@@ -81,18 +81,20 @@ import java.util.logging.Logger;
  *                      ├─ FileRecencyBlobStore (meta/recencyBlob.bin) ──────┤
  *                      ├─ JsonForwardLedger (meta/forwarded.json) ──────────┼─ TransportVisitClient (VISIT)
  *                      ├─ FileDeliveryLog (meta/delivery-log.jsonl) ────────┘
- *                      └─ DropboxIdentity (GrpcSecurity/ keys, baseId, advertised-id generation)
+ *                      └─ DropboxIdentity (GrpcSecurity/ keys, baseId = advertised id, own sender id)
  *  ServerKeys (meta/serverKeys/ if imported, else android-core R.raw.server_*) ─┬▶ ServerTrust ──▶ recency store
  *                                                                              └▶ DropboxControlManager
  *  DropboxControlManager (dataDir/ControlEndpoint: the dropbox's own DDD client endpoint) ──▶ TransportVisitClient
  *        inventory reports out / retention plans in ──▶ PlanExecutor ──▶ FileRelayStore.delete + ledger prune
+ *        recency requests out (signed with the TLS key) / grants in ──▶ FileRecencyBlobStore.offer
+ *            (kept only if signed by the trusted server and minted for the own sender id)
  *
  *  RoleCycleController ── RadioDriver ──▶ WifiDirectRadioDriver
  *        │ gate()                             ├─ DropboxWifiHost   ── HostingEndpoint ──▶ DropboxRpcServer
  *        ▼                                    └─ DropboxWifiJoiner ── VisitRunner ──────▶ {@link VisitCoordinator}
  *   ActivityGate ◀── ClientSessionTracker (one token per client IP) / VisitCoordinator (one per visit, from join)
  *
- *  Cycle listeners: HostPeriodIdRotator (new advertised id per HOST period), then status/notification.
+ *  Cycle listener: status/notification.
  *  Status:  CycleListener, RpcEventListener, visit results ──▶ DropboxStatusRepository (UI Status/Storage)
  *           WifiRadioState ── DropboxWifiStateBridge ──▶ DropboxWifiState (UI Local Wifi)
  * </pre>
@@ -269,16 +271,16 @@ public class DropboxService extends Service implements DropboxControls {
             dropboxPaths = paths;
             ServerKeys keys = loadServerKeys(paths);
 
-            DropboxIdentity id = DropboxIdentity.load(paths,
-                                                      b -> Base64.encodeToString(b, Base64.DEFAULT),
-                                                      p.getBoolean(DropboxPrefs.KEY_ROTATE_ADVERTISED_ID,
-                                                                   DropboxPrefs.DEFAULT_ROTATE_ADVERTISED_ID));
+            DropboxIdentity id = DropboxIdentity.load(paths, b -> Base64.encodeToString(b, Base64.DEFAULT));
             identity = id;
 
             FileRelayStore relayStore = new FileRelayStore(paths, DropboxPrefs.maxStorageBytes(p));
-            // Pinned to the server our clients trust: a blob they would reject is never stored (audit M5/M6).
+            // Pinned to the server our clients trust (a blob they would reject is never stored, audit M5/M6) and to
+            // our own sender id: only a blob the server minted for this dropbox is kept, never a carrier's
+            // (09 Own Recency Blob Design). A carrier blob stored by an older build is ignored from here on.
             FileRecencyBlobStore recencyStore =
-                    new FileRecencyBlobStore(paths, new ServerTrust(keys.identityKey(), System::currentTimeMillis));
+                    new FileRecencyBlobStore(paths, new ServerTrust(keys.identityKey(), System::currentTimeMillis),
+                                             id.ownSenderId());
             JsonForwardLedger forwardLedger = new JsonForwardLedger(paths);
             FileDeliveryLog deliveryLog = new FileDeliveryLog(paths);
             forwardLedger.pruneAgainst(relayStore); // forget ledger rows of bundles cleared while we were down
@@ -286,8 +288,8 @@ public class DropboxService extends Service implements DropboxControls {
             recency = recencyStore;
             ledger = forwardLedger;
 
-            // The dropbox's own client endpoint: inventory reports out, server retention plans in. A plan's
-            // deletions also drop the ledger rows of the deleted bundles.
+            // The dropbox's own client endpoint: inventory reports and recency requests out, server retention plans
+            // and recency grants in. A plan's deletions also drop the ledger rows of the deleted bundles.
             DropboxControlManager ctl = new DropboxControlManager(controlEndpointRoot(this),
                                                                   relayStore,
                                                                   deliveryLog::readAll,
@@ -296,12 +298,14 @@ public class DropboxService extends Service implements DropboxControls {
                                                                       refreshStatus();
                                                                   },
                                                                   System::currentTimeMillis,
-                                                                  new ControlEvents());
+                                                                  new ControlEvents(),
+                                                                  recencyStore,
+                                                                  id.tlsKeyPair());
             control = ctl;
             openControl(ctl, keys);
 
             TransportVisitClient client =
-                    new TransportVisitClient(relayStore, forwardLedger, recencyStore, ctl, id.keys());
+                    new TransportVisitClient(relayStore, forwardLedger, recencyStore::isServerSigned, ctl, id.keys());
             visitClient = client;
             visitExchange = VisitCoordinator.exchangeOf(client);
 
@@ -313,16 +317,14 @@ public class DropboxService extends Service implements DropboxControls {
                                                                      visits);
             radio = driver;
 
-            // Bootstrap rule: HOST only once a SUCCESS recency blob is cached (stock clients abort without one).
+            // Bootstrap rule: HOST only while the dropbox holds its own server-issued recency blob (stock clients
+            // abort without a SUCCESS blob).
             RoleCycleController cycle = new RoleCycleController(driver,
                                                                 clock,
                                                                 () -> recencyStore.currentTimestamp() > 0,
                                                                 DropboxPrefs.cycleConfig(p));
             controller = cycle;
             gate = cycle.gate();
-            // Rotation first, so the status published by cycleListener already shows the new id (audit M8).
-            cycle.addListener(new HostPeriodIdRotator(id, adv -> logger.info("Advertising id " + adv +
-                                                                                  " for this client period")));
             cycle.addListener(cycleListener);
 
             rpcServer = new DropboxRpcServer(id.keys(), relayStore, recencyStore, deliveryLog, cycle.gate(), clock,
@@ -349,10 +351,10 @@ public class DropboxService extends Service implements DropboxControls {
                 applyKeepAwake();
             });
 
-            logUi(UserLogType.WIFI, Level.INFO, "Dropbox " + id.baseId() + " starting (" +
-                    (recencyStore.currentTimestamp() > 0 ? "recency blob cached" :
-                     "no recency blob yet: visiting transports first") + ", trusting " + keys.describe() +
-                    " server keys)");
+            logUi(UserLogType.WIFI, Level.INFO, "Dropbox " + id.baseId() + " (sender id " + id.ownSenderId() +
+                    ") starting (" + (recencyStore.currentTimestamp() > 0 ? "own recency blob held" :
+                                      "waiting for a server-issued recency blob: visiting transports first") +
+                    ", trusting " + keys.describe() + " server keys)");
             errors.clear(StatusErrors.Source.STARTUP);
             refreshStatus();
             if (destroyed) {
@@ -526,9 +528,9 @@ public class DropboxService extends Service implements DropboxControls {
     private void onVisitResult(VisitResult r) {
         String summary = "Transport " + r.carrierId() + ": " + (r.ok() ? "ok" : "incomplete") + ", uploaded " +
                 r.uploaded() + ", downloaded " + r.downloaded() + ", already held " + r.skipped() +
-                (r.recencyUpdated() ? ", newer recency blob stored" : "") +
-                (r.controlUploaded() > 0 ? ", storage report sent" : "") +
-                (r.controlProcessed() > 0 ? ", server cleanup plan received" : "") +
+                (r.carrierTrusted() ? "" : ", transport not synced with our server") +
+                (r.controlUploaded() > 0 ? ", control bundle sent" : "") +
+                (r.controlProcessed() > 0 ? ", server control bundle received" : "") +
                 (r.lastError() == null ? "" : ", last error: " + r.lastError());
         logUi(UserLogType.EXCHANGE, r.ok() ? Level.INFO : Level.WARNING, summary);
         DropboxStatus.LastVisit last = new DropboxStatus.LastVisit(r.carrierId(), r.uploaded(), r.downloaded(),
@@ -560,6 +562,18 @@ public class DropboxService extends Service implements DropboxControls {
         }
 
         @Override
+        public void recencyRequested(long requestSeq) {
+            logUi(UserLogType.EXCHANGE, Level.INFO, "Recency blob request #" + requestSeq + " ready for the server");
+        }
+
+        @Override
+        public void recencyGranted(long requestSeq, boolean stored) {
+            logUi(UserLogType.EXCHANGE, stored ? Level.INFO : Level.WARNING, "Server recency grant for request #" +
+                    requestSeq + (stored ? ": new own recency blob, clients can be served" :
+                                  ": blob not usable (rejected or not newer); asking again on the next visit"));
+        }
+
+        @Override
         public void problem(String message) {
             logUi(UserLogType.EXCHANGE, Level.WARNING, message);
         }
@@ -572,10 +586,22 @@ public class DropboxService extends Service implements DropboxControls {
 
     /**
      * Opens (or re-opens, after a server-key change) the control endpoint and moves any of the dropbox's own
-     * bundles out of the pickup queue. A failure leaves the relay running without server-managed cleanup.
+     * bundles out of the pickup queue. A failure leaves the relay running without server-managed cleanup and
+     * without recency requests. An endpoint wiped for other server keys starts its recency request numbering
+     * over, so the blob it was serving (from the previous server's grants) is dropped as well.
+     *
+     * @return true if a held recency blob was dropped
      */
-    private void openControl(DropboxControlManager ctl, ServerKeys keys) {
+    private boolean openControl(DropboxControlManager ctl, ServerKeys keys) {
+        boolean blobDropped = false;
         if (ctl.open(keys.describe(), keys.identityPem(), keys.signedPrePem(), keys.ratchetPem())) {
+            FileRecencyBlobStore r = recency;
+            if (ctl.wasResetForNewServer() && r != null && r.currentTimestamp() > 0) {
+                r.reset();
+                blobDropped = true;
+                logUi(UserLogType.EXCHANGE, Level.WARNING, "New control identity for these server keys: dropped " +
+                        "the recency blob, waiting for a server-issued one");
+            }
             int adopted = ctl.adoptOwnBundles();
             if (adopted > 0) {
                 logUi(UserLogType.EXCHANGE, Level.INFO, "Removed " + adopted +
@@ -587,6 +613,7 @@ public class DropboxService extends Service implements DropboxControls {
             logUi(UserLogType.EXCHANGE, Level.WARNING, "Server-managed storage unavailable (" +
                     ctl.status().problem() + "); relaying without it");
         }
+        return blobDropped;
     }
 
     /** Role-cycle events (on {@code dropbox-cycle}). */
@@ -667,7 +694,7 @@ public class DropboxService extends Service implements DropboxControls {
             RoleCycleController cycle = controller;
             if (cycle != null) b.cycle(cycle.mode(), cycle.modeStartedAtMillis(), cycle.deadlineAtMillis());
             DropboxIdentity id = identity;
-            if (id != null) b.advertisedId(id.advertisedId());
+            if (id != null) b.advertisedId(id.advertisedId()).ownSenderId(id.ownSenderId());
             FileRecencyBlobStore r = recency;
             if (r != null) b.recencyBlobTimestamp(r.currentTimestamp());
             ActivityGate g = gate;
@@ -696,11 +723,6 @@ public class DropboxService extends Service implements DropboxControls {
         if (all || DropboxPrefs.KEY_MAX_STORAGE_MB.equals(key)) {
             store.setCapacityBytes(DropboxPrefs.maxStorageBytes(p));
             refreshStatus();
-        }
-        if (all || DropboxPrefs.KEY_ROTATE_ADVERTISED_ID.equals(key)) {
-            identity.setRotate(p.getBoolean(DropboxPrefs.KEY_ROTATE_ADVERTISED_ID,
-                                            DropboxPrefs.DEFAULT_ROTATE_ADVERTISED_ID));
-            refreshStatus(); // takes effect in the TXT record at the next startHosting
         }
         if (all || DropboxPrefs.KEY_KEEP_AWAKE.equals(key)) {
             applyKeepAwake();
@@ -823,9 +845,11 @@ public class DropboxService extends Service implements DropboxControls {
 
     /**
      * Operator "reset recency blob" (audit M6, {@code recency-blob-poisoning}). After the reset
-     * {@code currentTimestamp() == 0}, so the bootstrap rule keeps the cycle on VISIT until a carrier serves a
-     * blob {@link ServerTrust} accepts. A HOST dwell in progress is ended at once (normal drain rules), because
-     * clients would otherwise keep seeing the old blob in the TXT record until the dwell expires.
+     * {@code currentTimestamp() == 0}, so the bootstrap rule keeps the cycle on VISIT until a server grant brings
+     * a blob {@link ServerTrust} accepts for the dropbox's own sender id. The outstanding recency request is
+     * forgotten too, so the next visit asks again even if the server never answers the old one. A HOST dwell in
+     * progress is ended at once (normal drain rules), because clients would otherwise keep seeing the old blob
+     * in the TXT record until the dwell expires.
      */
     @Override
     public void resetRecencyBlob() {
@@ -833,8 +857,11 @@ public class DropboxService extends Service implements DropboxControls {
         FileRecencyBlobStore r = recency;
         if (r == null) throw new IllegalStateException("Dropbox is not initialized");
         r.reset();
+        DropboxControlManager ctl = control;
+        if (ctl != null) ctl.abandonRecencyRequest();
         refreshStatus();
-        logUi(UserLogType.EXCHANGE, Level.WARNING, "Operator reset the recency blob; visiting transports for a new one");
+        logUi(UserLogType.EXCHANGE, Level.WARNING, "Operator reset the recency blob; asking the server for a new " +
+                "one on the next transport visit");
         controller.forceVisit();
     }
 
@@ -858,9 +885,10 @@ public class DropboxService extends Service implements DropboxControls {
 
     /**
      * Operator "Server keys (QR)" import: trust the server named by a scanned or pasted
-     * {@code https://discdd.net/srvr?...} URL. Saves the keys, re-pins the recency store (a cached blob from
-     * the old server is dropped and a visit forced, since clients of the new server would reject it), and
-     * re-creates the control endpoint, which then starts a fresh client identity at the new server.
+     * {@code https://discdd.net/srvr?...} URL. Saves the keys, re-pins the recency store (a blob from the old
+     * server is dropped and a visit forced, since clients of the new server would reject it), and re-creates the
+     * control endpoint, which then starts a fresh client identity and recency request numbering at the new
+     * server.
      */
     @Override
     public String importServerKeys(String urlText) {
@@ -898,13 +926,17 @@ public class DropboxService extends Service implements DropboxControls {
         }
     }
 
-    /** Re-pins the recency store and re-opens the control endpoint for {@code keys}. */
+    /**
+     * Re-pins the recency store (the own-sender-id condition stays) and re-opens the control endpoint for
+     * {@code keys}.
+     */
     private void applyServerKeys(ServerKeys keys) {
         boolean blobKept = recency.setVerifier(new ServerTrust(keys.identityKey(), System::currentTimeMillis));
-        openControl(control, keys);
+        if (openControl(control, keys)) blobKept = false;
         refreshStatus();
         logUi(UserLogType.EXCHANGE, Level.INFO, "Now trusting " + keys.describe() + " server keys" +
-                (blobKept ? "" : "; dropped the recency blob of the previous server, visiting transports for a new one"));
+                (blobKept ? "" : "; dropped the recency blob of the previous server, asking the new one through " +
+                        "the next transport visit"));
         if (!blobKept) controller.forceVisit();
     }
 
@@ -961,7 +993,7 @@ public class DropboxService extends Service implements DropboxControls {
     /**
      * The server keys the dropbox trusts: imported keys under {@code meta/serverKeys} if present, else
      * android-core's built-in {@code R.raw.server_*} (the stock client's defaults). Their identity key pins the
-     * recency blobs the dropbox stores and re-serves (audit M5/M6); all three seed the control endpoint.
+     * recency blobs the dropbox stores and serves (audit M5/M6); all three seed the control endpoint.
      */
     private ServerKeys loadServerKeys(DropboxPaths paths) throws Exception {
         android.content.res.Resources res = getResources();

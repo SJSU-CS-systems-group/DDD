@@ -20,15 +20,22 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 /**
  * JVM tests for {@link FileRecencyBlobStore} with {@link ServerTrust}: only blobs a stock client of the same
  * server would accept are kept (SUCCESS, pinned key, valid Curve signature, at most 60 s ahead; Audit M5/M6),
- * only strictly newer ones replace the stored one, bytes are kept verbatim, and the blob survives a restart.
+ * and only if the server minted them for the dropbox's own sender id (never a carrier's, 09 Own Recency Blob
+ * Design); only strictly newer ones replace the stored one, bytes are kept verbatim, and the blob survives a
+ * restart.
  */
 public class FileRecencyBlobStoreTest {
     private static final long NOW = 1_800_000_000_000L;
+    /** The dropbox's own sender id (SecurityUtils.generateID of its TLS key). */
+    private static final String OWN = "own-dropbox-sender-id";
+    /** A carrier transport's sender id. */
+    private static final String CARRIER = "carrier-sha1-id";
 
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
@@ -48,16 +55,21 @@ public class FileRecencyBlobStoreTest {
     }
 
     private FileRecencyBlobStore open() {
-        return new FileRecencyBlobStore(paths, trust);
+        return new FileRecencyBlobStore(paths, trust, OWN);
     }
 
     /** A response exactly as {@code ServerBundleTransmission.getRecencyBlob} builds it, signed by {@code signer}. */
     private static GetRecencyBlobResponse signed(ECKeyPair signer, RecencyBlobStatus status, long ts) {
+        return signed(signer, status, ts, OWN);
+    }
+
+    private static GetRecencyBlobResponse signed(ECKeyPair signer, RecencyBlobStatus status, long ts,
+                                                 String senderId) {
         RecencyBlob blob = RecencyBlob.newBuilder()
                 .setVersion(0)
                 .setNonce(42)
                 .setBlobTimestamp(ts)
-                .setSenderId("carrier-sha1-id")
+                .setSenderId(senderId)
                 .build();
         byte[] sig;
         try {
@@ -89,12 +101,48 @@ public class FileRecencyBlobStoreTest {
     public void acceptsTrustedBlobAndKeepsExactBytes() throws IOException {
         FileRecencyBlobStore s = open();
         byte[] raw = success(NOW - 1_000);
-        assertTrue(s.isTrusted(raw));
+        assertTrue(s.isServerSigned(raw));
         assertTrue(s.offer(raw));
         assertArrayEquals(raw, s.current().get());
         assertEquals(NOW - 1_000, s.currentTimestamp());
         assertArrayEquals(raw, Files.readAllBytes(paths.recencyBlobFile));
-        assertEquals("carrier-sha1-id", s.currentResponse().get().getRecencyBlob().getSenderId());
+        assertEquals(OWN, s.currentResponse().get().getRecencyBlob().getSenderId());
+        assertEquals(OWN, s.ownSenderId());
+    }
+
+    /** 09 Own Recency Blob Design: a carrier's genuine blob names the carrier and is never stored. */
+    @Test
+    public void carrierBlobIsNeverStoredEvenWhenServerSigned() {
+        FileRecencyBlobStore s = open();
+        byte[] carrier = signed(server, RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS, NOW, CARRIER).toByteArray();
+        assertTrue("signed by our server: the visit may trust its sender id", s.isServerSigned(carrier));
+        assertFalse(s.offer(carrier));
+        assertFalse(s.current().isPresent());
+        assertFalse(Files.exists(paths.recencyBlobFile));
+        byte[] noSender = signed(server, RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS, NOW, "").toByteArray();
+        assertFalse(s.offer(noSender));
+
+        assertTrue(s.offer(success(NOW - 10)));
+        byte[] newerCarrier = signed(server, RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS, NOW, CARRIER)
+                .toByteArray();
+        assertFalse("newer but not ours", s.offer(newerCarrier));
+        assertEquals(NOW - 10, s.currentTimestamp());
+    }
+
+    /** A carrier blob that an older build copied to disk is ignored at load: back to bootstrap. */
+    @Test
+    public void carrierBlobStoredByAnOlderBuildIsDroppedAtLoad() throws IOException {
+        Files.write(paths.recencyBlobFile,
+                    signed(server, RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS, NOW - 1_000, CARRIER).toByteArray());
+        FileRecencyBlobStore s = open();
+        assertFalse(s.current().isPresent());
+        assertEquals(0, s.currentTimestamp());
+        assertTrue("an own blob, even an older one, is accepted", s.offer(success(NOW - 5_000)));
+    }
+
+    @Test
+    public void rejectsAnEmptyOwnSenderId() {
+        assertThrows(IllegalArgumentException.class, () -> new FileRecencyBlobStore(paths, trust, ""));
     }
 
     /** Audit M5: a carrier synced to another deployment must not replace our blob. */
@@ -103,7 +151,7 @@ public class FileRecencyBlobStoreTest {
         FileRecencyBlobStore s = open();
         assertTrue(s.offer(success(NOW - 5_000)));
         byte[] foreign = signed(otherServer, RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS, NOW).toByteArray();
-        assertFalse(s.isTrusted(foreign));
+        assertFalse(s.isServerSigned(foreign));
         assertFalse("newer but foreign", s.offer(foreign));
         assertEquals(NOW - 5_000, s.currentTimestamp());
         assertEquals("signed by unknown server",
@@ -176,7 +224,7 @@ public class FileRecencyBlobStoreTest {
         assertFalse(s.offer(null));
         assertFalse(s.offer(new byte[0]));
         assertFalse(s.offer(new byte[]{(byte) 0xFF, (byte) 0xFF, (byte) 0xFF}));
-        assertFalse(s.isTrusted(null));
+        assertFalse(s.isServerSigned(null));
         assertFalse(s.current().isPresent());
     }
 
@@ -218,6 +266,10 @@ public class FileRecencyBlobStoreTest {
         assertFalse(s.current().isPresent());
         assertFalse(Files.exists(paths.recencyBlobFile));
         assertTrue(s.offer(signed(otherServer, RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS, 50).toByteArray()));
+        // The new verifier still requires the own sender id.
+        assertFalse(s.offer(signed(otherServer, RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS, 60, CARRIER)
+                                    .toByteArray()));
+        assertEquals(50, s.currentTimestamp());
     }
 
     @Test

@@ -27,7 +27,7 @@ public class VisitCoordinatorTest {
 
     private ActivityGate gate;
     private FakeExchange exchange;
-    private boolean blobStored;
+    private boolean ownBlobHeld;
     private final List<String> events = new ArrayList<>();
     private final AtomicInteger drains = new AtomicInteger();
     private VisitCoordinator visits;
@@ -61,8 +61,8 @@ public class VisitCoordinatorTest {
         }
     }
 
-    private static VisitResult ok(boolean recencyFetched) {
-        return new VisitResult("T1", true, recencyFetched, false, 1, 2, 0, 0, false, null);
+    private static VisitResult ok(boolean carrierTrusted) {
+        return new VisitResult("T1", true, carrierTrusted, 1, 2, 0, 0, false, null);
     }
 
     @Before
@@ -70,8 +70,8 @@ public class VisitCoordinatorTest {
         gate = new ActivityGate();
         gate.setDrainListener(drains::incrementAndGet);
         exchange = new FakeExchange();
-        blobStored = true;
-        visits = new VisitCoordinator(() -> gate, () -> exchange, () -> blobStored, new VisitCoordinator.Events() {
+        ownBlobHeld = true;
+        visits = new VisitCoordinator(() -> gate, () -> exchange, () -> ownBlobHeld, new VisitCoordinator.Events() {
             @Override
             public void exchangeStarting(String carrierId) {
                 events.add("start " + carrierId);
@@ -105,21 +105,20 @@ public class VisitCoordinatorTest {
     }
 
     @Test
-    public void earlyReturnNeedsOkRecencyFetchedAndAStoredBlob() throws Exception {
+    public void earlyReturnNeedsAnOkVisitAndTheOwnBlob() throws Exception {
         gate.openAdmissions();
-        // Review #9: a carrier that never synced (no SUCCESS blob) must not end VISIT early.
+        // 09 Own Recency Blob Design: whether the carrier had a blob of our server does not matter.
         exchange.result = ok(false);
-        assertFalse(visits.runVisit(GO, "T1", () -> false));
-        // Audit i2: fetched but not stored (offer failed or the verifier rejected it) during bootstrap.
-        exchange.result = ok(true);
-        blobStored = false;
-        assertFalse(visits.runVisit(GO, "T1", () -> false));
-        // Incomplete exchange.
-        blobStored = true;
-        exchange.result = new VisitResult("T1", true, true, true, 0, 0, 0, 1, false, "upload failed");
-        assertFalse(visits.runVisit(GO, "T1", () -> false));
+        assertTrue(visits.runVisit(GO, "T1", () -> false));
         exchange.result = ok(true);
         assertTrue(visits.runVisit(GO, "T1", () -> false));
+        // Bootstrap (Review #9, audit i2): without the own blob HOST is skipped, so no early return.
+        ownBlobHeld = false;
+        assertFalse(visits.runVisit(GO, "T1", () -> false));
+        // Incomplete exchange.
+        ownBlobHeld = true;
+        exchange.result = new VisitResult("T1", true, true, 0, 0, 0, 1, false, "upload failed");
+        assertFalse(visits.runVisit(GO, "T1", () -> false));
     }
 
     @Test
@@ -138,13 +137,13 @@ public class VisitCoordinatorTest {
         assertEquals("the join holds the drain open", 1, gate.activeCount());
         assertEquals(0, drains.get());
 
-        // The join completes: the exchange reuses the join token although admissions are closed, fetches the
-        // recency blob and stops before the first bundle (keepGoing is false).
-        exchange.result = new VisitResult("T1", true, true, true, 0, 0, 0, 0, true, null);
+        // The join completes: the exchange reuses the join token although admissions are closed, asks the
+        // carrier for its recency blob and stops before the first bundle (keepGoing is false).
+        exchange.result = new VisitResult("T1", true, true, 0, 0, 0, 0, true, null);
         assertFalse("stopped early: not a success", visits.runVisit(GO, "T1", () -> false));
         assertEquals(1, exchange.calls);
         assertEquals("same single token", 1, exchange.activeDuring);
-        assertFalse("dwell over: finish after the recency fetch", exchange.keepGoingAtStart);
+        assertFalse("dwell over: finish after the recency probe", exchange.keepGoingAtStart);
         assertEquals("drain completes when the exchange ends", 1, drains.get());
         assertFalse(visits.hasPendingJoin());
     }
@@ -208,7 +207,7 @@ public class VisitCoordinatorTest {
             gate.forceReleaseAll("drain cap");
             cancelledSeen.set(exchange.cancelled.getAsBoolean());
         };
-        exchange.result = new VisitResult("T1", true, true, false, 0, 0, 0, 1, true, "cancelled");
+        exchange.result = new VisitResult("T1", true, true, 0, 0, 0, 1, true, "cancelled");
         assertFalse(visits.runVisit(GO, "T1", () -> false));
         assertEquals("cancel hook hard-cancels the gRPC channel", 1, exchange.cancels);
         assertTrue("the visit sees the cancellation", cancelledSeen.get());

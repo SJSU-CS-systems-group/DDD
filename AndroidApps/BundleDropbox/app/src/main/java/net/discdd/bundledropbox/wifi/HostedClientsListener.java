@@ -8,7 +8,8 @@ package net.discdd.bundledropbox.wifi;
  * {@code ActivityGate} only learns about a stock client at its first RPC. A client that has joined the group
  * but is still probing port 7777 or doing the TLS handshake holds no token, so an idle-switch at dwell
  * expiry would tear the group down under it; the client then stamps {@code lastExchange} and skips this
- * transportId until it rotates (Research/R3 §7). Joined-but-silent clients are visible only here.
+ * transportId until a newer recency blob is advertised (Research/R3 §7). Joined-but-silent clients are visible
+ * only here.
  *
  * <p>Edge-triggered: called only when the count changes, including the drop to 0 when the group is removed,
  * lost, or a start/stop op supersedes hosting. Called on the main thread; implementations must be fast and

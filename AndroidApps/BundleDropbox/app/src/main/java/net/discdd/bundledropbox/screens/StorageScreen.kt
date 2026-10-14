@@ -99,9 +99,10 @@ fun StorageScreen(viewModel: StorageViewModel = viewModel()) {
                     enabled = status.downstreamCount() > 0) {
                 Text(stringResource(R.string.storage_clear_downstream))
             }
-            // Audit M6: manual recovery from a recency blob that clients reject (e.g. from another server).
+            // Audit M6: manual recovery from a recency blob that clients reject, or from a recency request
+            // the server never answers.
             OutlinedButton(onClick = { confirmRecencyReset = true }, modifier = Modifier.fillMaxWidth(),
-                    enabled = status.recencyBlobTimestamp() > 0) {
+                    enabled = status.recencyBlobTimestamp() > 0 || status.control().recencyOutstanding()) {
                 Text(stringResource(R.string.storage_recency_reset))
             }
 

@@ -57,6 +57,8 @@ final class FakeCarrier implements AutoCloseable {
     final Path toServer;
     final int port;
     volatile GetRecencyBlobResponse recency = GetRecencyBlobResponse.getDefaultInstance();
+    /** If set, {@code getRecencyBlob} fails with this status instead of answering {@link #recency}. */
+    volatile io.grpc.Status recencyFailure;
     /** If set, {@code psiDownloadBundle} signals {@link #downloadBlocked} and waits for this latch. */
     volatile CountDownLatch downloadGate;
     final CountDownLatch downloadBlocked = new CountDownLatch(1);
@@ -127,6 +129,11 @@ final class FakeCarrier implements AutoCloseable {
 
         @Override
         public void getRecencyBlob(GetRecencyBlobRequest request, StreamObserver<GetRecencyBlobResponse> response) {
+            io.grpc.Status failure = recencyFailure;
+            if (failure != null) {
+                response.onError(failure.asRuntimeException());
+                return;
+            }
             response.onNext(recency);
             response.onCompleted();
         }

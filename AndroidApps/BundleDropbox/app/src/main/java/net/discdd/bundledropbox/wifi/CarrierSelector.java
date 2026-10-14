@@ -98,7 +98,8 @@ public final class CarrierSelector {
             if (s.attempted || nowMillis - s.lastSeen > SEEN_TTL_MS) continue;
             if (s.deviceAddress == null || s.deviceAddress.isBlank()) continue;
             // FUTURE: prefer carriers advertising a newer recency blob (they synced with the server more
-            // recently, so they likely hold fresher client-bound bundles); captured but unused in v1.
+            // recently, so they likely hold fresher client-bound bundles and grants); captured but unused in
+            // v1. Only the timestamp is read: a carrier's blob is never stored or relayed.
             // Strict "<" keeps the earliest-discovered carrier on ties (the map is in discovery order).
             if (bestId == null || lastVisited(e.getKey()) < lastVisited(bestId)) bestId = e.getKey();
         }

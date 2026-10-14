@@ -94,9 +94,9 @@ public final class WifiDirectRadioDriver implements RadioDriver {
      * @param context              service context (the application context is used internally)
      * @param baseId               stable 16-char id derived from the dropbox TLS key, exactly like the
      *                             transport's transportId (R1 §2.4); used for the group name
-     * @param advertisedIdSupplier TXT {@code transportId} to advertise, read at each startHosting
-     *                             ({@code baseId-gen} with rotation, 03 Architecture §5)
-     * @param recencyBlobSupplier  raw cached {@code GetRecencyBlobResponse} bytes, or null if none
+     * @param advertisedIdSupplier TXT {@code transportId} to advertise, read at each startHosting (the stable
+     *                             {@code baseId}, 09 Own Recency Blob Design)
+     * @param recencyBlobSupplier  the dropbox's own raw {@code GetRecencyBlobResponse} bytes, or null if none
      *                             (e.g. {@code () -> recencyBlobStore.current().orElse(null)})
      * @param endpoint             client-server hooks around hosting: ensure the always-on gRPC server (7777)
      *                             is up before advertising, end client sessions on stopHosting

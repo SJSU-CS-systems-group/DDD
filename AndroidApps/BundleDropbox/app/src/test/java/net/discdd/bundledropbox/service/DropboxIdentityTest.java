@@ -1,6 +1,7 @@
 package net.discdd.bundledropbox.service;
 
 import net.discdd.bundledropbox.store.DropboxPaths;
+import net.discdd.bundlesecurity.SecurityUtils;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -8,16 +9,18 @@ import org.junit.rules.TemporaryFolder;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
 import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 /**
- * JVM tests for {@link DropboxIdentity}: transport-compatible baseId, persisted generation, and the
- * rotate setting (03 Architecture §5).
+ * JVM tests for {@link DropboxIdentity}: transport-compatible baseId, which is also the advertised id (no
+ * rotation, 09 Own Recency Blob Design), and the own sender id the server mints recency blobs for.
  */
 public class DropboxIdentityTest {
     /**
@@ -36,7 +39,7 @@ public class DropboxIdentityTest {
 
     @Test
     public void baseIdUsesTheTransportFormula() throws Exception {
-        DropboxIdentity id = DropboxIdentity.load(paths(), ANDROID_DEFAULT_BASE64, true);
+        DropboxIdentity id = DropboxIdentity.load(paths(), ANDROID_DEFAULT_BASE64);
         String full = ANDROID_DEFAULT_BASE64.apply(id.keys().grpcKeyPair.getPublic().getEncoded());
         assertEquals(full.substring(full.length() - 20, full.length() - 4), id.baseId());
         assertEquals(16, id.baseId().length());
@@ -44,43 +47,43 @@ public class DropboxIdentityTest {
     }
 
     @Test
-    public void keysAndBaseIdAreStableAcrossRestarts() throws Exception {
+    public void keysAndIdsAreStableAcrossRestarts() throws Exception {
         DropboxPaths p = paths();
-        DropboxIdentity first = DropboxIdentity.load(p, ANDROID_DEFAULT_BASE64, true);
-        DropboxIdentity second = DropboxIdentity.load(p, ANDROID_DEFAULT_BASE64, true);
+        DropboxIdentity first = DropboxIdentity.load(p, ANDROID_DEFAULT_BASE64);
+        DropboxIdentity second = DropboxIdentity.load(p, ANDROID_DEFAULT_BASE64);
         assertEquals(first.baseId(), second.baseId());
+        assertEquals(first.ownSenderId(), second.ownSenderId());
     }
 
+    /** 09 Own Recency Blob Design: the advertised transportId is the stable baseId; there is no rotation. */
     @Test
-    public void generationRotatesAndPersists() throws Exception {
+    public void advertisedIdIsAlwaysTheBaseId() throws Exception {
         DropboxPaths p = paths();
-        DropboxIdentity id = DropboxIdentity.load(p, ANDROID_DEFAULT_BASE64, true);
-        assertEquals(id.baseId() + "-0", id.advertisedId());
-        String next = id.bumpGeneration();
-        assertEquals(id.baseId() + "-1", next);
-        assertEquals(next, id.advertisedId());
-        assertEquals("1", new String(Files.readAllBytes(p.meta.resolve(DropboxIdentity.GENERATION_FILE_NAME)),
-                                     StandardCharsets.UTF_8).trim());
-
-        DropboxIdentity restarted = DropboxIdentity.load(p, ANDROID_DEFAULT_BASE64, true);
-        assertEquals("an id is never reused after a restart", next, restarted.advertisedId());
-    }
-
-    @Test
-    public void rotationOffAdvertisesPlainBaseId() throws Exception {
-        DropboxIdentity id = DropboxIdentity.load(paths(), ANDROID_DEFAULT_BASE64, false);
-        id.bumpGeneration();
+        DropboxIdentity id = DropboxIdentity.load(p, ANDROID_DEFAULT_BASE64);
         assertEquals(id.baseId(), id.advertisedId());
-        id.setRotate(true);
-        assertEquals(id.baseId() + "-1", id.advertisedId());
+        assertEquals(id.baseId(), DropboxIdentity.load(p, ANDROID_DEFAULT_BASE64).advertisedId());
     }
 
+    /** A counter file left by a build with advertised-id rotation is removed and changes nothing. */
     @Test
-    public void corruptGenerationFileRestartsAtZero() throws Exception {
+    public void leftoverGenerationFileIsDeletedHarmlessly() throws Exception {
         DropboxPaths p = paths();
-        Files.write(p.meta.resolve(DropboxIdentity.GENERATION_FILE_NAME), "garbage".getBytes(StandardCharsets.UTF_8));
-        DropboxIdentity id = DropboxIdentity.load(p, ANDROID_DEFAULT_BASE64, true);
-        assertEquals(0, id.generation());
-        assertNotEquals(id.baseId(), id.advertisedId());
+        Path leftover = p.meta.resolve(DropboxIdentity.LEGACY_GENERATION_FILE_NAME);
+        Files.write(leftover, "7".getBytes(StandardCharsets.UTF_8));
+        DropboxIdentity id = DropboxIdentity.load(p, ANDROID_DEFAULT_BASE64);
+        assertFalse(Files.exists(leftover));
+        assertEquals(id.baseId(), id.advertisedId());
+    }
+
+    /**
+     * The own sender id is what the server's gRPC getRecencyBlob computes for a peer presenting this TLS key
+     * ({@code SecurityUtils.generateID(cert.getPublicKey().getEncoded())}), so a blob minted for it is the
+     * dropbox's own.
+     */
+    @Test
+    public void ownSenderIdMatchesTheServersFormulaForTheTlsKey() throws Exception {
+        DropboxIdentity id = DropboxIdentity.load(paths(), ANDROID_DEFAULT_BASE64);
+        assertEquals(SecurityUtils.generateID(id.keys().grpcCert.getPublicKey().getEncoded()), id.ownSenderId());
+        assertSame(id.keys().grpcKeyPair, id.tlsKeyPair());
     }
 }

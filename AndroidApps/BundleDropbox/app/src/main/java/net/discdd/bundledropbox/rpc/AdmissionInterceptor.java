@@ -24,9 +24,9 @@ import java.util.logging.Logger;
  * <p>Refusing with {@code UNAVAILABLE} is NOT free for the stock client: {@code doExchangeWithTransport}'s
  * outer catch swallows the error, but {@code BundleClientService.exchangeWith} then stamps
  * {@code lastExchange} for our advertised transportId anyway, and the client skips that id until a recency
- * blob newer than the stamp is advertised (R3 §7). In practice a refused client is locked out until the
- * advertised id rotates after the next successful carrier visit (or for good with rotation off, until a
- * newer blob arrives). The cycle therefore minimizes refusals: it withdraws the DNS-SD record as soon as a
+ * blob newer than the stamp is advertised (R3 §7). The transportId is stable, so in practice a refused client
+ * is locked out until the dropbox's next server-issued blob arrives (one carrier round trip). The cycle
+ * therefore minimizes refusals: it withdraws the DNS-SD record as soon as a
  * HOST drain begins ({@code RadioDriver.withdrawHostAdvertisement}), and admitted clients are never reaped
  * while draining ({@link ClientSessionTracker}). A draining dropbox never refuses an already admitted
  * client, so an exchange is only cut in half by the drain cap.

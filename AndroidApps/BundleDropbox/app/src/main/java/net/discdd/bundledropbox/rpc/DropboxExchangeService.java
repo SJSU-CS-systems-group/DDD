@@ -62,7 +62,7 @@ import java.util.logging.Logger;
  *       session removed after a successful download) over every committed DOWNSTREAM bundle, as a stock
  *       transport does ({@link DownstreamOffer}).</li>
  *   <li><b>downloadBundle</b> (legacy, only used if PSI is UNIMPLEMENTED): any committed DOWNSTREAM file.</li>
- *   <li><b>getRecencyBlob</b>: the carrier's server-signed blob from {@link RecencyBlobStore}, served
+ *   <li><b>getRecencyBlob</b>: the dropbox's own server-issued blob from {@link RecencyBlobStore}, served
  *       verbatim.</li>
  * </ul>
  *
@@ -121,7 +121,7 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
 
     /**
      * @param store        relay store (UPSTREAM receives client uploads, DOWNSTREAM is served to clients)
-     * @param recencyBlobs cached carrier recency blob
+     * @param recencyBlobs the dropbox's own server-issued recency blob
      * @param deliveryLog  records DOWNSTREAM bundles streamed to clients (servedCount in inventory reports)
      * @param listener     status events; may be {@link RpcEventListener#NO_OP}
      * @param clock        monotonic clock for PSI session TTLs
@@ -168,9 +168,12 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
     // ---------------------------------------------------------------------------------------------
 
     /**
-     * Serves the cached carrier blob. It is parsed and re-serialized unchanged; the client re-serializes
-     * {@code recencyBlob} itself to verify the signature, so the signed content is identical (Research/R3
-     * §3 option c). Never fabricate or re-sign a blob.
+     * Serves the dropbox's own blob: the server minted it for the dropbox's TLS key and sent it in a control
+     * {@code RecencyGrant} (09 Own Recency Blob Design, R3 option d2), so its {@code senderId} is
+     * {@code SecurityUtils.generateID} of the very certificate this server presents, the same value the
+     * server's gRPC {@code getRecencyBlob} would mint for this peer. It is parsed and re-serialized unchanged;
+     * the client re-serializes {@code recencyBlob} itself to verify the signature, so the signed content is
+     * identical. Never fabricate or re-sign a blob, and never serve a carrier's.
      *
      * <p>With no blob the default instance (status UNDEFINED) is returned, exactly what a transport that
      * never reached the server returns. The stock client aborts on it ({@code RecencyException}), which is
@@ -191,7 +194,7 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
         } else {
             logger.log(Level.WARNING,
                        "No recency blob yet; client " + RemoteAddrInterceptor.currentIp() +
-                               " will abort its exchange (dropbox must visit a transport first)");
+                               " will abort its exchange (waiting for a server-issued recency blob)");
         }
         responseObserver.onNext(response);
         responseObserver.onCompleted();

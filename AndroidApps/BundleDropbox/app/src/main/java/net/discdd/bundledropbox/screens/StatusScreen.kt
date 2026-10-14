@@ -39,6 +39,7 @@ import net.discdd.bundledropbox.R
 import net.discdd.bundledropbox.cycle.CycleMode
 import net.discdd.bundledropbox.status.DropboxStatus
 import net.discdd.bundledropbox.viewmodels.OperatorState
+import net.discdd.bundledropbox.viewmodels.RecencyRequestState
 import net.discdd.bundledropbox.viewmodels.StatusFormat
 import net.discdd.bundledropbox.viewmodels.StatusViewModel
 import net.discdd.components.EasterEgg
@@ -161,7 +162,7 @@ private fun ModeCard(status: DropboxStatus, op: OperatorState, nowMono: Long) {
     val fraction = StatusFormat.elapsedFraction(status, nowMono)
     val container = when (op) {
         OperatorState.NEEDS_ATTENTION -> MaterialTheme.colorScheme.errorContainer
-        OperatorState.WAITING_FOR_FIRST_VISIT, OperatorState.PAUSED, OperatorState.NOT_RUNNING ->
+        OperatorState.WAITING_FOR_RECENCY_BLOB, OperatorState.PAUSED, OperatorState.NOT_RUNNING ->
             MaterialTheme.colorScheme.tertiaryContainer
         else -> MaterialTheme.colorScheme.primaryContainer
     }
@@ -246,14 +247,17 @@ private fun CycleControls(
     }
 }
 
-/** Identity, recency blob, sessions and queue counters. */
+/** Identity, own recency blob and its request, sessions and queue counters. */
 @Composable
 private fun DetailsCard(status: DropboxStatus) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             LabeledValue(stringResource(R.string.status_advertised_id),
                     status.advertisedId() ?: stringResource(R.string.value_unknown))
+            LabeledValue(stringResource(R.string.status_own_sender_id),
+                    status.ownSenderId() ?: stringResource(R.string.value_unknown))
             LabeledValue(stringResource(R.string.status_recency_blob), recencyBlobText(status))
+            LabeledValue(stringResource(R.string.status_recency_request), recencyRequestText(status))
             LabeledValue(stringResource(R.string.status_active_sessions), status.activeSessions().toString())
             LabeledValue(stringResource(R.string.status_upstream),
                     stringResource(R.string.count_and_bytes, status.upstreamCount(),
@@ -315,6 +319,22 @@ private fun recencyBlobText(status: DropboxStatus): String {
     val whenText = DateFormat.getDateFormat(context).format(Date(ts)) + " " +
             DateFormat.getTimeFormat(context).format(Date(ts))
     return stringResource(R.string.status_recency_blob_age, age, whenText)
+}
+
+/** The dropbox's request for its own recency blob: outstanding (since when), answered or abandoned (when). */
+@Composable
+private fun recencyRequestText(status: DropboxStatus): String {
+    val control = status.control()
+    val now = System.currentTimeMillis()
+    return when (StatusFormat.recencyRequestState(control)) {
+        RecencyRequestState.NONE_YET -> stringResource(R.string.status_recency_request_none)
+        RecencyRequestState.OUTSTANDING -> stringResource(R.string.status_recency_request_outstanding,
+                control.recencyRequestSeq(), StatusFormat.formatAge(now - control.recencyRequestedAtMillis()))
+        RecencyRequestState.ANSWERED -> stringResource(R.string.status_recency_request_answered,
+                control.recencyAnsweredSeq(), StatusFormat.formatAge(now - control.recencyGrantAtMillis()))
+        RecencyRequestState.ABANDONED -> stringResource(R.string.status_recency_request_abandoned,
+                control.recencyRequestSeq(), StatusFormat.formatAge(now - control.recencyAbandonedAtMillis()))
+    }
 }
 
 @Composable

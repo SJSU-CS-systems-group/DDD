@@ -25,12 +25,6 @@ public final class DropboxPrefs {
     public static final String KEY_DRAIN_CAP_S = "drain_cap_s";
     /** End VISIT early after a successful carrier exchange. */
     public static final String KEY_RETURN_AFTER_VISIT = "return_after_visit";
-    /**
-     * Advertise a new transport id at the start of every hosting period, so clients' "new data" filter
-     * (blobTimestamp &gt; lastExchange per transportId, Research/R3) lets each client exchange once per period
-     * ({@code service/HostPeriodIdRotator}).
-     */
-    public static final String KEY_ROTATE_ADVERTISED_ID = "rotate_advertised_id";
     /** Store capacity, megabytes. */
     public static final String KEY_MAX_STORAGE_MB = "max_storage_mb";
     /**
@@ -61,7 +55,6 @@ public final class DropboxPrefs {
     public static final int DEFAULT_TRANSPORT_PERIOD_S = (int) (CycleConfig.DEFAULT_TRANSPORT_PERIOD_MS / 1000);
     public static final int DEFAULT_DRAIN_CAP_S = (int) (CycleConfig.DEFAULT_DRAIN_CAP_MS / 1000);
     public static final boolean DEFAULT_RETURN_AFTER_VISIT = CycleConfig.DEFAULT_RETURN_AFTER_VISIT;
-    public static final boolean DEFAULT_ROTATE_ADVERTISED_ID = true;
     public static final int DEFAULT_MAX_STORAGE_MB = 1024;
     public static final boolean DEFAULT_KEEP_AWAKE = true;
     public static final boolean DEFAULT_START_ON_BOOT = true;

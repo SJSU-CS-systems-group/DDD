@@ -48,6 +48,8 @@ import static org.junit.Assert.assertTrue;
  */
 public class TransportVisitClientTest {
     private static final String CARRIER = "carrier-T1";
+    /** The dropbox's own sender id: never the carrier's ("sha1-of-T"). */
+    private static final String OWN_SENDER = "own-dropbox-sender";
 
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
@@ -69,7 +71,7 @@ public class TransportVisitClientTest {
         GrpcSecurityKey dropboxKey = new GrpcSecurityKey(tmp.newFolder("GrpcSecurity").toPath(), SecurityUtils.SERVER);
         client = new TransportVisitClient(store,
                                           ledger,
-                                          recency,
+                                          recency::isServerSigned,
                                           CarrierChannelFactory.tls(dropboxKey),
                                           VisitOptions.DEFAULTS.withProbe(3, 50),
                                           System::currentTimeMillis);
@@ -131,8 +133,9 @@ public class TransportVisitClientTest {
 
         assertTrue(r.toString(), r.ok());
         assertTrue(r.reachable());
-        assertTrue(r.recencyUpdated());
-        assertEquals(1_000, recency.currentTimestamp());
+        assertTrue(r.carrierTrusted());
+        assertEquals("the carrier's blob is never offered", 0, recency.offers);
+        assertEquals(0, recency.currentTimestamp());
         assertEquals(1, r.uploaded());
         assertEquals(2, r.downloaded());
         assertEquals(1, r.skipped());
@@ -161,7 +164,7 @@ public class TransportVisitClientTest {
         VisitResult again = visit();
 
         assertTrue(again.toString(), again.ok());
-        assertFalse("same blob timestamp is not newer", again.recencyUpdated());
+        assertTrue(again.carrierTrusted());
         assertEquals(0, again.uploaded());
         assertEquals(0, again.downloaded());
         assertEquals(2, again.skipped());
@@ -245,20 +248,21 @@ public class TransportVisitClientTest {
         VisitResult r = client.visit(InetAddress.getLoopbackAddress(), carrier.port, CARRIER, () -> true, () -> true);
 
         assertTrue(r.stoppedEarly());
-        assertFalse(r.recencyFetched());
+        assertFalse(r.carrierTrusted());
         assertEquals(0, r.uploaded());
         assertEquals(0, carrier.psiExchanges.get());
     }
 
     @Test(timeout = 60_000)
-    public void recencyIsFetchedEvenWhenAlreadyToldToStop() throws Exception {
+    public void carrierRecencyIsProbedEvenWhenAlreadyToldToStop() throws Exception {
         carrier.recency = successBlob(5_000);
         dropboxHoldsUpstream("up1", 100);
         carrierHolds("d1", 100);
 
         VisitResult r = visit(() -> false);
 
-        assertTrue(r.recencyUpdated());
+        assertTrue(r.carrierTrusted());
+        assertEquals(0, recency.offers);
         assertTrue(r.stoppedEarly());
         assertEquals(0, r.uploaded());
         assertEquals(0, r.downloaded());
@@ -273,7 +277,7 @@ public class TransportVisitClientTest {
         VisitResult r = visit();
 
         assertTrue(r.toString(), r.ok());
-        assertFalse(r.recencyUpdated());
+        assertFalse(r.carrierTrusted());
         assertEquals(0, recency.currentTimestamp());
         assertEquals(1, r.downloaded());
     }
@@ -417,7 +421,8 @@ public class TransportVisitClientTest {
         JsonForwardLedger realLedger = new JsonForwardLedger(paths);
         ECKeyPair server = Curve.generateKeyPair();
         FileRecencyBlobStore realRecency =
-                new FileRecencyBlobStore(paths, new ServerTrust(server.getPublicKey(), System::currentTimeMillis));
+                new FileRecencyBlobStore(paths, new ServerTrust(server.getPublicKey(), System::currentTimeMillis),
+                                         OWN_SENDER);
         Staged up = realStore.beginStaging(Direction.UPSTREAM);
         try (var out = up.open()) {
             Files.copy(BundleFixtures.bundleJar(fixtures, "realUp", "realUp", 1000), out);
@@ -427,7 +432,7 @@ public class TransportVisitClientTest {
         Path d1 = carrierHolds("d1", 2000);
         TransportVisitClient real = new TransportVisitClient(realStore,
                                                              realLedger,
-                                                             realRecency,
+                                                             realRecency::isServerSigned,
                                                              CarrierChannelFactory.tls(null),
                                                              VisitOptions.DEFAULTS.withProbe(3, 50),
                                                              System::currentTimeMillis);
@@ -435,9 +440,9 @@ public class TransportVisitClientTest {
         VisitResult r = real.visit(InetAddress.getLoopbackAddress(), carrier.port, CARRIER, () -> true);
 
         assertTrue(r.toString(), r.ok());
-        assertTrue(r.recencyFetched());
-        assertTrue(r.recencyUpdated());
-        assertEquals(7_000, realRecency.currentTimestamp());
+        assertTrue(r.carrierTrusted());
+        assertEquals("a carrier's blob is never stored, however genuine", 0, realRecency.currentTimestamp());
+        assertFalse(Files.exists(paths.recencyBlobFile));
         assertTrue(realLedger.wasForwardedTo("realUp", CARRIER));
         assertSameBytes(realStore.pathFor(Direction.UPSTREAM, "realUp"), carrier.toServer.resolve("realUp"));
         assertSameBytes(d1, realStore.pathFor(Direction.DOWNSTREAM, "d1"));
@@ -445,18 +450,20 @@ public class TransportVisitClientTest {
     }
 
     /**
-     * Audit M5: a carrier synced to another deployment's server serves a SUCCESS blob our clients would reject.
-     * It is neither stored nor counted as "recency fetched" (which drives id rotation and the bootstrap early
-     * return), while its bundles are still exchanged as usual.
+     * Audit M5 and 09 Own Recency Blob Design: a carrier synced to another deployment's server serves a SUCCESS
+     * blob our clients would reject, so its sender id is not believed; its bundles are still exchanged as usual.
+     * A carrier synced to OUR server is trusted for its sender id, but its blob is not stored either.
      */
     @Test(timeout = 60_000)
-    public void foreignServerBlobIsNotTrustedOrStored() throws Exception {
+    public void carrierBlobIsNeverStoredWhetherTrustedOrNot() throws Exception {
         DropboxPaths paths = new DropboxPaths(tmp.newFolder("trustRoot").toPath());
         ECKeyPair ours = Curve.generateKeyPair();
         ECKeyPair foreign = Curve.generateKeyPair();
         FileRecencyBlobStore realRecency =
-                new FileRecencyBlobStore(paths, new ServerTrust(ours.getPublicKey(), System::currentTimeMillis));
-        TransportVisitClient real = new TransportVisitClient(store, ledger, realRecency, CarrierChannelFactory.tls(null),
+                new FileRecencyBlobStore(paths, new ServerTrust(ours.getPublicKey(), System::currentTimeMillis),
+                                         OWN_SENDER);
+        TransportVisitClient real = new TransportVisitClient(store, ledger, realRecency::isServerSigned,
+                                                             CarrierChannelFactory.tls(null),
                                                              VisitOptions.DEFAULTS.withProbe(3, 50),
                                                              System::currentTimeMillis);
         carrier.recency = signedBlob(foreign, 9_000);
@@ -465,16 +472,31 @@ public class TransportVisitClientTest {
         VisitResult r = real.visit(InetAddress.getLoopbackAddress(), carrier.port, CARRIER, () -> true);
 
         assertTrue(r.toString(), r.ok());
-        assertFalse(r.recencyFetched());
-        assertFalse(r.recencyUpdated());
+        assertFalse(r.carrierTrusted());
         assertEquals(0, realRecency.currentTimestamp());
         assertEquals(List.of("d1"), downstreamIds());
 
         carrier.recency = signedBlob(ours, 8_000);
         VisitResult good = real.visit(InetAddress.getLoopbackAddress(), carrier.port, CARRIER, () -> true);
-        assertTrue(good.recencyFetched());
-        assertTrue(good.recencyUpdated());
-        assertEquals(8_000, realRecency.currentTimestamp());
+        assertTrue(good.toString(), good.ok());
+        assertTrue(good.carrierTrusted());
+        assertEquals("trusted, yet never stored", 0, realRecency.currentTimestamp());
+        assertFalse(realRecency.current().isPresent());
+    }
+
+    /** Visit success does not depend on the carrier's getRecencyBlob: a failing call is not a visit error. */
+    @Test(timeout = 60_000)
+    public void failingCarrierRecencyCallIsNotAVisitError() throws Exception {
+        carrier.recencyFailure = io.grpc.Status.INTERNAL.withDescription("no blob for you");
+        dropboxHoldsUpstream("up1", 100);
+        carrierHolds("d1", 100);
+
+        VisitResult r = visit();
+
+        assertTrue(r.toString(), r.ok());
+        assertFalse(r.carrierTrusted());
+        assertEquals(1, r.uploaded());
+        assertEquals(1, r.downloaded());
     }
 
     private static GetRecencyBlobResponse signedBlob(ECKeyPair signer, long ts) throws Exception {

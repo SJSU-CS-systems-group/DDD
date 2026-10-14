@@ -9,7 +9,6 @@ import io.grpc.stub.ClientResponseObserver;
 import net.discdd.bundledropbox.store.BundleRecord;
 import net.discdd.bundledropbox.store.Direction;
 import net.discdd.bundledropbox.store.ForwardLedger;
-import net.discdd.bundledropbox.store.RecencyBlobStore;
 import net.discdd.bundledropbox.store.RelayStore;
 import net.discdd.bundledropbox.store.Staged;
 import net.discdd.grpc.BundleChunk;
@@ -55,6 +54,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
+import java.util.function.Predicate;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -73,13 +73,15 @@ import static java.util.logging.Level.WARNING;
  *   <li><b>Socket probe</b> of {@code host:7777} with bounded retries, as the stock client does
  *       ({@code ClientBundleTransmission.isServerRunning}): right after a P2P join the carrier's port may not be
  *       routable yet.</li>
- *   <li><b>{@code getRecencyBlob}</b>, offered verbatim to the {@link RecencyBlobStore}, which keeps it only if
- *       the dropbox's clients would accept it (pinned server key, valid signature, not from the future). This
- *       always runs, even if {@code keepGoing} is already false: it is cheap and it is the only way a fresh
- *       dropbox can ever host (the stock client aborts the whole exchange without a SUCCESS, server-signed
- *       recency blob, R3/R4 §4.4).</li>
+ *   <li><b>{@code getRecencyBlob}</b>, as a stock client does. The carrier's blob is <b>never stored or
+ *       served</b>: it names the carrier, not the dropbox (09 Own Recency Blob Design). It is only checked with
+ *       {@code carrierBlobTrusted} (pinned server key, valid signature, not from the future); if it passes, its
+ *       {@code senderId} names the carrier in the dropbox endpoint's routing metadata ({@link
+ *       ControlChannel#accept}). A failure here is logged, not counted as a visit error: nothing else depends on
+ *       it.</li>
  *   <li><b>Own control bundle</b> ({@link ControlChannel#ownBundleForVisit()}): the dropbox's own DDD client
- *       bundle, carrying its inventory report and the ack of the last retention plan it processed, is uploaded
+ *       bundle, carrying its inventory report, its outstanding recency request (the dropbox's only way to get a
+ *       recency blob of its own) and the ack of the last control bundle it processed, is uploaded
  *       <b>before</b> any relayed bundle so a short dwell never starves the server-managed cleanup loop
  *       (06 Storage Management Design "Visit flow"). It is not in the relay store or the ledger; an id already
  *       acknowledged by this carrier is not re-sent.</li>
@@ -95,9 +97,10 @@ import static java.util.logging.Level.WARNING;
  *       {@link ControlChannel#accept} and <b>never</b> into the relay store: no client could ever use it. When
  *       the quota is full the walk goes on in <b>control-only</b> mode (see {@link #CONTROL_BUNDLE_MAX_BYTES}),
  *       because the retention plan that frees the space arrives in exactly such a bundle.</li>
- *   <li><b>Ack re-upload</b>: if a retention plan was processed during this visit, the dropbox's own bundle is
- *       regenerated (it now acks the plan bundle and reports the plan's results) and uploaded once more, which
- *       saves the server a full carrier round trip (Research/R7 §8).</li>
+ *   <li><b>Ack re-upload</b>: if a control bundle (retention plan, recency grant) was processed during this visit,
+ *       the dropbox's own bundle is regenerated (it now acks that bundle, reports the plan's results and carries
+ *       the next recency request) and uploaded once more, which saves the server a full carrier round trip
+ *       (Research/R7 §8).</li>
  * </ol>
  *
  * <p><b>Stopping.</b> {@code keepGoing} is checked BETWEEN bundles only, so a bundle in flight always completes
@@ -153,7 +156,7 @@ public final class TransportVisitClient {
 
     private final RelayStore store;
     private final ForwardLedger ledger;
-    private final RecencyBlobStore recencyStore;
+    private final Predicate<byte[]> carrierBlobTrusted;
     private final ControlChannel control;
     private final CarrierChannelFactory channelFactory;
     private final VisitOptions options;
@@ -182,18 +185,20 @@ public final class TransportVisitClient {
      *
      * @param store          the relay store (UPSTREAM is read, DOWNSTREAM is written)
      * @param ledger         per-carrier record of acknowledged uploads
-     * @param recencyStore   cache of the newest server-signed recency blob
+     * @param carrierBlobTrusted true if a serialized carrier {@code GetRecencyBlobResponse} is signed by the server
+     *                           the dropbox's clients trust ({@code RecencyBlobStore::isServerSigned}); only
+     *                           decides whether the carrier's {@code senderId} is believed
      * @param control        the dropbox's own control endpoint, or {@link ControlChannel#NONE}
      * @param identityOrNull the dropbox TLS identity presented as client certificate, or {@code null}
      */
     public TransportVisitClient(RelayStore store,
                                 ForwardLedger ledger,
-                                RecencyBlobStore recencyStore,
+                                Predicate<byte[]> carrierBlobTrusted,
                                 ControlChannel control,
                                 GrpcSecurityKey identityOrNull) {
         this(store,
              ledger,
-             recencyStore,
+             carrierBlobTrusted,
              control,
              CarrierChannelFactory.tls(identityOrNull),
              VisitOptions.DEFAULTS,
@@ -203,16 +208,16 @@ public final class TransportVisitClient {
     /**
      * Relay-only constructor (no control channel), for tests of the relay path.
      *
-     * @see #TransportVisitClient(RelayStore, ForwardLedger, RecencyBlobStore, ControlChannel, CarrierChannelFactory,
+     * @see #TransportVisitClient(RelayStore, ForwardLedger, Predicate, ControlChannel, CarrierChannelFactory,
      *      VisitOptions, LongSupplier)
      */
     public TransportVisitClient(RelayStore store,
                                 ForwardLedger ledger,
-                                RecencyBlobStore recencyStore,
+                                Predicate<byte[]> carrierBlobTrusted,
                                 CarrierChannelFactory channelFactory,
                                 VisitOptions options,
                                 LongSupplier wallClock) {
-        this(store, ledger, recencyStore, ControlChannel.NONE, channelFactory, options, wallClock);
+        this(store, ledger, carrierBlobTrusted, ControlChannel.NONE, channelFactory, options, wallClock);
     }
 
     /**
@@ -220,7 +225,7 @@ public final class TransportVisitClient {
      *
      * @param store          the relay store
      * @param ledger         per-carrier record of acknowledged uploads
-     * @param recencyStore   cache of the newest server-signed recency blob
+     * @param carrierBlobTrusted whether a carrier's serialized recency blob comes from our server
      * @param control        the dropbox's own control endpoint, or {@link ControlChannel#NONE}
      * @param channelFactory creates one new channel per visit
      * @param options        probe, deadline and pass bounds
@@ -228,14 +233,14 @@ public final class TransportVisitClient {
      */
     public TransportVisitClient(RelayStore store,
                                 ForwardLedger ledger,
-                                RecencyBlobStore recencyStore,
+                                Predicate<byte[]> carrierBlobTrusted,
                                 ControlChannel control,
                                 CarrierChannelFactory channelFactory,
                                 VisitOptions options,
                                 LongSupplier wallClock) {
         this.store = Objects.requireNonNull(store, "store");
         this.ledger = Objects.requireNonNull(ledger, "ledger");
-        this.recencyStore = Objects.requireNonNull(recencyStore, "recencyStore");
+        this.carrierBlobTrusted = Objects.requireNonNull(carrierBlobTrusted, "carrierBlobTrusted");
         this.control = Objects.requireNonNull(control, "control");
         this.channelFactory = Objects.requireNonNull(channelFactory, "channelFactory");
         this.options = Objects.requireNonNull(options, "options");
@@ -344,8 +349,7 @@ public final class TransportVisitClient {
         private final BooleanSupplier cancelled;
 
         private boolean reachable;
-        private boolean recencyFetched;
-        private boolean recencyUpdated;
+        private boolean carrierTrusted;
         private int uploaded;
         private int downloaded;
         private int skipped;
@@ -385,8 +389,7 @@ public final class TransportVisitClient {
             }
             VisitResult result = new VisitResult(carrierId,
                                                  reachable,
-                                                 recencyFetched,
-                                                 recencyUpdated,
+                                                 carrierTrusted,
                                                  uploaded,
                                                  downloaded,
                                                  skipped,
@@ -446,48 +449,52 @@ public final class TransportVisitClient {
         // ---------------------------------------------------------------- recency
 
         /**
-         * Fetches the carrier's recency blob and offers the serialized response to the store, which keeps it only
-         * if the dropbox's clients would accept it and it is strictly newer. A carrier that never synced with the
-         * server answers with the default instance (status UNDEFINED), which is normal and not an error.
-         *
-         * <p>{@code recencyFetched} means "this carrier holds a blob our clients trust", not merely SUCCESS: a
-         * carrier synced to another deployment's server must not count as in sync (the service rotates the
-         * advertised id and ends a bootstrap VISIT early on it, Audit M5).
-         *
-         * <p>Re-serialization is safe: the server signature covers the {@code RecencyBlob} message, which the
-         * stock client re-serializes itself before verifying.
+         * Asks the carrier for its recency blob, as a stock client would, only to learn whether the carrier synced
+         * with our server and, if so, its {@code senderId} (the transport id that server routes replies by,
+         * R7 §4). The blob is <b>never</b> stored or served: it was minted for the carrier, and the dropbox gets
+         * its own through the control channel (09 Own Recency Blob Design). A carrier that never synced answers
+         * with the default instance (status UNDEFINED); that, and a failing RPC, are logged, not visit errors.
          */
         private void fetchRecencyBlob(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blocking) {
+            GetRecencyBlobResponse response;
             try {
-                GetRecencyBlobResponse response = blocking.withDeadlineAfter(options.shortDeadlineMs(), MILLISECONDS)
+                response = blocking.withDeadlineAfter(options.shortDeadlineMs(), MILLISECONDS)
                         .getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
-                if (response.getStatus() != RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS) {
-                    logger.log(INFO, "carrier " + carrierId + " has no server-signed recency blob (status " +
-                            response.getStatus() + "); it has probably never synced with the server");
-                }
-                byte[] raw = response.toByteArray();
-                recencyFetched = recencyStore.isTrusted(raw);
-                recencyUpdated = recencyStore.offer(raw);
-                String senderId = response.getRecencyBlob().getSenderId();
-                // Only a blob from our server names the carrier the way that server routes (R7 §4).
-                if (recencyFetched && !senderId.isEmpty()) carrierSenderId = senderId;
-                if (response.getStatus() == RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS && !recencyFetched) {
-                    logger.log(WARNING, "carrier " + carrierId + " serves a recency blob our clients would reject " +
-                            "(another server, bad signature or future timestamp); not relayed");
-                }
-                logger.log(INFO, "recency blob ts=" + response.getRecencyBlob().getBlobTimestamp() + " stored=" +
-                        recencyUpdated);
             } catch (StatusRuntimeException e) {
-                rpcFailed(e.getStatus(), "getRecencyBlob");
+                checkCancelled();
+                io.grpc.Status.Code code = e.getStatus().getCode();
+                if (code == io.grpc.Status.Code.UNAVAILABLE || code == io.grpc.Status.Code.CANCELLED) {
+                    throw new CarrierLost("getRecencyBlob failed: " + e.getStatus());
+                }
+                logger.log(INFO, "carrier " + carrierId + " did not answer getRecencyBlob (" + e.getStatus() +
+                        "); its sender id stays unknown");
+                return;
             }
+            if (response.getStatus() != RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS) {
+                logger.log(INFO, "carrier " + carrierId + " has no server-signed recency blob (status " +
+                        response.getStatus() + "); it has probably never synced with the server");
+                return;
+            }
+            carrierTrusted = carrierBlobTrusted.test(response.toByteArray());
+            String senderId = response.getRecencyBlob().getSenderId();
+            // Only a blob from our server names the carrier the way that server routes (R7 §4).
+            if (carrierTrusted && !senderId.isEmpty()) carrierSenderId = senderId;
+            if (!carrierTrusted) {
+                logger.log(WARNING, "carrier " + carrierId + " serves a recency blob our clients would reject " +
+                        "(another server, bad signature or future timestamp)");
+            }
+            logger.log(INFO, "carrier " + carrierId + " recency blob ts=" +
+                    response.getRecencyBlob().getBlobTimestamp() + " trusted=" + carrierTrusted +
+                    " (names the carrier for routing only, never stored)");
         }
 
         // ---------------------------------------------------------------- upload
 
         /**
          * Uploads the dropbox's own control bundle, unless this carrier already acknowledged the same id. Runs
-         * before the relayed uploads: it is small, and the inventory it carries is what lets the server free
-         * the dropbox's storage. A failure is recorded like any upload failure and retried on the next visit.
+         * before the relayed uploads: it is small, the inventory it carries is what lets the server free the
+         * dropbox's storage, and its recency request is how the dropbox gets a blob to host with. A failure is
+         * recorded like any upload failure and retried on the next visit.
          */
         private void uploadOwnBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub async) {
             checkContinue();

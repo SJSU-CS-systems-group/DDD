@@ -42,7 +42,10 @@ public final class DropboxPaths {
     public final Path staging;
     /** {@code root/Dropbox/meta}: ledgers, logs and the recency blob. */
     public final Path meta;
-    /** {@code root/Dropbox/meta/recencyBlob.bin}: raw {@code GetRecencyBlobResponse} relayed from carriers. */
+    /**
+     * {@code root/Dropbox/meta/recencyBlob.bin}: the dropbox's own server-issued {@code GetRecencyBlobResponse}, raw,
+     * as received in a control {@code RecencyGrant} (09 Own Recency Blob Design).
+     */
     public final Path recencyBlobFile;
     /** {@code root/GrpcSecurity}: TLS keys and self-signed cert, passed to {@code GrpcSecurityKey}. */
     public final Path grpcSecurity;

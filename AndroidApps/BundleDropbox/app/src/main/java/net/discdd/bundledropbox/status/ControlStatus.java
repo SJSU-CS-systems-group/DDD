@@ -4,8 +4,9 @@ import java.util.Objects;
 
 /**
  * Immutable snapshot of the dropbox's control channel for the Status and Storage tabs: the dropbox's own client
- * id at the server, the server keys it trusts, the newest inventory report and retention plan, and how much the
- * server has had deleted (06 Storage Management Design "UI"). Published by {@code control/DropboxControlManager}
+ * id at the server, the server keys it trusts, the newest inventory report and retention plan, how much the
+ * server has had deleted (06 Storage Management Design "UI"), and the recency request/grant exchange that gets
+ * the dropbox its own recency blob (09 Own Recency Blob Design). Published by {@code control/DropboxControlManager}
  * and carried in {@link DropboxStatus#control()}.
  *
  * <p>Times are the dropbox's wall clock (epoch millis), 0 when the event has not happened yet.
@@ -26,6 +27,11 @@ public final class ControlStatus {
     private final long deletedDownstreamCount;
     private final long deletedDownstreamBytes;
     private final String problem;
+    private final long recencyRequestSeq;
+    private final long recencyRequestedAtMillis;
+    private final long recencyAnsweredSeq;
+    private final long recencyGrantAtMillis;
+    private final long recencyAbandonedAtMillis;
 
     /**
      * @param available              true if the control endpoint is open
@@ -57,6 +63,46 @@ public final class ControlStatus {
         this.deletedDownstreamCount = deletedDownstreamCount;
         this.deletedDownstreamBytes = deletedDownstreamBytes;
         this.problem = problem;
+        this.recencyRequestSeq = 0;
+        this.recencyRequestedAtMillis = 0;
+        this.recencyAnsweredSeq = 0;
+        this.recencyGrantAtMillis = 0;
+        this.recencyAbandonedAtMillis = 0;
+    }
+
+    private ControlStatus(ControlStatus base, long recencyRequestSeq, long recencyRequestedAtMillis,
+                          long recencyAnsweredSeq, long recencyGrantAtMillis, long recencyAbandonedAtMillis) {
+        this.available = base.available;
+        this.endpointClientId = base.endpointClientId;
+        this.serverKeys = base.serverKeys;
+        this.lastReportSeq = base.lastReportSeq;
+        this.lastReportAtMillis = base.lastReportAtMillis;
+        this.lastPlanSeq = base.lastPlanSeq;
+        this.lastPlanAtMillis = base.lastPlanAtMillis;
+        this.deletedUpstreamCount = base.deletedUpstreamCount;
+        this.deletedUpstreamBytes = base.deletedUpstreamBytes;
+        this.deletedDownstreamCount = base.deletedDownstreamCount;
+        this.deletedDownstreamBytes = base.deletedDownstreamBytes;
+        this.problem = base.problem;
+        this.recencyRequestSeq = recencyRequestSeq;
+        this.recencyRequestedAtMillis = recencyRequestedAtMillis;
+        this.recencyAnsweredSeq = recencyAnsweredSeq;
+        this.recencyGrantAtMillis = recencyGrantAtMillis;
+        this.recencyAbandonedAtMillis = recencyAbandonedAtMillis;
+    }
+
+    /**
+     * @param recencyRequestSeq        newest recency request queued (0 = none)
+     * @param recencyRequestedAtMillis when it was queued
+     * @param recencyAnsweredSeq       highest request a grant answered (0 = none)
+     * @param recencyGrantAtMillis     when the newest grant arrived
+     * @param recencyAbandonedAtMillis when the operator abandoned the newest request (0 = it was not)
+     * @return a copy of this status carrying the recency exchange
+     */
+    public ControlStatus withRecency(long recencyRequestSeq, long recencyRequestedAtMillis, long recencyAnsweredSeq,
+                                     long recencyGrantAtMillis, long recencyAbandonedAtMillis) {
+        return new ControlStatus(this, recencyRequestSeq, recencyRequestedAtMillis, recencyAnsweredSeq,
+                                 recencyGrantAtMillis, recencyAbandonedAtMillis);
     }
 
     /** @return the status of a control channel that could not be opened */
@@ -100,6 +146,27 @@ public final class ControlStatus {
     /** @return why the channel is unavailable or degraded, or {@code null} */
     public String problem() { return problem; }
 
+    /** @return newest recency request queued, 0 if none yet */
+    public long recencyRequestSeq() { return recencyRequestSeq; }
+
+    /** @return when it was queued (wall clock), 0 if none yet */
+    public long recencyRequestedAtMillis() { return recencyRequestedAtMillis; }
+
+    /** @return highest recency request a grant answered, 0 if none yet */
+    public long recencyAnsweredSeq() { return recencyAnsweredSeq; }
+
+    /** @return when the newest grant arrived (wall clock), 0 if none yet */
+    public long recencyGrantAtMillis() { return recencyGrantAtMillis; }
+
+    /**
+     * @return when the operator abandoned the newest request (wall clock), 0 unless it was abandoned rather than
+     *         answered; a new request or a late grant clears it
+     */
+    public long recencyAbandonedAtMillis() { return recencyAbandonedAtMillis; }
+
+    /** @return true while a recency request waits for the server's grant */
+    public boolean recencyOutstanding() { return recencyRequestSeq > recencyAnsweredSeq; }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -111,21 +178,27 @@ public final class ControlStatus {
                 deletedUpstreamBytes == c.deletedUpstreamBytes && deletedDownstreamCount == c.deletedDownstreamCount &&
                 deletedDownstreamBytes == c.deletedDownstreamBytes &&
                 Objects.equals(endpointClientId, c.endpointClientId) && serverKeys.equals(c.serverKeys) &&
-                Objects.equals(problem, c.problem);
+                Objects.equals(problem, c.problem) && recencyRequestSeq == c.recencyRequestSeq &&
+                recencyRequestedAtMillis == c.recencyRequestedAtMillis &&
+                recencyAnsweredSeq == c.recencyAnsweredSeq && recencyGrantAtMillis == c.recencyGrantAtMillis &&
+                recencyAbandonedAtMillis == c.recencyAbandonedAtMillis;
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(available, endpointClientId, serverKeys, lastReportSeq, lastReportAtMillis, lastPlanSeq,
                             lastPlanAtMillis, deletedUpstreamCount, deletedUpstreamBytes, deletedDownstreamCount,
-                            deletedDownstreamBytes, problem);
+                            deletedDownstreamBytes, problem, recencyRequestSeq, recencyRequestedAtMillis,
+                            recencyAnsweredSeq, recencyGrantAtMillis, recencyAbandonedAtMillis);
     }
 
     @Override
     public String toString() {
         return "ControlStatus{" + (available ? "client=" + endpointClientId : "unavailable") + ", keys=" +
                 serverKeys + ", report#" + lastReportSeq + ", plan#" + lastPlanSeq + ", deleted up=" +
-                deletedUpstreamCount + " down=" + deletedDownstreamCount +
+                deletedUpstreamCount + " down=" + deletedDownstreamCount + ", recency request#" + recencyRequestSeq +
+                (recencyOutstanding() ? " outstanding" : "") + ", answered#" + recencyAnsweredSeq +
+                (recencyAbandonedAtMillis > 0 ? " (abandoned)" : "") +
                 (problem == null ? "" : ", problem=" + problem) + "}";
     }
 }

@@ -28,9 +28,11 @@ import java.util.function.LongSupplier;
  *       ("signature verification failed").</li>
  * </ol>
  * Anything the client would reject is rejected here, so the dropbox never stores or advertises a blob that
- * aborts its clients' exchanges (Audit M5/M6). The key is the same one the clients pin: the service passes
- * {@code ServerKeys.identityKey()}, i.e. android-core's {@code server_identity.pub} raw resource or an
- * operator-imported key (custom server keys via QR, 06 Storage Management Design).
+ * aborts its clients' exchanges (Audit M5/M6). Like the stock client, it does not look at {@code senderId};
+ * {@code FileRecencyBlobStore} adds the "minted for this dropbox" check on top. The key is the same one the
+ * clients pin: the service passes {@code ServerKeys.identityKey()}, i.e. android-core's
+ * {@code server_identity.pub} raw resource or an operator-imported key (custom server keys via QR, 06 Storage
+ * Management Design).
  *
  * <p>Known limit: the future bound uses the dropbox's own clock. An offline dropbox whose clock runs more
  * than 60 s slow rejects fresh genuine blobs; its clients would reject them too if their clocks were equally

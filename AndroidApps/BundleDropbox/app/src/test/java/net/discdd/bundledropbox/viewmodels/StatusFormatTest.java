@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNull;
 
 import net.discdd.bundledropbox.cycle.CycleListener;
 import net.discdd.bundledropbox.cycle.CycleMode;
+import net.discdd.bundledropbox.status.ControlStatus;
 import net.discdd.bundledropbox.status.DropboxStatus;
 
 import org.junit.Test;
@@ -53,13 +54,39 @@ public class StatusFormatTest {
 
     @Test
     public void bootstrapWithoutBlobShowsWaitingButStillShowsExchange() {
-        assertEquals(OperatorState.WAITING_FOR_FIRST_VISIT,
+        assertEquals(OperatorState.WAITING_FOR_RECENCY_BLOB,
                      StatusFormat.operatorState(status(CycleMode.VISIT_STARTING, 0, 0), false));
-        assertEquals(OperatorState.WAITING_FOR_FIRST_VISIT, StatusFormat.operatorState(status(CycleMode.VISITING, 0, 0), false));
-        assertEquals(OperatorState.WAITING_FOR_FIRST_VISIT,
+        assertEquals(OperatorState.WAITING_FOR_RECENCY_BLOB, StatusFormat.operatorState(status(CycleMode.VISITING, 0, 0), false));
+        assertEquals(OperatorState.WAITING_FOR_RECENCY_BLOB,
                      StatusFormat.operatorState(status(CycleMode.VISIT_STOPPING, 0, 0), false));
         assertEquals(OperatorState.EXCHANGING_WITH_TRANSPORT,
                      StatusFormat.operatorState(status(CycleMode.VISITING, 0, 1), false));
+    }
+
+    /** 09 Own Recency Blob Design: the Status tab shows whether the request for the own blob is outstanding. */
+    @Test
+    public void recencyRequestStateFollowsTheControlStatus() {
+        ControlStatus open = new ControlStatus(true, "client", "built-in", 0, 0, 0, 0, 0, 0, 0, 0, null);
+        assertEquals(RecencyRequestState.NONE_YET, StatusFormat.recencyRequestState(open));
+        assertEquals(RecencyRequestState.NONE_YET, StatusFormat.recencyRequestState(ControlStatus.NONE));
+        assertEquals(RecencyRequestState.OUTSTANDING,
+                     StatusFormat.recencyRequestState(open.withRecency(1, 100, 0, 0, 0)));
+        assertEquals(RecencyRequestState.ANSWERED,
+                     StatusFormat.recencyRequestState(open.withRecency(1, 100, 1, 200, 0)));
+        assertEquals(RecencyRequestState.OUTSTANDING,
+                     StatusFormat.recencyRequestState(open.withRecency(2, 300, 1, 200, 0)));
+    }
+
+    /** An operator reset abandons the request; it must not read as answered (with an unrelated grant's age). */
+    @Test
+    public void abandonedRecencyRequestIsNotReportedAsAnswered() {
+        ControlStatus open = new ControlStatus(true, "client", "built-in", 0, 0, 0, 0, 0, 0, 0, 0, null);
+        assertEquals("bootstrap request abandoned before any grant", RecencyRequestState.ABANDONED,
+                     StatusFormat.recencyRequestState(open.withRecency(1, 100, 1, 0, 150)));
+        assertEquals("abandoned after an earlier grant", RecencyRequestState.ABANDONED,
+                     StatusFormat.recencyRequestState(open.withRecency(2, 300, 2, 200, 350)));
+        assertEquals("the next request is outstanding again", RecencyRequestState.OUTSTANDING,
+                     StatusFormat.recencyRequestState(open.withRecency(3, 400, 2, 200, 0)));
     }
 
     @Test

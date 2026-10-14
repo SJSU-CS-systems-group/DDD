@@ -40,6 +40,12 @@ import java.util.logging.Logger;
  *       A delayed plan for an earlier refresh of the same page can advance it after a restart, while an
  *       unrelated plan cannot skip unseen entries.</li>
  *   <li>Totals of bundles deleted on server orders, per direction, for the Storage tab.</li>
+ *   <li>{@code recencyRequestSeq} / {@code recencyAnsweredSeq}: the newest recency request queued and the
+ *       newest one a grant answered (09 Own Recency Blob Design). A request is outstanding while
+ *       {@code recencyRequestSeq > recencyAnsweredSeq}; at most one is, so a waiting request never makes the
+ *       dropbox burn a new bundle id per visit. Both survive restarts, so a request is never re-numbered.
+ *       {@code recencyAbandonedAtMillis} is set while the newest request was given up by the operator rather
+ *       than answered by a grant, so the Status tab never reports an abandoned request as answered.</li>
  * </ul>
  *
  * <p>Writes use the store's durable atomic replacement helper: file contents are flushed before rename and the
@@ -188,6 +194,56 @@ public final class ControlStateStore {
         save(next);
     }
 
+    /**
+     * Records that a recency request with {@code requestSeq} was queued in the endpoint's send store. Called
+     * after the ADU is queued: a crash in between re-uses the sequence, which the server answers like the first.
+     *
+     * @param requestSeq the request's sequence number (greater than {@link Snapshot#recencyRequestSeq()})
+     * @param nowMillis  wall clock
+     */
+    public synchronized void recordRecencyRequested(long requestSeq, long nowMillis) throws IOException {
+        State next = state.copy();
+        next.recencyRequestSeq = Math.max(next.recencyRequestSeq, requestSeq);
+        next.recencyRequestedAtMillis = nowMillis;
+        next.recencyAbandonedAtMillis = 0;
+        save(next);
+    }
+
+    /**
+     * Records a received recency grant. A grant answers every request whose sequence is not higher than its
+     * own, whether or not its blob was stored: a grant the dropbox could not use must not leave a request
+     * outstanding forever. A grant numbered above the last request can only exist if the counter was lost
+     * (damaged state file), so the next request continues above it.
+     *
+     * @param requestSeq the grant's {@code requestSeq}
+     * @param stored     true if the store accepted the granted blob
+     * @param nowMillis  wall clock
+     */
+    public synchronized void recordRecencyGranted(long requestSeq, boolean stored, long nowMillis) throws IOException {
+        State next = state.copy();
+        next.recencyAnsweredSeq = Math.max(next.recencyAnsweredSeq, requestSeq);
+        next.recencyRequestSeq = Math.max(next.recencyRequestSeq, requestSeq);
+        next.recencyGrantAtMillis = nowMillis;
+        next.recencyAbandonedAtMillis = 0; // a late grant for an abandoned request did answer it
+        if (stored) next.recencyStoredAtMillis = nowMillis;
+        save(next);
+    }
+
+    /**
+     * Forgets the outstanding recency request (operator recovery): it no longer counts as outstanding, so the next
+     * own bundle carries a new request with the next sequence number. It is recorded as abandoned, not answered
+     * ({@link Snapshot#recencyAbandonedAtMillis()}), until the next request is queued or a grant arrives.
+     *
+     * @param nowMillis wall clock
+     */
+    public synchronized void recordRecencyAbandoned(long nowMillis) throws IOException {
+        if (state.recencyAnsweredSeq >= state.recencyRequestSeq) return;
+        State next = state.copy();
+        next.recencyAnsweredSeq = next.recencyRequestSeq;
+        next.recencyAbandonedAtMillis = nowMillis;
+        save(next);
+    }
+
     private void save(State next) throws IOException {
         byte[] json = GSON.toJson(next).getBytes(StandardCharsets.UTF_8);
         AtomicFiles.write(file, json);
@@ -202,6 +258,8 @@ public final class ControlStateStore {
             if (s.pageAcks == null) s.pageAcks = new ArrayList<>();
             s.pageAcks.removeIf(r -> r == null || r.firstSeq <= 0 || r.lastSeq < r.firstSeq);
             s.pendingResults.removeIf(r -> r == null || r.planSeq <= 0);
+            s.recencyRequestSeq = Math.max(0, s.recencyRequestSeq);
+            s.recencyAnsweredSeq = Math.max(0, s.recencyAnsweredSeq);
             for (PendingResult r : s.pendingResults) {
                 if (r.includedReports == null) r.includedReports = new ArrayList<>();
                 // Old bookkeeping could mark even omitted outcomes as sent. Do not infer receipt from it.
@@ -235,6 +293,12 @@ public final class ControlStateStore {
         String pendingUpstreamEnd;
         String pendingDownstreamEnd;
         List<PageAckRange> pageAcks = new ArrayList<>();
+        long recencyRequestSeq;
+        long recencyRequestedAtMillis;
+        long recencyAnsweredSeq;
+        long recencyGrantAtMillis;
+        long recencyStoredAtMillis;
+        long recencyAbandonedAtMillis;
 
         State copy() {
             State c = new State();
@@ -257,6 +321,12 @@ public final class ControlStateStore {
             c.pendingDownstreamEnd = pendingDownstreamEnd;
             c.pageAcks = new ArrayList<>();
             for (PageAckRange range : pageAcks) c.pageAcks.add(range.copy());
+            c.recencyRequestSeq = recencyRequestSeq;
+            c.recencyRequestedAtMillis = recencyRequestedAtMillis;
+            c.recencyAnsweredSeq = recencyAnsweredSeq;
+            c.recencyGrantAtMillis = recencyGrantAtMillis;
+            c.recencyStoredAtMillis = recencyStoredAtMillis;
+            c.recencyAbandonedAtMillis = recencyAbandonedAtMillis;
             return c;
         }
     }
@@ -356,6 +426,12 @@ public final class ControlStateStore {
         private final String pendingUpstreamEnd;
         private final String pendingDownstreamEnd;
         private final long latestPendingReportSeq;
+        private final long recencyRequestSeq;
+        private final long recencyRequestedAtMillis;
+        private final long recencyAnsweredSeq;
+        private final long recencyGrantAtMillis;
+        private final long recencyStoredAtMillis;
+        private final long recencyAbandonedAtMillis;
 
         private Snapshot(State s) {
             lastReportSeq = s.lastReportSeq;
@@ -382,6 +458,12 @@ public final class ControlStateStore {
             pendingUpstreamEnd = s.pendingUpstreamEnd;
             pendingDownstreamEnd = s.pendingDownstreamEnd;
             latestPendingReportSeq = s.pageAcks.isEmpty() ? 0 : s.pageAcks.get(s.pageAcks.size() - 1).lastSeq;
+            recencyRequestSeq = s.recencyRequestSeq;
+            recencyRequestedAtMillis = s.recencyRequestedAtMillis;
+            recencyAnsweredSeq = s.recencyAnsweredSeq;
+            recencyGrantAtMillis = s.recencyGrantAtMillis;
+            recencyStoredAtMillis = s.recencyStoredAtMillis;
+            recencyAbandonedAtMillis = s.recencyAbandonedAtMillis;
         }
 
         /** @return reportSeq of the newest queued inventory, 0 if none yet */
@@ -428,6 +510,30 @@ public final class ControlStateStore {
         public String pendingDownstreamEnd() { return pendingDownstreamEnd; }
 
         public long latestPendingReportSeq() { return latestPendingReportSeq; }
+
+        /** @return requestSeq of the newest recency request queued, 0 if none yet */
+        public long recencyRequestSeq() { return recencyRequestSeq; }
+
+        /** @return wall-clock time the newest recency request was queued, 0 if none yet */
+        public long recencyRequestedAtMillis() { return recencyRequestedAtMillis; }
+
+        /** @return the highest requestSeq a received grant answered, 0 if none yet */
+        public long recencyAnsweredSeq() { return recencyAnsweredSeq; }
+
+        /** @return wall-clock time the newest grant was received, 0 if none yet */
+        public long recencyGrantAtMillis() { return recencyGrantAtMillis; }
+
+        /** @return wall-clock time a granted blob was last stored, 0 if none yet */
+        public long recencyStoredAtMillis() { return recencyStoredAtMillis; }
+
+        /**
+         * @return wall-clock time the operator abandoned the newest request, 0 unless it was abandoned and neither
+         *         a new request nor a grant has been recorded since
+         */
+        public long recencyAbandonedAtMillis() { return recencyAbandonedAtMillis; }
+
+        /** @return true while a recency request waits for its grant (at most one at a time) */
+        public boolean recencyOutstanding() { return recencyRequestSeq > recencyAnsweredSeq; }
 
         /**
          * @return true if a plan deleted or skipped something and no queued report has carried that outcome yet.

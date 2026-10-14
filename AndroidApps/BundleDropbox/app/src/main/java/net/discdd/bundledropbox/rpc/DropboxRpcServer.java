@@ -107,7 +107,7 @@ public final class DropboxRpcServer {
      *
      * @param grpcKeys     the dropbox's TLS identity ({@code new GrpcSecurityKey(paths.grpcSecurity, SecurityUtils.SERVER)})
      * @param store        relay store
-     * @param recencyBlobs cached carrier recency blob
+     * @param recencyBlobs the dropbox's own server-issued recency blob
      * @param deliveryLog  served-bundle log
      * @param gate         the cycle's gate ({@code RoleCycleController.gate()})
      * @param clock        monotonic clock (the cycle's clock, {@code SystemClock::elapsedRealtime})
@@ -131,7 +131,7 @@ public final class DropboxRpcServer {
      * @param cert          self-signed cert for {@code keyPair} with CN {@code publicKeyToName(pub)}
      * @param port          listen port; 0 picks a free port (see {@link #getPort()})
      * @param store         relay store
-     * @param recencyBlobs  cached carrier recency blob
+     * @param recencyBlobs  the dropbox's own server-issued recency blob
      * @param deliveryLog   served-bundle log
      * @param gate          the cycle's gate
      * @param clock         monotonic clock

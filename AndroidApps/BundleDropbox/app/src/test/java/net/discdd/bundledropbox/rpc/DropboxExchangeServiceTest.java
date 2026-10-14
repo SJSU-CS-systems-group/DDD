@@ -237,7 +237,7 @@ public class DropboxExchangeServiceTest {
 
         GetRecencyBlobResponse blob = GetRecencyBlobResponse.newBuilder()
                 .setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)
-                .setRecencyBlob(RecencyBlob.newBuilder().setBlobTimestamp(123).setNonce(7).setSenderId("carrier"))
+                .setRecencyBlob(RecencyBlob.newBuilder().setBlobTimestamp(123).setNonce(7).setSenderId("own-dropbox"))
                 .setRecencyBlobSignature(ByteString.copyFromUtf8("sig"))
                 .setServerPublicKey(ByteString.copyFromUtf8("pub"))
                 .build();

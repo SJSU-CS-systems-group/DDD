@@ -78,7 +78,7 @@ public class DropboxRpcServerTest {
         blobs = new RpcTestFakes.FakeRecencyBlobStore();
         blobs.blob = GetRecencyBlobResponse.newBuilder()
                 .setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)
-                .setRecencyBlob(RecencyBlob.newBuilder().setBlobTimestamp(1234).setSenderId("carrier"))
+                .setRecencyBlob(RecencyBlob.newBuilder().setBlobTimestamp(1234).setSenderId("own-dropbox"))
                 .build()
                 .toByteArray();
         deliveryLog = new RpcTestFakes.FakeDeliveryLog();

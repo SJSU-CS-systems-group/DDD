@@ -3,6 +3,7 @@ package net.discdd.bundledropbox.viewmodels
 import androidx.annotation.StringRes
 import net.discdd.bundledropbox.R
 import net.discdd.bundledropbox.cycle.CycleMode
+import net.discdd.bundledropbox.status.ControlStatus
 import net.discdd.bundledropbox.status.DropboxStatus
 import java.util.Locale
 
@@ -21,11 +22,25 @@ enum class OperatorState(@StringRes val labelRes: Int, @StringRes val explanatio
     EXCHANGING_WITH_TRANSPORT(R.string.op_exchanging_with_transport, R.string.op_exchanging_with_transport_explain),
     FINISHING_TRANSPORT_TRANSFER(R.string.op_finishing_transport_transfer, R.string.op_finishing_transport_transfer_explain),
     RESTORING_CLIENT_SERVICE(R.string.op_restoring_client_service, R.string.op_restoring_client_service_explain),
-    WAITING_FOR_FIRST_VISIT(R.string.op_waiting_for_first_visit, R.string.op_waiting_for_first_visit_explain),
+    WAITING_FOR_RECENCY_BLOB(R.string.op_waiting_for_recency_blob, R.string.op_waiting_for_recency_blob_explain),
     PAUSED(R.string.op_paused, R.string.op_paused_explain),
     STOPPED_BY_OPERATOR(R.string.op_stopped, R.string.op_stopped_explain),
     NOT_RUNNING(R.string.op_not_running, R.string.op_not_running_explain),
     NEEDS_ATTENTION(R.string.op_needs_attention, R.string.op_needs_attention_explain),
+}
+
+/**
+ * Where the dropbox's request for its own recency blob stands (09 Own Recency Blob Design), for the Status tab.
+ */
+enum class RecencyRequestState {
+    /** No request queued yet (control endpoint new or unavailable). */
+    NONE_YET,
+    /** A request waits for the server's grant: it rides in the own bundle until a carrier round trip answers. */
+    OUTSTANDING,
+    /** The newest request was answered; the next visit queues the next one. */
+    ANSWERED,
+    /** The operator gave up on the newest request (reset recency blob); the next visit queues a new one. */
+    ABANDONED,
 }
 
 /**
@@ -49,8 +64,9 @@ object StatusFormat {
         if (stopped) return OperatorState.STOPPED_BY_OPERATOR
         // Bootstrap (03 Architecture §1): with no recency blob the controller loops VISIT periods only,
         // because the stock client aborts its whole exchange without a SUCCESS recency blob (R1 §0.3,
-        // R3). Searching in that phase is reported as "waiting for first transport visit" so the
-        // operator knows clients cannot be served yet; an actual exchange still shows as such.
+        // R3). The dropbox's own blob comes from the server through carriers (09 Own Recency Blob
+        // Design), so searching in that phase is reported as "waiting for a server-issued recency blob"
+        // and the operator knows clients cannot be served yet; an actual exchange still shows as such.
         val bootstrap = !status.hasRecencyBlob()
         val mode: CycleMode = status.mode() // non-null by contract (Builder requires it)
         return when (mode) {
@@ -60,19 +76,32 @@ object StatusFormat {
             CycleMode.HOST_DRAINING -> OperatorState.FINISHING_CLIENT_TRANSFERS
             CycleMode.HOST_STOPPING -> OperatorState.SWITCHING_TO_TRANSPORT
             CycleMode.VISIT_STARTING ->
-                if (bootstrap) OperatorState.WAITING_FOR_FIRST_VISIT else OperatorState.SEARCHING_FOR_TRANSPORT
+                if (bootstrap) OperatorState.WAITING_FOR_RECENCY_BLOB else OperatorState.SEARCHING_FOR_TRANSPORT
             // One activity-gate token covers a whole carrier exchange (03 Architecture "Visit-side
             // keying"), so activeSessions > 0 while VISITING means a carrier exchange is in progress.
             CycleMode.VISITING -> when {
                 status.activeSessions() > 0 -> OperatorState.EXCHANGING_WITH_TRANSPORT
-                bootstrap -> OperatorState.WAITING_FOR_FIRST_VISIT
+                bootstrap -> OperatorState.WAITING_FOR_RECENCY_BLOB
                 else -> OperatorState.SEARCHING_FOR_TRANSPORT
             }
             CycleMode.VISIT_DRAINING -> OperatorState.FINISHING_TRANSPORT_TRANSFER
             CycleMode.VISIT_STOPPING ->
-                if (bootstrap) OperatorState.WAITING_FOR_FIRST_VISIT else OperatorState.RESTORING_CLIENT_SERVICE
+                if (bootstrap) OperatorState.WAITING_FOR_RECENCY_BLOB else OperatorState.RESTORING_CLIENT_SERVICE
             CycleMode.UNAVAILABLE -> OperatorState.NEEDS_ATTENTION
         }
+    }
+
+    /**
+     * @param control the control channel snapshot ([DropboxStatus.control])
+     * @return whether a recency request is outstanding, answered, abandoned by the operator, or not sent yet. An
+     *         abandoned request is never reported as answered, so the age of an unrelated grant is not shown for it.
+     */
+    @JvmStatic
+    fun recencyRequestState(control: ControlStatus): RecencyRequestState = when {
+        control.recencyRequestSeq() <= 0L -> RecencyRequestState.NONE_YET
+        control.recencyOutstanding() -> RecencyRequestState.OUTSTANDING
+        control.recencyAbandonedAtMillis() > 0L -> RecencyRequestState.ABANDONED
+        else -> RecencyRequestState.ANSWERED
     }
 
     /**

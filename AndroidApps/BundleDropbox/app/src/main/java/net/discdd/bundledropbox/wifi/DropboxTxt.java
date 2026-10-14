@@ -67,8 +67,8 @@ public final class DropboxTxt {
     }
 
     /**
-     * Group name for the dropbox's own group. Uses the stable {@code baseId}, not the rotating advertised
-     * id, so persistent-group reuse keeps working across advertised-id rotations (03 Architecture §5).
+     * Group name for the dropbox's own group. Uses the stable {@code baseId}, which is also the advertised
+     * {@code transportId} (09 Own Recency Blob Design: the per-period id rotation is gone).
      *
      * @param baseId 16-char id derived from the dropbox's TLS key, exactly like the transport's transportId
      * @return {@code "DIRECT-ddd_" + baseId}
@@ -80,7 +80,8 @@ public final class DropboxTxt {
     /**
      * Encodes a raw {@code GetRecencyBlobResponse} for the {@link #KEY_RECENCY_BLOB} TXT value.
      *
-     * @param rawRecencyBlobResponse serialized response as stored by {@code RecencyBlobStore}, may be null
+     * @param rawRecencyBlobResponse the dropbox's own server-issued response as stored by
+     *                               {@code RecencyBlobStore}, may be null
      * @return standard (non-URL) Base64, which is what the client decodes (DDDWifiDirect.java:189); or
      *         null if there is no blob or the TXT entry would exceed {@link #MAX_TXT_ENTRY_CHARS}
      */
@@ -105,8 +106,8 @@ public final class DropboxTxt {
      * than being listed and then aborting every exchange with RecencyException (R3 §2). Normally the
      * controller does not host without a blob at all (bootstrap loops VISIT).
      *
-     * @param advertisedId             the id clients see as {@code transportId} ({@code baseId-gen} when rotation
-     *                                 is on); must be non-blank because the client NPEs on a missing id (R3 §1a)
+     * @param advertisedId             the id clients see as {@code transportId} (the stable {@code baseId});
+     *                                 must be non-blank because the client NPEs on a missing id (R3 §1a)
      * @param encodedRecencyBlobOrNull result of {@link #encodeRecencyBlob(byte[])}
      * @return an unmodifiable, insertion-ordered map
      * @throws IllegalArgumentException if {@code advertisedId} is blank or too long for a TXT entry

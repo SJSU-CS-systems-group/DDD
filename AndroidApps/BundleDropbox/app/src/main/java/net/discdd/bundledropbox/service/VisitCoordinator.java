@@ -28,8 +28,7 @@ import java.util.function.Supplier;
  * So the joiner calls {@link #beginJoin} right before it issues {@code connect}, which takes the token then
  * (and refuses the connect if admissions are already closed), {@link #runVisit} reuses that token, and
  * {@link #endJoin} releases it if the attempt ends without an exchange. A join caught by the dwell end then
- * gets the drain grace (bounded by the drain cap) to finish and at least fetch the carrier's recency blob,
- * which {@code TransportVisitClient} always does even when {@code keepGoing} is already false. If no
+ * gets the drain grace (bounded by the drain cap) to finish cleanly instead of being torn down mid-join. If no
  * {@code beginJoin} preceded the exchange, {@link #runVisit} takes the token itself.
  *
  * <h2>Early return</h2>
@@ -71,7 +70,7 @@ public final class VisitCoordinator implements VisitRunner {
 
     private final Supplier<ActivityGate> gate;
     private final Supplier<Exchange> exchange;
-    private final BooleanSupplier blobStored;
+    private final BooleanSupplier ownBlobHeld;
     private final Events events;
 
     private ActivityGate.Token joinToken; // guarded by this
@@ -81,14 +80,15 @@ public final class VisitCoordinator implements VisitRunner {
      * @param gate       the cycle's gate; read lazily because the driver (which holds this runner) is built
      *                   before the controller. {@code null} means "not wired": every visit is skipped
      * @param exchange   the visit client; read lazily for the same reason
-     * @param blobStored true while a SUCCESS recency blob is stored ({@code recency.currentTimestamp() > 0})
+     * @param ownBlobHeld true while the dropbox holds its own server-issued recency blob
+     *                    ({@code recency.currentTimestamp() > 0}), i.e. while it may HOST
      * @param events     status/log reactions
      */
-    public VisitCoordinator(Supplier<ActivityGate> gate, Supplier<Exchange> exchange, BooleanSupplier blobStored,
+    public VisitCoordinator(Supplier<ActivityGate> gate, Supplier<Exchange> exchange, BooleanSupplier ownBlobHeld,
                             Events events) {
         this.gate = Objects.requireNonNull(gate, "gate");
         this.exchange = Objects.requireNonNull(exchange, "exchange");
-        this.blobStored = Objects.requireNonNull(blobStored, "blobStored");
+        this.ownBlobHeld = Objects.requireNonNull(ownBlobHeld, "ownBlobHeld");
         this.events = Objects.requireNonNull(events, "events");
     }
 
@@ -177,7 +177,7 @@ public final class VisitCoordinator implements VisitRunner {
                                      () -> !stopRequested.getAsBoolean() && !g.isClosing(),
                                      token::isCancelled);
             events.visitResult(r);
-            return returnEarly(r, blobStored.getAsBoolean());
+            return returnEarly(r, ownBlobHeld.getAsBoolean());
         } finally {
             token.close(); // may fire the drain listener: VISIT_DRAINING ends now
             events.exchangeEnded();
@@ -186,17 +186,17 @@ public final class VisitCoordinator implements VisitRunner {
 
     /**
      * The {@code success} flag for {@code VisitCallback.visitFinished}, which ends VISIT early when
-     * {@code return_after_visit} is on. True only if the exchange completed, the carrier returned a SUCCESS
-     * recency blob, and a blob is actually stored now.
+     * {@code return_after_visit} is on. True if the exchange completed and the dropbox holds its own recency
+     * blob now. Whether the carrier had a blob of its own does not matter: the dropbox never uses it
+     * (09 Own Recency Blob Design).
      *
-     * <p>Without the recency condition, a carrier that never synced with the server would trigger early return
-     * during bootstrap: VISIT ends, HOST is skipped (still no blob), and VISIT restarts with the selector's marks
-     * cleared, rejoining the same useless carrier over and over (Review #9). The "stored" condition closes the
-     * residual case where the blob was fetched but {@code offer()} failed to store it (disk error, or rejected
-     * by the recency verifier) (audit i2, {@code bootstrap-early-return-residual}).
+     * <p>The held-blob condition is the bootstrap rule, not a property of the visit: without a blob HOST is
+     * skipped, so an early return would only restart VISIT with the selector's marks cleared and rejoin the same
+     * carrier over and over (Review #9, audit i2). During bootstrap the dropbox therefore stays in VISIT for the
+     * whole transport period; its recency request rides in the own bundle the visit already uploaded.
      */
-    static boolean returnEarly(VisitResult r, boolean blobStoredNow) {
-        return r.ok() && r.recencyFetched() && blobStoredNow;
+    static boolean returnEarly(VisitResult r, boolean ownBlobHeldNow) {
+        return r.ok() && ownBlobHeldNow;
     }
 
     /** @return true while a join token taken by {@link #beginJoin} is pending (tests). */

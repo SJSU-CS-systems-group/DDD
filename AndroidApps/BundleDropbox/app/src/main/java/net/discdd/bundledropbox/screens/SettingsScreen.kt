@@ -98,8 +98,6 @@ fun SettingsScreen(viewModel: DropboxSettingsViewModel = viewModel()) {
                     fontWeight = FontWeight.Bold)
             SwitchRow(R.string.settings_return_after_visit, R.string.settings_return_after_visit_help,
                     form.returnAfterVisit, viewModel::onReturnAfterVisitChange)
-            SwitchRow(R.string.settings_rotate_id, R.string.settings_rotate_id_help,
-                    form.rotateAdvertisedId, viewModel::onRotateAdvertisedIdChange)
             SwitchRow(R.string.settings_keep_awake, R.string.settings_keep_awake_help,
                     form.keepAwake, viewModel::onKeepAwakeChange)
             SwitchRow(R.string.settings_start_on_boot, R.string.settings_start_on_boot_help,

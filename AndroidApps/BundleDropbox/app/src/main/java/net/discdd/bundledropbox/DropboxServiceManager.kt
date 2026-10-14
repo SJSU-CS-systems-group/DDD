@@ -54,10 +54,11 @@ interface DropboxControls {
     fun clearDownstream()
 
     /**
-     * Operator "reset recency blob" (audit M6): forgets the stored recency blob, so the dropbox stops
-     * advertising and serving it and goes back to the bootstrap state (VISIT only) until a carrier supplies
-     * a blob signed by the pinned server. Ends a HOST dwell early. Manual recovery from a bad blob; an
-     * untrusted blob is already dropped automatically when the service starts.
+     * Operator "reset recency blob" (audit M6): forgets the stored recency blob and the outstanding request
+     * for one, so the dropbox stops advertising and serving the blob and goes back to the bootstrap state
+     * (VISIT only) until the server grants a new blob for the dropbox's own sender id. Ends a HOST dwell
+     * early. Manual recovery from a bad blob or an unanswered request; an untrusted or foreign blob is
+     * already dropped automatically when the service starts.
      */
     fun resetRecencyBlob()
 

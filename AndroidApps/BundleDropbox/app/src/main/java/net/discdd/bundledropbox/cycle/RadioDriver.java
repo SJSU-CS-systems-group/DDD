@@ -54,7 +54,7 @@ public interface RadioDriver {
      *
      * <p>Why: a stock client that has joined the group but not yet sent its first RPC (server probe, TLS
      * handshake) holds no gate token, so an idle-looking HOST would tear the group down under it; the
-     * refused client stamps {@code lastExchange} and is locked out until the advertised id rotates
+     * refused client stamps {@code lastExchange} and is locked out until a newer recency blob is advertised
      * (Audit m5, R3 §7). With this count the controller keeps admissions open for a short bounded grace.
      * Implementations should also call {@code RoleCycleController.hostedClientsChanged()} when the client
      * list changes, so the grace ends without waiting for the next poll (optional).
@@ -75,7 +75,7 @@ public interface RadioDriver {
      * client stamps {@code lastExchange} for the advertised transportId even when its exchange failed
      * ({@code BundleClientService.exchangeWith} calls {@code timeStampExchange} unconditionally, R3 §7).
      * It then skips this transportId until the blob timestamp exceeds that stamp, i.e. a client that
-     * discovers us while we drain is locked out until the advertised id rotates. Withdrawing the record
+     * discovers us while we drain is locked out until a newer recency blob is advertised. Withdrawing the record
      * keeps new clients from discovering a dropbox that is about to refuse them.
      */
     void withdrawHostAdvertisement();

@@ -31,7 +31,6 @@ data class SettingsForm(
         val drainCapS: String = DropboxPrefs.DEFAULT_DRAIN_CAP_S.toString(),
         val maxStorageMb: String = DropboxPrefs.DEFAULT_MAX_STORAGE_MB.toString(),
         val returnAfterVisit: Boolean = DropboxPrefs.DEFAULT_RETURN_AFTER_VISIT,
-        val rotateAdvertisedId: Boolean = DropboxPrefs.DEFAULT_ROTATE_ADVERTISED_ID,
         val keepAwake: Boolean = DropboxPrefs.DEFAULT_KEEP_AWAKE,
         val startOnBoot: Boolean = DropboxPrefs.DEFAULT_START_ON_BOOT,
         /** true when the numeric fields differ from what is stored. */
@@ -84,7 +83,7 @@ object SettingsValidation {
  * `DropboxService` reads). Following the transport's SharedPreferences -> service-listener pattern
  * (R5 §5.5 item 4), saving only writes preferences; the service's `OnSharedPreferenceChangeListener`
  * pushes the new `CycleConfig` into the role-cycle controller (`updateConfig`) and applies the
- * advertised-ID / keep-awake / capacity settings. The UI never talks to the controller directly.
+ * keep-awake / capacity settings. The UI never talks to the controller directly.
  *
  * Switches are written immediately; numeric fields are written together on Save after validation.
  *
@@ -116,7 +115,6 @@ class DropboxSettingsViewModel(application: Application) : AndroidViewModel(appl
                 drainCapS = prefs.getInt(DropboxPrefs.KEY_DRAIN_CAP_S, DropboxPrefs.DEFAULT_DRAIN_CAP_S).toString(),
                 maxStorageMb = prefs.getInt(DropboxPrefs.KEY_MAX_STORAGE_MB, DropboxPrefs.DEFAULT_MAX_STORAGE_MB).toString(),
                 returnAfterVisit = prefs.getBoolean(DropboxPrefs.KEY_RETURN_AFTER_VISIT, DropboxPrefs.DEFAULT_RETURN_AFTER_VISIT),
-                rotateAdvertisedId = prefs.getBoolean(DropboxPrefs.KEY_ROTATE_ADVERTISED_ID, DropboxPrefs.DEFAULT_ROTATE_ADVERTISED_ID),
                 keepAwake = prefs.getBoolean(DropboxPrefs.KEY_KEEP_AWAKE, DropboxPrefs.DEFAULT_KEEP_AWAKE),
                 startOnBoot = prefs.getBoolean(DropboxPrefs.KEY_START_ON_BOOT, DropboxPrefs.DEFAULT_START_ON_BOOT),
         )
@@ -128,7 +126,6 @@ class DropboxSettingsViewModel(application: Application) : AndroidViewModel(appl
     fun onMaxStorageChange(v: String) = _form.update { it.copy(maxStorageMb = v, dirty = true, saved = false) }
 
     fun onReturnAfterVisitChange(v: Boolean) = putBoolean(DropboxPrefs.KEY_RETURN_AFTER_VISIT, v) { it.copy(returnAfterVisit = v) }
-    fun onRotateAdvertisedIdChange(v: Boolean) = putBoolean(DropboxPrefs.KEY_ROTATE_ADVERTISED_ID, v) { it.copy(rotateAdvertisedId = v) }
     fun onKeepAwakeChange(v: Boolean) = putBoolean(DropboxPrefs.KEY_KEEP_AWAKE, v) { it.copy(keepAwake = v) }
     fun onStartOnBootChange(v: Boolean) = putBoolean(DropboxPrefs.KEY_START_ON_BOOT, v) { it.copy(startOnBoot = v) }
 
@@ -182,7 +179,6 @@ class DropboxSettingsViewModel(application: Application) : AndroidViewModel(appl
                 putInt(DropboxPrefs.KEY_DRAIN_CAP_S, DropboxPrefs.DEFAULT_DRAIN_CAP_S)
                 putInt(DropboxPrefs.KEY_MAX_STORAGE_MB, DropboxPrefs.DEFAULT_MAX_STORAGE_MB)
                 putBoolean(DropboxPrefs.KEY_RETURN_AFTER_VISIT, DropboxPrefs.DEFAULT_RETURN_AFTER_VISIT)
-                putBoolean(DropboxPrefs.KEY_ROTATE_ADVERTISED_ID, DropboxPrefs.DEFAULT_ROTATE_ADVERTISED_ID)
                 putBoolean(DropboxPrefs.KEY_KEEP_AWAKE, DropboxPrefs.DEFAULT_KEEP_AWAKE)
                 putBoolean(DropboxPrefs.KEY_START_ON_BOOT, DropboxPrefs.DEFAULT_START_ON_BOOT)
             }

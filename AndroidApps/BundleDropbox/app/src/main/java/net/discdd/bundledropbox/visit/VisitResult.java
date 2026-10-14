@@ -8,14 +8,15 @@ import java.util.Objects;
  *
  * <p>Consumers:
  * <ul>
- *   <li>{@code wifi/WifiDirectRadioDriver} reports {@link #ok()} to the role cycle as
- *       {@code VisitCallback.visitFinished(gen, ok)}; with "return after visit" ON a successful visit ends
- *       VISIT mode early.</li>
- *   <li>{@code service/DropboxIdentity} bumps the advertised-ID generation when {@link #recencyUpdated()} is
- *       true, so clients (which only exchange when {@code blobTimestamp > lastExchange} for a transportId,
- *       Research/R3) see the dropbox as a transport with new data.</li>
+ *   <li>{@code wifi/WifiDirectRadioDriver} reports the service's verdict ({@code service/VisitCoordinator}, based
+ *       on {@link #ok()}) to the role cycle as {@code VisitCallback.visitFinished(gen, ok)}; with "return after
+ *       visit" ON a successful visit ends VISIT mode early.</li>
  *   <li>The UI shows it as {@code DropboxStatus.LastVisit}.</li>
  * </ul>
+ *
+ * <p>Nothing here says whether the dropbox got a recency blob: the carrier's blob is never stored (it names the
+ * carrier), and the dropbox's own blob arrives as a control grant, counted in {@link #controlProcessed()}
+ * (09 Own Recency Blob Design).
  *
  * <p>The control-channel counters ({@link #controlUploaded()}, {@link #controlProcessed()}) count the dropbox's
  * <em>own</em> bundles, which never enter the relay store; {@link #uploaded()}, {@link #downloaded()} and
@@ -26,8 +27,7 @@ import java.util.Objects;
 public final class VisitResult {
     private final String carrierId;
     private final boolean reachable;
-    private final boolean recencyFetched;
-    private final boolean recencyUpdated;
+    private final boolean carrierTrusted;
     private final int uploaded;
     private final int downloaded;
     private final int skipped;
@@ -40,8 +40,10 @@ public final class VisitResult {
     /**
      * @param carrierId      the carrier's DNS-SD {@code transportId} the visit was made to
      * @param reachable      true if the carrier's gRPC port answered the socket probe
-     * @param recencyUpdated true if the carrier's recency blob was accepted by the {@code RecencyBlobStore}
-     *                       (SUCCESS and strictly newer than the cached one)
+     * @param carrierTrusted true if the carrier answered {@code getRecencyBlob} with a blob signed by the server
+     *                       the dropbox's clients trust (SUCCESS, pinned key, valid signature, not from the
+     *                       future), so its {@code senderId} could name the carrier in routing metadata. The
+     *                       blob itself is never stored
      * @param uploaded       UPSTREAM bundles the carrier acknowledged with {@code SUCCESS} during this visit
      * @param downloaded     new DOWNSTREAM bundles committed to the store during this visit
      * @param skipped        downloaded carrier files discarded: the store (or this visit) already held that id, or
@@ -53,30 +55,7 @@ public final class VisitResult {
      */
     public VisitResult(String carrierId,
                        boolean reachable,
-                       boolean recencyUpdated,
-                       int uploaded,
-                       int downloaded,
-                       int skipped,
-                       int errors,
-                       boolean stoppedEarly,
-                       String lastError) {
-        this(carrierId, reachable, recencyUpdated, recencyUpdated, uploaded, downloaded, skipped, errors,
-             stoppedEarly, lastError);
-    }
-
-    /**
-     * Full constructor.
-     *
-     * @param recencyFetched true if the carrier answered {@code getRecencyBlob} with a blob the dropbox's
-     *                       clients would accept (SUCCESS, signed by the pinned server, not from the future),
-     *                       whether or not it was newer than the cached one. The service bumps the
-     *                       advertised-id generation on this (03 Architecture §5); see the other constructor
-     *                       for the remaining parameters
-     */
-    public VisitResult(String carrierId,
-                       boolean reachable,
-                       boolean recencyFetched,
-                       boolean recencyUpdated,
+                       boolean carrierTrusted,
                        int uploaded,
                        int downloaded,
                        int skipped,
@@ -85,8 +64,7 @@ public final class VisitResult {
                        String lastError) {
         this.carrierId = Objects.requireNonNull(carrierId, "carrierId");
         this.reachable = reachable;
-        this.recencyFetched = recencyFetched || recencyUpdated;
-        this.recencyUpdated = recencyUpdated;
+        this.carrierTrusted = carrierTrusted;
         this.uploaded = uploaded;
         this.downloaded = downloaded;
         this.skipped = skipped;
@@ -100,8 +78,7 @@ public final class VisitResult {
     private VisitResult(VisitResult base, int controlUploaded, int controlProcessed) {
         this.carrierId = base.carrierId;
         this.reachable = base.reachable;
-        this.recencyFetched = base.recencyFetched;
-        this.recencyUpdated = base.recencyUpdated;
+        this.carrierTrusted = base.carrierTrusted;
         this.uploaded = base.uploaded;
         this.downloaded = base.downloaded;
         this.skipped = base.skipped;
@@ -128,14 +105,11 @@ public final class VisitResult {
     public boolean reachable() { return reachable; }
 
     /**
-     * @return true if the carrier returned a recency blob our clients trust (stored or not). Basis for
-     *         advertised-id rotation: the carrier is in sync with our server, so what we now hold is as fresh as
-     *         it gets. A carrier synced to another deployment's server does not count.
+     * @return true if the carrier served a recency blob signed by the server our clients trust: it has synced with
+     *         our server, and its {@code senderId} was used to name it in the dropbox endpoint's routing metadata.
+     *         Informational only (logs, tests); the blob was not stored.
      */
-    public boolean recencyFetched() { return recencyFetched; }
-
-    /** @return true if a newer SUCCESS recency blob was stored during this visit. */
-    public boolean recencyUpdated() { return recencyUpdated; }
+    public boolean carrierTrusted() { return carrierTrusted; }
 
     /** @return number of UPSTREAM bundles acknowledged by the carrier. */
     public int uploaded() { return uploaded; }
@@ -165,9 +139,10 @@ public final class VisitResult {
     public int controlProcessed() { return controlProcessed; }
 
     /**
-     * @return true if the carrier was reached, every phase (recency, upload, download-all) ran to completion,
-     *         and no error occurred. This is the {@code success} flag for {@code VisitCallback.visitFinished}.
-     *         A false result is safe: nothing is marked forwarded unless acknowledged and partial downloads are
+     * @return true if the carrier was reached, every phase (recency probe, upload, download-all) ran to
+     *         completion, and no error occurred. A carrier without a blob of our server is not an error. The
+     *         service's {@code success} flag for {@code VisitCallback.visitFinished} starts from this. A false
+     *         result is safe: nothing is marked forwarded unless acknowledged and partial downloads are
      *         discarded, so the next visit simply retries.
      */
     public boolean ok() {
@@ -179,8 +154,7 @@ public final class VisitResult {
         if (this == o) return true;
         if (!(o instanceof VisitResult)) return false;
         VisitResult that = (VisitResult) o;
-        return reachable == that.reachable && recencyFetched == that.recencyFetched &&
-                recencyUpdated == that.recencyUpdated && uploaded == that.uploaded &&
+        return reachable == that.reachable && carrierTrusted == that.carrierTrusted && uploaded == that.uploaded &&
                 downloaded == that.downloaded && skipped == that.skipped && errors == that.errors &&
                 stoppedEarly == that.stoppedEarly && controlUploaded == that.controlUploaded &&
                 controlProcessed == that.controlProcessed && carrierId.equals(that.carrierId) &&
@@ -191,8 +165,7 @@ public final class VisitResult {
     public int hashCode() {
         return Objects.hash(carrierId,
                             reachable,
-                            recencyFetched,
-                            recencyUpdated,
+                            carrierTrusted,
                             uploaded,
                             downloaded,
                             skipped,
@@ -205,8 +178,9 @@ public final class VisitResult {
 
     @Override
     public String toString() {
-        return "VisitResult{carrier=" + carrierId + ", ok=" + ok() + ", reachable=" + reachable + ", recencyFetched=" + recencyFetched + ", recencyUpdated=" +
-                recencyUpdated + ", uploaded=" + uploaded + ", downloaded=" + downloaded + ", skipped=" + skipped +
+        return "VisitResult{carrier=" + carrierId + ", ok=" + ok() + ", reachable=" + reachable +
+                ", carrierTrusted=" + carrierTrusted + ", uploaded=" + uploaded + ", downloaded=" + downloaded +
+                ", skipped=" + skipped +
                 ", errors=" + errors + ", stoppedEarly=" + stoppedEarly + ", controlUploaded=" + controlUploaded +
                 ", controlProcessed=" + controlProcessed +
                 (lastError == null ? "" : ", lastError=" + lastError) + "}";

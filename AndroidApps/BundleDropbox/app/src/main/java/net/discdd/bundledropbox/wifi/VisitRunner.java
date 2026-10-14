@@ -7,10 +7,11 @@ import java.util.function.BooleanSupplier;
  * The carrier exchange the Wi-Fi joiner runs once it has joined a carrier's group.
  *
  * <p>The radio layer only knows how to get the dropbox onto a carrier's network; what happens there
- * (getRecencyBlob, upload of unforwarded upstream bundles, download-all via PSI; Research/R2 §4.3, §8) is
- * {@code visit/TransportVisitClient}. {@code service/VisitCoordinator} implements this interface: it holds one
- * {@code ActivityGate} "visit" token from the start of the join to the end of the exchange, and returns
- * {@code ok() && recencyFetched()} of the visit result, and only if the blob was actually stored.
+ * (getRecencyBlob, the dropbox's own control bundle, upload of unforwarded upstream bundles, download-all via PSI;
+ * Research/R2 §4.3, §8) is {@code visit/TransportVisitClient}. {@code service/VisitCoordinator} implements this
+ * interface: it holds one {@code ActivityGate} "visit" token from the start of the join to the end of the
+ * exchange, and returns {@code ok()} of the visit result, but only once the dropbox holds its own recency blob
+ * (bootstrap rule).
  *
  * <p>Join hooks (audit m1, {@code join-not-protected-by-gate}): the joiner calls {@link #beginJoin} right
  * before it issues {@code connect} and {@link #endJoin} when an attempt ends, so a dwell that expires
@@ -59,8 +60,8 @@ public interface VisitRunner {
      *                       normally 192.168.49.1); the carrier's gRPC server is on port 7777
      * @param carrierId      the carrier's TXT {@code transportId} (key for {@code ForwardLedger})
      * @param stopRequested  becomes true when the visit must end
-     * @return true if the exchange completed (recency fetch succeeded and transfers finished); reported to
-     *         the controller as {@code VisitCallback.visitFinished(gen, success)}
+     * @return true if the exchange completed (transfers finished) and the dropbox may host; reported to the
+     *         controller as {@code VisitCallback.visitFinished(gen, success)}
      * @throws Exception any failure; treated as {@code false}
      */
     boolean runVisit(InetAddress carrierAddress, String carrierId, BooleanSupplier stopRequested) throws Exception;

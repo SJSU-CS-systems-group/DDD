@@ -32,13 +32,14 @@ import java.util.logging.Logger;
  *       than the gate has admitted keys, HOST_DRAINING keeps admissions open for up to
  *       {@link #JOINED_CLIENT_GRACE_MS} (never past the drain cap) so that client's first RPC is
  *       admitted instead of refused; a refused stock client would stamp {@code lastExchange} and skip us
- *       until the advertised id rotates (R3 §7). The DNS-SD record is withdrawn for the whole drain, so
+ *       until a newer recency blob is advertised (R3 §7). The DNS-SD record is withdrawn for the whole drain, so
  *       new clients do not discover us during the grace.</li>
  *   <li>Early return: with {@link CycleConfig#returnAfterVisit()}, a successful
  *       {@link VisitCallback#visitFinished} ends the VISIT dwell immediately (same drain rules).</li>
  *   <li>Bootstrap: a fresh dropbox has no server-signed recency blob and the stock client aborts its
  *       exchange without a SUCCESS recency blob (Research/R3), so hosting would be useless. While
- *       {@code hasRecencyBlob} is false, HOST is skipped and VISIT periods loop.</li>
+ *       {@code hasRecencyBlob} is false (waiting for a server-issued recency blob, which takes one carrier
+ *       round trip), HOST is skipped and VISIT periods loop.</li>
  *   <li>Failures: a failed radio op is retried with exponential backoff, {@link #MAX_ATTEMPTS} attempts in
  *       total (each distinct op gets its own budget). When a START exhausts its attempts the other role is
  *       tried once (HOST only with a recency blob), so a role-specific failure cannot stop the dropbox from
@@ -206,7 +207,8 @@ public final class RoleCycleController {
      *
      * @param radio          radio side ({@code wifi/WifiDirectRadioDriver})
      * @param clock          monotonic clock that keeps counting in deep sleep ({@code SystemClock::elapsedRealtime})
-     * @param hasRecencyBlob true once a SUCCESS recency blob is cached ({@code RecencyBlobStore.current()})
+     * @param hasRecencyBlob true while the dropbox holds its own server-issued recency blob
+     *                       ({@code RecencyBlobStore.current()})
      * @param config         initial timer settings
      */
     public RoleCycleController(RadioDriver radio, Clock clock, BooleanSupplier hasRecencyBlob, CycleConfig config) {
@@ -481,7 +483,8 @@ public final class RoleCycleController {
     private void startRole(Role role) {
         attempts = 0;
         if (role == Role.VISIT && !blobAvailable()) {
-            logger.info("No recency blob cached: bootstrap VISIT (HOST skipped until a carrier provides one)");
+            logger.info("No recency blob yet: bootstrap VISIT (HOST skipped while waiting for a server-issued " +
+                                "recency blob)");
         }
         issueOp(Op.startFor(role));
     }
@@ -645,8 +648,8 @@ public final class RoleCycleController {
                             ": draining until cap");
         if (role == Role.HOST) {
             // New clients are refused once admissions close, and a refused stock client stamps lastExchange
-            // for our advertised id anyway and then skips us until the id rotates (R3 §7). Stop advertising
-            // so nobody new discovers us; admitted (and joined) clients keep the group and endpoint.
+            // for our advertised id anyway and then skips us until a newer blob is advertised (R3 §7). Stop
+            // advertising so nobody new discovers us; admitted (and joined) clients keep the group and endpoint.
             try {
                 radio.withdrawHostAdvertisement();
             } catch (RuntimeException e) {
@@ -809,7 +812,7 @@ public final class RoleCycleController {
             setMode(CycleMode.STOPPED, CycleListener.NO_DEADLINE);
             return;
         }
-        // Bootstrap: without a recency blob clients abort (R3), so keep visiting until a carrier gives one.
+        // Bootstrap: without a recency blob clients abort (R3), so keep visiting until a server grant brings one.
         Role next = forced != null ? forced : (finished == Role.HOST ? Role.VISIT : Role.HOST);
         if (next == Role.HOST && !blobAvailable()) next = Role.VISIT;
         startRole(next);

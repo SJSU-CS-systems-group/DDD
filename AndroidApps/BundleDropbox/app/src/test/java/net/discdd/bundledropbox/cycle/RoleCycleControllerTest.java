@@ -291,7 +291,7 @@ public class RoleCycleControllerTest {
         assertFalse(radio.ops().contains("startHosting"));
 
         ready();
-        radio.last().visitFinished(true); // the carrier gave us a blob
+        radio.last().visitFinished(true); // a server grant gave us our own blob
         blob.set(true);
         s.runReady();
         assertEquals(CycleMode.VISIT_STOPPING, c.mode());

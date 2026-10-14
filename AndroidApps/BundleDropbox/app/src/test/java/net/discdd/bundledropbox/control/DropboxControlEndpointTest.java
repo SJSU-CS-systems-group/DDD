@@ -2,9 +2,11 @@ package net.discdd.bundledropbox.control;
 
 import net.discdd.bundledropbox.store.BundleRecord;
 import net.discdd.bundledropbox.store.Direction;
+import net.discdd.bundledropbox.store.FileRecencyBlobStore;
 import net.discdd.bundledropbox.store.FileRelayStore;
 import net.discdd.bundledropbox.store.RelayStore;
 import net.discdd.bundledropbox.store.Staged;
+import net.discdd.bundledropbox.store.ServerTrust;
 import net.discdd.bundledropbox.store.StoreStats;
 import net.discdd.bundledropbox.visit.ControlChannel;
 import net.discdd.bundlesecurity.BundleIDGenerator;
@@ -18,11 +20,18 @@ import net.discdd.dropbox.control.DropboxControl.Reason;
 import net.discdd.dropbox.control.DropboxControlCodec;
 import net.discdd.dropbox.control.InventoryReport;
 import net.discdd.dropbox.control.InventoryCompleteness;
+import net.discdd.dropbox.control.RecencyGrant;
+import net.discdd.dropbox.control.RecencyRequest;
+import net.discdd.dropbox.control.RecencyRequestSigner;
 import net.discdd.dropbox.control.RetentionPlan;
+import net.discdd.grpc.GetRecencyBlobResponse;
+import net.discdd.grpc.RecencyBlob;
+import net.discdd.grpc.RecencyBlobStatus;
 import net.discdd.model.ADU;
 import net.discdd.model.Bundle;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.utils.BundleUtils;
+import com.google.protobuf.ByteString;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -42,6 +51,9 @@ import java.io.PipedInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.spec.ECGenParameterSpec;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
@@ -58,6 +70,7 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -72,7 +85,8 @@ import static org.junit.Assert.assertTrue;
  * {@code BundleUtils}, the same calls {@code ServerBundleTransmission} makes. Covers the Research/R7 rules: the
  * addressed-to-me test by bundle-id decryption, processing a copy, replay safety, the app-id backstop, the
  * blank-file repair, server-key changes; and {@link DropboxControlManager} end to end (inventory out, plan in,
- * relay-store deletions, results in the next inventory, start-up adoption).
+ * relay-store deletions, results in the next inventory, start-up adoption, and the own recency blob: request out,
+ * grant in, stored only when minted for the dropbox's own sender id; 09 Own Recency Blob Design).
  *
  * <p><b>One endpoint root per JVM.</b> bundle-core keeps {@code ClientSecurity} and {@code ClientRouting} as
  * process-wide singletons, so every test here shares one static root, wiped before each test (the endpoint then
@@ -93,6 +107,7 @@ public class DropboxControlEndpointTest {
     private static FakeServer server;
 
     private final List<RetentionPlan> plans = new ArrayList<>();
+    private final List<RecencyGrant> grants = new ArrayList<>();
     private final AtomicBoolean sinkFails = new AtomicBoolean();
 
     /** The server's three public key files (what the dropbox imports) next to their private halves. */
@@ -153,6 +168,7 @@ public class DropboxControlEndpointTest {
                         bytes = in.readAllBytes();
                     }
                     if (name.startsWith("ADU/" + DropboxControl.APP_ID + "/")) r.controlAdus.add(bytes);
+                    if (name.startsWith("ADU/" + DropboxControl.RECENCY_APP_ID + "/")) r.recencyAdus.add(bytes);
                     if (name.equals("acknowledgement.txt")) r.ack = new String(bytes, StandardCharsets.UTF_8).trim();
                 }
             }
@@ -162,13 +178,20 @@ public class DropboxControlEndpointTest {
         /** Builds downstream bundle {@code counter} for {@code clientId} carrying one control ADU. */
         Path send(String clientId, long counter, long aduId, byte[] aduBytes, String ackedId, Path outDir)
                 throws Exception {
+            return send(DropboxControl.APP_ID, clientId, counter, aduId, aduBytes, ackedId, outDir);
+        }
+
+        /** Builds downstream bundle {@code counter} for {@code clientId} carrying one ADU under {@code appId}. */
+        Path send(String appId, String clientId, long counter, long aduId, byte[] aduBytes, String ackedId,
+                  Path outDir) throws Exception {
             Files.createDirectories(outDir);
             String encryptedId = security.createEncryptedBundleId(clientId, counter, BundleIDGenerator.DOWNSTREAM);
             Path aduFile = outDir.resolve("adu-" + counter);
             Files.write(aduFile, aduBytes);
-            ADU adu = new ADU(aduFile.toFile(), DropboxControl.APP_ID, aduId, aduBytes.length);
+            ADU adu = new ADU(aduFile.toFile(), appId, aduId, aduBytes.length);
             PipedInputStream pipe = new PipedInputStream();
-            // app_ids.txt deliberately WITHOUT the control app id: the endpoint's backstop must keep reports flowing.
+            // app_ids.txt deliberately WITHOUT the control app ids: the endpoint's backstop must keep reports and
+            // recency requests flowing.
             Future<?> f = BundleUtils.runFuture(executor, ackedId, null, List.of(adu), null, pipe,
                                                 List.of("net.discdd.other"));
             Path jar = outDir.resolve(encryptedId);
@@ -184,15 +207,38 @@ public class DropboxControlEndpointTest {
             f.get();
             return jar;
         }
+
+        /** Mints a blob for {@code senderId} exactly as {@code ServerBundleTransmission.getRecencyBlob} does. */
+        GetRecencyBlobResponse mint(String senderId, long timestamp) throws Exception {
+            RecencyBlob blob = RecencyBlob.newBuilder()
+                    .setVersion(0)
+                    .setNonce(42)
+                    .setBlobTimestamp(timestamp)
+                    .setSenderId(senderId)
+                    .build();
+            return GetRecencyBlobResponse.newBuilder()
+                    .setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)
+                    .setRecencyBlob(blob)
+                    .setRecencyBlobSignature(ByteString.copyFrom(SecurityUtils.signMessageRaw(blob.toByteArray(),
+                                                                                             security.getSigningKey())))
+                    .setServerPublicKey(ByteString.copyFrom(security.getIdentityPublicKey().serialize()))
+                    .build();
+        }
     }
 
     private static final class Received {
         final List<byte[]> controlAdus = new ArrayList<>();
+        final List<byte[]> recencyAdus = new ArrayList<>();
         String ack;
 
         InventoryReport onlyInventory() throws Exception {
             assertEquals(1, controlAdus.size());
             return DropboxControlCodec.decodeInventory(controlAdus.get(0));
+        }
+
+        RecencyRequest onlyRecencyRequest() throws Exception {
+            assertEquals(1, recencyAdus.size());
+            return DropboxControlCodec.decodeRecencyRequest(recencyAdus.get(0));
         }
     }
 
@@ -226,7 +272,14 @@ public class DropboxControlEndpointTest {
         return DropboxControlEndpoint.open(root, keys.identityPem, keys.signedPrePem, keys.ratchetPem, plan -> {
             if (sinkFails.get()) throw new IOException("sink not ready");
             plans.add(plan);
-        });
+        }, grants::add);
+    }
+
+    /** A TLS key pair like the dropbox's ({@code DDDTLSUtil.generateKeyPair}: EC P-256). */
+    private static KeyPair tlsKeyPair() throws Exception {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
+        generator.initialize(new ECGenParameterSpec("secp256r1"));
+        return generator.generateKeyPair();
     }
 
     private static byte[] inventory(long seq) throws Exception {
@@ -428,8 +481,50 @@ public class DropboxControlEndpointTest {
                                                        keysA.signedPrePem, keysA.ratchetPem, p -> {}));
     }
 
+    /** A recency request and its grant travel under their own app id, never mixed with plans and inventories. */
+    @Test
+    public void recencyRequestAndGrantUseTheirOwnQueue() throws Exception {
+        DropboxControlEndpoint ep = open(keysA);
+        KeyPair tls = tlsKeyPair();
+        RecencyRequest request = RecencyRequestSigner.sign(ep.clientId(), 1, tls);
+        ControlChannel.OwnBundle own = ep.prepareUpstream(inventory(1), DropboxControlCodec.encode(request));
+        Received r = server.receive(own.path(), work("w"));
+        assertEquals(1, r.onlyInventory().getReportSeq());
+        assertEquals(request, r.onlyRecencyRequest());
+        assertTrue("the server can verify it for the bundle's client id",
+                   RecencyRequestSigner.verify(ep.clientId(), r.onlyRecencyRequest()));
+        assertEquals(own.bundleId(), ep.prepareUpstream(null, null).bundleId());
+
+        RecencyGrant grant = RecencyGrant.of(1, server.mint("sender", 5).toByteArray(), 7L);
+        Path grantJar = server.send(DropboxControl.RECENCY_APP_ID, ep.clientId(), 1, 1,
+                                    DropboxControlCodec.encode(grant), own.bundleId(), work("g"));
+        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(grantJar, null));
+        assertEquals(List.of(grant), grants);
+        assertTrue(plans.isEmpty());
+
+        // A message of the other channel's type on either queue is dropped and never blocks the queue.
+        Path planOnRecency = server.send(DropboxControl.RECENCY_APP_ID, ep.clientId(), 2, 2, plan(1, 1, List.of()),
+                                         own.bundleId(), work("p"));
+        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(planOnRecency, null));
+        Path grantOnPlans = server.send(DropboxControl.APP_ID, ep.clientId(), 3, 1, DropboxControlCodec.encode(grant),
+                                        own.bundleId(), work("q"));
+        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(grantOnPlans, null));
+        assertEquals(1, grants.size());
+        assertTrue(plans.isEmpty());
+        assertEquals(List.of(), receivedControlAduFiles());
+        assertEquals(List.of(), receivedAduFiles(DropboxControl.RECENCY_APP_ID));
+
+        // The grant bundle acknowledged the bundle that carried the request, so it no longer rides along.
+        Received next = server.receive(ep.prepareUpstream(null, null).path(), work("w2"));
+        assertTrue(next.recencyAdus.isEmpty());
+    }
+
     private List<Path> receivedControlAduFiles() throws IOException {
-        Path dir = root.resolve("receive").resolve(DropboxControl.APP_ID);
+        return receivedAduFiles(DropboxControl.APP_ID);
+    }
+
+    private List<Path> receivedAduFiles(String appId) throws IOException {
+        Path dir = root.resolve("receive").resolve(appId);
         if (!Files.isDirectory(dir)) return List.of();
         try (Stream<Path> s = Files.list(dir)) {
             return s.filter(p -> !p.getFileName().toString().equals("metadata.json")).collect(Collectors.toList());
@@ -443,8 +538,12 @@ public class DropboxControlEndpointTest {
         final List<PlanExecutor.Outcome> outcomes = new ArrayList<>();
         final List<Long> reports = new ArrayList<>();
         final List<String> problems = new ArrayList<>();
+        final List<Long> recencyRequests = new ArrayList<>();
+        final List<String> recencyGrants = new ArrayList<>();
 
         @Override public void planApplied(PlanExecutor.Outcome o) { outcomes.add(o); }
+        @Override public void recencyRequested(long seq) { recencyRequests.add(seq); }
+        @Override public void recencyGranted(long seq, boolean stored) { recencyGrants.add(seq + ":" + stored); }
         @Override public void reportQueued(long seq, int up, int down) { reports.add(seq); }
         @Override public void problem(String message) { problems.add(message); }
         @Override public void statusChanged() {}
@@ -665,6 +764,112 @@ public class DropboxControlEndpointTest {
         assertFalse(store.contains(Direction.UPSTREAM, "u1"));
         assertEquals(1, m.status().lastPlanSeq());
         assertEquals("successful adoption is replay-safe", 0, m.adoptOwnBundles());
+    }
+
+    /**
+     * 09 Own Recency Blob Design, end to end: request out, grant in, next request out. A grant whose blob was minted
+     * for another sender id (a carrier's) answers the request but is not stored; one minted for the dropbox's own
+     * sender id is stored. An outstanding request never churns the own bundle id and survives a reopen.
+     */
+    @Test
+    public void managerRunsTheRecencyRequestGrantLoop() throws Exception {
+        FileRelayStore store = ControlFixtures.newStore(tmp.newFolder("dropbox").toPath(), clock);
+        KeyPair tls = tlsKeyPair();
+        String ownSender = RecencyRequestSigner.senderIdFor(Base64.getEncoder().encodeToString(
+                tls.getPublic().getEncoded()));
+        long now = System.currentTimeMillis();
+        FileRecencyBlobStore recency =
+                new FileRecencyBlobStore(tmp.newFolder("meta").toPath().resolve("recencyBlob.bin"),
+                                         new ServerTrust(server.security.getIdentityPublicKey().getPublicKey(),
+                                                         () -> now), ownSender);
+        Events events = new Events();
+        AtomicLong visitTime = new AtomicLong(5_000_000L);
+        DropboxControlManager m = new DropboxControlManager(root, store, List::of, () -> {}, visitTime::get, events,
+                                                            recency, tls);
+        assertTrue(m.open("built-in", keysA.identityPem, keysA.signedPrePem, keysA.ratchetPem));
+        String clientId = m.status().endpointClientId();
+
+        // Visit 1: the first own bundle carries request #1, signed for this endpoint with the TLS key.
+        ControlChannel.OwnBundle own1 = m.ownBundleForVisit();
+        RecencyRequest request1 = server.receive(own1.path(), work("w1")).onlyRecencyRequest();
+        assertEquals(1, request1.getRequestSeq());
+        assertTrue(RecencyRequestSigner.verify(clientId, request1));
+        assertEquals(ownSender, RecencyRequestSigner.senderIdFor(request1.getTlsPublicKey()));
+        assertTrue(m.status().recencyOutstanding());
+        assertEquals(5_000_000L, m.status().recencyRequestedAtMillis());
+        assertEquals(List.of(1L), events.recencyRequests);
+
+        // While it is outstanding the bundle id is not churned, not even across a restart.
+        assertEquals(own1.bundleId(), m.ownBundleForVisit().bundleId());
+        assertTrue(m.open("built-in", keysA.identityPem, keysA.signedPrePem, keysA.ratchetPem));
+        assertTrue(m.status().recencyOutstanding());
+        assertEquals(own1.bundleId(), m.ownBundleForVisit().bundleId());
+        assertEquals(List.of(1L), events.recencyRequests);
+
+        // The server answers with a blob minted for another sender (a carrier's): it answers, but is not stored.
+        RecencyGrant foreign = RecencyGrant.of(1, server.mint("carrier-sender", now - 2_000).toByteArray(), now);
+        Path foreignJar = server.send(DropboxControl.RECENCY_APP_ID, clientId, 1, 1,
+                                      DropboxControlCodec.encode(foreign), own1.bundleId(), work("g1"));
+        assertTrue(m.accept(foreignJar, "transport-T1"));
+        assertFalse(recency.current().isPresent());
+        assertFalse(m.status().recencyOutstanding());
+        assertEquals(List.of("1:false"), events.recencyGrants);
+
+        // Visit 2: request #2 forces a new own bundle; the backstop kept the recency app id registered although
+        // the grant bundle listed only another app.
+        ControlChannel.OwnBundle own2 = m.ownBundleForVisit();
+        assertNotEquals(own1.bundleId(), own2.bundleId());
+        RecencyRequest request2 = server.receive(own2.path(), work("w2")).onlyRecencyRequest();
+        assertEquals(2, request2.getRequestSeq());
+        assertTrue(RecencyRequestSigner.verify(clientId, request2));
+
+        // The grant for our own sender id is stored and served from now on.
+        GetRecencyBlobResponse mine = server.mint(ownSender, now - 1_000);
+        Path grantJar = server.send(DropboxControl.RECENCY_APP_ID, clientId, 2, 2,
+                                    DropboxControlCodec.encode(RecencyGrant.of(2, mine.toByteArray(), now)),
+                                    own2.bundleId(), work("g2"));
+        assertTrue(m.accept(grantJar, "transport-T1"));
+        assertArrayEquals(mine.toByteArray(), recency.current().get());
+        assertEquals(now - 1_000, recency.currentTimestamp());
+        assertEquals(2, m.status().recencyAnsweredSeq());
+        assertEquals(List.of("1:false", "2:true"), events.recencyGrants);
+
+        // Next visit: the next request goes out, as a transport fetches a fresh blob on every server sync.
+        ControlChannel.OwnBundle own3 = m.ownBundleForVisit();
+        assertEquals(3, server.receive(own3.path(), work("w3")).onlyRecencyRequest().getRequestSeq());
+        assertEquals(List.of(1L, 2L, 3L), events.recencyRequests);
+        assertTrue(events.problems.isEmpty());
+
+        // Other server keys: a fresh endpoint, whose request numbering starts over.
+        assertTrue(m.open("other", keysB.identityPem, keysB.signedPrePem, keysB.ratchetPem));
+        assertTrue(m.wasResetForNewServer());
+        assertEquals(0, m.status().recencyRequestSeq());
+        assertFalse(m.status().recencyOutstanding());
+    }
+
+    @Test
+    public void abandoningAnOutstandingRequestSendsTheNextOne() throws Exception {
+        FileRelayStore store = ControlFixtures.newStore(tmp.newFolder("dropbox").toPath(), clock);
+        KeyPair tls = tlsKeyPair();
+        FileRecencyBlobStore recency =
+                new FileRecencyBlobStore(tmp.newFolder("meta").toPath().resolve("recencyBlob.bin"),
+                                         new ServerTrust(server.security.getIdentityPublicKey().getPublicKey(),
+                                                         System::currentTimeMillis), "own");
+        Events events = new Events();
+        DropboxControlManager m = new DropboxControlManager(root, store, List::of, () -> {}, () -> 5_000_000L,
+                                                            events, recency, tls);
+        assertTrue(m.open("built-in", keysA.identityPem, keysA.signedPrePem, keysA.ratchetPem));
+        ControlChannel.OwnBundle own1 = m.ownBundleForVisit();
+        assertTrue(m.status().recencyOutstanding());
+
+        m.abandonRecencyRequest();
+        assertFalse(m.status().recencyOutstanding());
+        assertEquals("abandoned, never answered", 0, m.status().recencyGrantAtMillis());
+        assertEquals(5_000_000L, m.status().recencyAbandonedAtMillis());
+        ControlChannel.OwnBundle own2 = m.ownBundleForVisit();
+        assertNotEquals(own1.bundleId(), own2.bundleId());
+        assertEquals("a newer request supersedes the unsent one", 2,
+                     server.receive(own2.path(), work("w")).onlyRecencyRequest().getRequestSeq());
     }
 
     @Test

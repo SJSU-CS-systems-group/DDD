@@ -37,7 +37,8 @@ import static org.junit.Assert.assertTrue;
  *   <li>the dropbox's own bundle is uploaded <b>first</b>, before relayed bundles, and is neither stored nor
  *       recorded in the ledger;</li>
  *   <li>downloaded bundles addressed to the dropbox go to {@link ControlChannel#accept} with the carrier's
- *       recency-blob sender id and <b>never</b> into the relay store;</li>
+ *       recency-blob sender id (when that blob is from our server) and <b>never</b> into the relay store, while
+ *       the carrier's blob itself is never offered to the recency store (09 Own Recency Blob Design);</li>
  *   <li>after a processed plan the regenerated own bundle (carrying the ack) is uploaded at the end;</li>
  *   <li>a failing control channel never breaks the relay.</li>
  * </ul>
@@ -53,6 +54,7 @@ public class TransportVisitControlTest {
     private FakeRelayStore store;
     private FakeLedgerAndRecency.Ledger ledger;
     private FakeControl control;
+    private FakeLedgerAndRecency.Recency recency;
     private TransportVisitClient client;
     private Path fixtures;
 
@@ -100,11 +102,12 @@ public class TransportVisitControlTest {
         store = new FakeRelayStore(tmp.newFolder("dropbox").toPath());
         ledger = new FakeLedgerAndRecency.Ledger();
         control = new FakeControl();
+        recency = new FakeLedgerAndRecency.Recency();
         fixtures = tmp.newFolder("fixtures").toPath();
         GrpcSecurityKey dropboxKey = new GrpcSecurityKey(tmp.newFolder("GrpcSecurity").toPath(), SecurityUtils.SERVER);
         client = new TransportVisitClient(store,
                                           ledger,
-                                          new FakeLedgerAndRecency.Recency(),
+                                          recency::isServerSigned,
                                           control,
                                           CarrierChannelFactory.tls(dropboxKey),
                                           VisitOptions.DEFAULTS.withProbe(3, 50),
@@ -259,6 +262,20 @@ public class TransportVisitControlTest {
         assertEquals(List.of("mine1"), control.acceptedIds);
         assertEquals(List.of(), downstreamIds());
         assertEquals(1, r.controlProcessed());
+    }
+
+    /** The trusted carrier's sender id names it in routing metadata; its blob is still never stored. */
+    @Test(timeout = 60_000)
+    public void trustedCarrierBlobOnlyNamesTheCarrier() throws Exception {
+        BundleFixtures.bundleJar(carrier.toClient, "mine1", "mine1", 120);
+        control.ownership.put("mine1", ControlChannel.Ownership.MINE_NEW);
+
+        VisitResult r = visit();
+
+        assertTrue(r.carrierTrusted());
+        assertEquals(List.of(SENDER_ID), control.acceptedSenders);
+        assertEquals("never offered", 0, recency.offers);
+        assertFalse(recency.current().isPresent());
     }
 
     @Test(timeout = 60_000)

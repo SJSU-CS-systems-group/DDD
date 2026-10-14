@@ -99,8 +99,9 @@ final class DropboxWifiHost {
     /**
      * @param link               shared channel and helpers
      * @param baseId             stable 16-char id for the group name
-     * @param advertisedId       supplies the TXT {@code transportId} at each start (rotates per 03 Architecture §5)
-     * @param recencyBlob        supplies the raw cached {@code GetRecencyBlobResponse}, or null if none yet
+     * @param advertisedId       supplies the TXT {@code transportId} at each start (the stable {@code baseId})
+     * @param recencyBlob        supplies the dropbox's own raw {@code GetRecencyBlobResponse}, or null if none
+     *                           yet
      * @param endpoint           client server hooks: ensure it is up before advertising, end sessions on stop
      * @param stateChanged       called after any UI-visible change
      * @param roleLost           called with a reason if the hosted group disappears while HOSTING
@@ -244,7 +245,8 @@ final class DropboxWifiHost {
             byte[] rawBlob = recencyBlob.get();
             String encoded = DropboxTxt.encodeRecencyBlob(rawBlob);
             if (rawBlob == null) {
-                link.wifi(WARNING, "No recency blob yet: clients will not list this dropbox until a carrier visit");
+                link.wifi(WARNING, "No recency blob yet: clients will not list this dropbox until the server " +
+                        "issues one");
             } else if (encoded == null) {
                 // Same refusal as DDDWifiServer.updateRecencyBlob (>255 chars), but we still advertise.
                 link.wifi(SEVERE, "Recency blob too large for a TXT record (" + rawBlob.length + " bytes); omitted");

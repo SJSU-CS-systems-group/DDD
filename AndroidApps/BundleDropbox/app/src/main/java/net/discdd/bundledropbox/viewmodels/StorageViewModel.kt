@@ -84,7 +84,7 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
     /** Deletes all pickups (DOWNSTREAM, server-to-client) bundles via the service. */
     fun clearDownstream() = clear(R.string.storage_cleared_downstream) { it.clearDownstream() }
 
-    /** Forgets the stored recency blob via the service (audit M6 operator recovery). */
+    /** Forgets the stored recency blob and the outstanding request via the service (audit M6 operator recovery). */
     fun resetRecencyBlob() = clear(R.string.storage_recency_reset_done) { it.resetRecencyBlob() }
 
     fun clearMessage() = _extras.update { it.copy(message = null) }

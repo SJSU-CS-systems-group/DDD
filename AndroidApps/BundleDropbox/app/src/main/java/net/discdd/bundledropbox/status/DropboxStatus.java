@@ -32,6 +32,7 @@ public final class DropboxStatus {
     private final long modeStartedAtMillis;
     private final long deadlineAtMillis;
     private final String advertisedId;
+    private final String ownSenderId;
     private final long recencyBlobTimestamp;
     private final int activeSessions;
     private final int upstreamCount;
@@ -47,6 +48,7 @@ public final class DropboxStatus {
         this.modeStartedAtMillis = b.modeStartedAtMillis;
         this.deadlineAtMillis = b.deadlineAtMillis;
         this.advertisedId = b.advertisedId;
+        this.ownSenderId = b.ownSenderId;
         this.recencyBlobTimestamp = b.recencyBlobTimestamp;
         this.activeSessions = b.activeSessions;
         this.upstreamCount = b.upstreamCount;
@@ -77,15 +79,21 @@ public final class DropboxStatus {
     public boolean hasDeadline() { return deadlineAtMillis != CycleListener.NO_DEADLINE; }
 
     /**
-     * @return the {@code transportId} currently advertised to clients ({@code baseId-gen} when rotation
-     *         is on), or {@code null} before the identity is loaded
+     * @return the {@code transportId} advertised to clients (the stable {@code baseId}), or {@code null} before
+     *         the identity is loaded
      */
     public String advertisedId() { return advertisedId; }
 
-    /** @return {@code blobTimestamp} of the cached recency blob (server wall clock), or 0 if none. */
+    /**
+     * @return the sender id the server mints the dropbox's recency blobs for ({@code SecurityUtils.generateID}
+     *         of its TLS public key), or {@code null} before the identity is loaded
+     */
+    public String ownSenderId() { return ownSenderId; }
+
+    /** @return {@code blobTimestamp} of the dropbox's own recency blob (server wall clock), or 0 if none. */
     public long recencyBlobTimestamp() { return recencyBlobTimestamp; }
 
-    /** @return true if a recency blob is cached, i.e. the dropbox can serve clients. */
+    /** @return true if the dropbox holds its own recency blob, i.e. it can serve clients. */
     public boolean hasRecencyBlob() { return recencyBlobTimestamp > 0; }
 
     /** @return client sessions currently admitted by the activity gate. */
@@ -121,13 +129,15 @@ public final class DropboxStatus {
                 recencyBlobTimestamp == s.recencyBlobTimestamp && activeSessions == s.activeSessions &&
                 upstreamCount == s.upstreamCount && upstreamBytes == s.upstreamBytes &&
                 downstreamCount == s.downstreamCount && downstreamBytes == s.downstreamBytes && mode == s.mode &&
-                Objects.equals(advertisedId, s.advertisedId) && Objects.equals(lastVisit, s.lastVisit) &&
+                Objects.equals(advertisedId, s.advertisedId) && Objects.equals(ownSenderId, s.ownSenderId) &&
+                Objects.equals(lastVisit, s.lastVisit) &&
                 Objects.equals(lastError, s.lastError) && control.equals(s.control);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(mode, modeStartedAtMillis, deadlineAtMillis, advertisedId, recencyBlobTimestamp,
+        return Objects.hash(mode, modeStartedAtMillis, deadlineAtMillis, advertisedId, ownSenderId,
+                            recencyBlobTimestamp,
                             activeSessions, upstreamCount, upstreamBytes, downstreamCount, downstreamBytes,
                             lastVisit, lastError, control);
     }
@@ -135,7 +145,8 @@ public final class DropboxStatus {
     @Override
     public String toString() {
         return "DropboxStatus{mode=" + mode + ", startedAt=" + modeStartedAtMillis + ", deadline=" +
-                deadlineAtMillis + ", advertisedId=" + advertisedId + ", blobTs=" + recencyBlobTimestamp +
+                deadlineAtMillis + ", advertisedId=" + advertisedId + ", senderId=" + ownSenderId + ", blobTs=" +
+                recencyBlobTimestamp +
                 ", sessions=" + activeSessions + ", up=" + upstreamCount + "/" + upstreamBytes + "B, down=" +
                 downstreamCount + "/" + downstreamBytes + "B, lastVisit=" + lastVisit + ", lastError=" + lastError +
                 ", control=" + control + "}";
@@ -147,6 +158,7 @@ public final class DropboxStatus {
         private long modeStartedAtMillis = 0;
         private long deadlineAtMillis = CycleListener.NO_DEADLINE;
         private String advertisedId = null;
+        private String ownSenderId = null;
         private long recencyBlobTimestamp = 0;
         private int activeSessions = 0;
         private int upstreamCount = 0;
@@ -165,6 +177,7 @@ public final class DropboxStatus {
             this.modeStartedAtMillis = s.modeStartedAtMillis;
             this.deadlineAtMillis = s.deadlineAtMillis;
             this.advertisedId = s.advertisedId;
+            this.ownSenderId = s.ownSenderId;
             this.recencyBlobTimestamp = s.recencyBlobTimestamp;
             this.activeSessions = s.activeSessions;
             this.upstreamCount = s.upstreamCount;
@@ -193,7 +206,10 @@ public final class DropboxStatus {
         /** Sets the advertised transport id. */
         public Builder advertisedId(String v) { this.advertisedId = v; return this; }
 
-        /** Sets the cached recency blob timestamp (0 = none). */
+        /** Sets the dropbox's own sender id. */
+        public Builder ownSenderId(String v) { this.ownSenderId = v; return this; }
+
+        /** Sets the own recency blob timestamp (0 = none). */
         public Builder recencyBlobTimestamp(long v) { this.recencyBlobTimestamp = v; return this; }
 
         /** Sets the number of admitted client sessions. */

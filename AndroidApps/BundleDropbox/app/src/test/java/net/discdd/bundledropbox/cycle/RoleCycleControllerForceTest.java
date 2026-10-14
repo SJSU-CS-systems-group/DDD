@@ -93,7 +93,7 @@ public class RoleCycleControllerForceTest {
         s.runReady();
         assertEquals(CycleMode.VISIT_STARTING, c.mode());
         FakeRadio.Call startVisit = radio.last();
-        blob.set(true); // e.g. a carrier delivered a blob during the previous visit
+        blob.set(true); // e.g. a server grant arrived during the previous visit
         c.forceHost();
         s.runReady();
         assertEquals(CycleMode.VISIT_STOPPING, c.mode());

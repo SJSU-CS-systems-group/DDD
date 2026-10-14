@@ -22,7 +22,7 @@ import java.util.logging.Logger;
  *       admissions are closed (draining / not hosting): the RPC is refused and the interceptor answers
  *       {@code UNAVAILABLE}. This is NOT a harmless "try later" for the stock client: it stamps
  *       {@code lastExchange} for our advertised transportId even though the exchange failed, and then skips
- *       us until the advertised id rotates or a newer recency blob is advertised (R3 §7). That is why the
+ *       us until a newer recency blob is advertised (R3 §7). That is why the
  *       cycle withdraws the DNS-SD record as soon as a HOST drain begins, and why sessions are never reaped
  *       while draining (below).</li>
  *   <li>Later RPCs from an admitted IP reuse the session's token, so they pass even while draining:

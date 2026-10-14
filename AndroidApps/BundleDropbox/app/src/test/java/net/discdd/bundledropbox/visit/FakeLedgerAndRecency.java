@@ -29,16 +29,21 @@ final class FakeLedgerAndRecency {
         }
     }
 
-    /** Keeps the newest SUCCESS blob, exactly as the {@link RecencyBlobStore#offer} contract says. */
+    /**
+     * Keeps the newest SUCCESS blob, as the {@link RecencyBlobStore#offer} contract says (without the server and
+     * own-sender-id checks), and counts offers so visit tests can prove a carrier's blob is never offered.
+     */
     static final class Recency implements RecencyBlobStore {
         private byte[] current;
         private long timestamp;
+        int offers;
 
         @Override
         public synchronized Optional<byte[]> current() { return Optional.ofNullable(current); }
 
         @Override
         public synchronized boolean offer(byte[] rawResponse) {
+            offers++;
             try {
                 GetRecencyBlobResponse r = GetRecencyBlobResponse.parseFrom(rawResponse);
                 if (r.getStatus() != RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS) return false;

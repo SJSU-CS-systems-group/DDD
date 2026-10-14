@@ -7,8 +7,9 @@ import java.util.Objects;
  * The dropbox's own DDD client endpoint as seen by a carrier visit ({@link TransportVisitClient}). The visit
  * splices it into the exchange it already runs (Research/R6 §3.1, 06 Storage Management Design "Visit flow"):
  * <ol>
- *   <li>after the recency blob, it uploads {@link #ownBundleForVisit()} <b>first</b>, before any relayed bundle,
- *       so the inventory and the acks it carries are never starved by a short dwell;</li>
+ *   <li>after the carrier's {@code getRecencyBlob} (used only to learn the carrier's sender id), it uploads
+ *       {@link #ownBundleForVisit()} <b>first</b>, before any relayed bundle, so the inventory, the recency request
+ *       and the acks it carries are never starved by a short dwell;</li>
  *   <li>during download-all, every downloaded jar is {@linkplain #classify classified}: a bundle addressed to the
  *       dropbox goes to {@link #accept} and <b>never</b> into the relay store, since no stock client could ever
  *       PSI-match it.</li>
@@ -55,8 +56,8 @@ public interface ControlChannel {
     }
 
     /**
-     * Builds (or reuses) the dropbox's own bundle: a fresh inventory report when the holdings changed, plus the
-     * ack of the newest plan bundle it processed.
+     * Builds (or reuses) the dropbox's own bundle: a fresh inventory report when the holdings changed, a new
+     * recency request when none is outstanding, plus the ack of the newest control bundle it processed.
      *
      * @return the bundle to upload first, or {@code null} if there is none (endpoint unavailable)
      */
@@ -75,7 +76,7 @@ public interface ControlChannel {
      * @param stagedJar       the downloaded jar
      * @param carrierSenderId the carrier's recency-blob {@code senderId} (the transport id the server routes by),
      *                        or {@code null} if unknown
-     * @return true if the bundle was processed (its plans applied)
+     * @return true if the bundle was processed (its plans applied, its recency grants offered to the store)
      */
     boolean accept(Path stagedJar, String carrierSenderId);
 

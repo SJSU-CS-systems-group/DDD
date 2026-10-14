@@ -8,6 +8,7 @@ import net.discdd.dropbox.control.BundleJarInfo;
 import net.discdd.dropbox.control.DropboxControl;
 import net.discdd.dropbox.control.DropboxControlCodec;
 import net.discdd.dropbox.control.DropboxControlException;
+import net.discdd.dropbox.control.RecencyGrant;
 import net.discdd.dropbox.control.RetentionPlan;
 import net.discdd.model.ADU;
 import net.discdd.model.Bundle;
@@ -51,8 +52,11 @@ import javax.crypto.spec.SecretKeySpec;
 /**
  * The dropbox's own DDD client endpoint: one bundle-core {@link ClientBundleTransmission} with its own client
  * keys, through which the dropbox talks to the server about its storage (06 Storage Management Design,
- * Research/R7). It sends {@code inventory} ADUs and receives {@code plan} ADUs under
- * {@link DropboxControl#APP_ID}; the bundles travel through carriers exactly like a stock client's.
+ * Research/R7) and gets its own recency blob (09 Own Recency Blob Design). It sends {@code inventory} ADUs and
+ * receives {@code plan} ADUs under {@link DropboxControl#APP_ID}, and sends {@code recencyRequest} ADUs and
+ * receives {@code recencyGrant} ADUs under {@link DropboxControl#RECENCY_APP_ID}. The two app ids are separate
+ * queues because the server keeps exactly one plan queued under {@code APP_ID} and decodes it as a plan. The
+ * bundles travel through carriers exactly like a stock client's.
  *
  * <p>No network: the endpoint only builds and consumes bundle files. The visit uploads its bundle and hands it
  * downloaded bundles ({@code DropboxControlManager}, {@link ControlChannel}).
@@ -77,16 +81,20 @@ import javax.crypto.spec.SecretKeySpec;
  *       writer; an empty file makes it reject every reply forever (R7 §7).</li>
  *   <li><b>Recreate a missing {@code routing.metadata}.</b> bundle-core's {@code ClientRouting} singleton writes it
  *       only once per process, so a re-created root (server-key change) would otherwise lack it.</li>
- *   <li><b>Union {@link DropboxControl#APP_ID} into the registered app ids</b> after each bundle: the client
- *       only sends app ids the server listed, so a server that omitted it would silence the inventory (R7 §3).
- *       The server lists it for dropbox nodes too; this is the backstop.</li>
+ *   <li><b>Union {@link DropboxControl#APP_ID} and {@link DropboxControl#RECENCY_APP_ID} into the registered app
+ *       ids</b> at open and after each bundle: the client only sends app ids the server listed, so a server that
+ *       omitted one would silence the inventory or the recency request (R7 §3). The server lists them for
+ *       dropbox nodes too; this is the backstop.</li>
  * </ul>
  *
  * <h2>ADUs (Research/R6 §3.1)</h2>
- * Received plan ADUs are read from the stored copy, handed to the {@link PlanSink}, and then deleted with
- * {@code deleteAllFilesUpTo}, which also makes bundle-core skip re-deliveries of the same ADU ids. A plan whose
- * sink failed stays stored and is replayed by {@link #replayPending()} (at start-up and after the next bundle).
- * Inventory ADUs are snapshots: queuing a new one deletes the older unsent ones, so only the newest rides.
+ * Received plan and grant ADUs are read from the stored copy, handed to the {@link PlanSink} or the
+ * {@link GrantSink}, and then deleted with {@code deleteAllFilesUpTo}, which also makes bundle-core skip
+ * re-deliveries of the same ADU ids. An ADU whose sink failed stays stored and is replayed by
+ * {@link #replayPending()} (at start-up and after the next bundle); the two app ids are drained independently, so
+ * a stuck plan never holds back a grant or the other way round. A message of the wrong type for its app id is
+ * dropped ({@code UNEXPECTED_TYPE}). Inventory and recency-request ADUs are snapshots: queuing a new one deletes
+ * the older unsent ones of its app id, so only the newest rides.
  *
  * <p>Thread-safety: none of the bundle-core classes are thread-safe, so every method is {@code synchronized}.
  */
@@ -109,6 +117,20 @@ public final class DropboxControlEndpoint {
         void onPlan(RetentionPlan plan) throws IOException;
     }
 
+    /** Receives each decoded recency grant, in ADU order. */
+    @FunctionalInterface
+    public interface GrantSink {
+        /**
+         * @param grant a decoded grant (shape checked only: the blob is neither parsed nor verified yet)
+         * @throws IOException to keep the grant's ADU stored and retry it later ({@link #replayPending()})
+         */
+        void onGrant(RecencyGrant grant) throws IOException;
+    }
+
+    /** A grant sink for endpoints that do not take part in the recency exchange (tests): grants are dropped. */
+    static final GrantSink DROP_GRANTS =
+            grant -> logger.log(Level.INFO, "No recency consumer; dropping " + grant);
+
     /** Outcome of {@link #accept}. */
     public enum AcceptResult {
         /** The bundle was processed: its ADUs were stored and delivered, and it is now the largest received. */
@@ -128,6 +150,7 @@ public final class DropboxControlEndpoint {
     private final ClientPaths paths;
     private final ClientBundleTransmission transmission;
     private final PlanSink sink;
+    private final GrantSink grantSink;
     private final String clientId;
     private final byte[] clientIdBytes;
     private final SecretKeySpec bundleIdKey;
@@ -135,11 +158,12 @@ public final class DropboxControlEndpoint {
     private final boolean resetForNewServer;
     private boolean closed; // guarded by this
 
-    private DropboxControlEndpoint(Path root, ClientPaths paths, PlanSink sink, boolean resetForNewServer)
-            throws Exception {
+    private DropboxControlEndpoint(Path root, ClientPaths paths, PlanSink sink, GrantSink grantSink,
+                                   boolean resetForNewServer) throws Exception {
         this.root = root;
         this.paths = paths;
         this.sink = sink;
+        this.grantSink = grantSink;
         this.resetForNewServer = resetForNewServer;
         this.scratchDir = Files.createDirectories(root.resolve(CONTROL_DIR_NAME).resolve("incoming"));
         this.transmission = new ClientBundleTransmission(paths, this::onAdu);
@@ -147,7 +171,7 @@ public final class DropboxControlEndpoint {
         this.clientId = security.getClientID();
         this.clientIdBytes = Base64.getUrlDecoder().decode(clientId);
         this.bundleIdKey = deriveBundleIdKey(security, paths);
-        ensureControlAppRegistered();
+        ensureControlAppsRegistered();
         cleanScratch();
     }
 
@@ -160,20 +184,23 @@ public final class DropboxControlEndpoint {
      * could not be compared). The dropbox then appears to the new server as a new client, which it learns about
      * from the first bundle; no registration exists (R7 §2).
      *
-     * <p>Received plans are <b>not</b> replayed here: call {@link #replayPending()} once the sink is ready.
+     * <p>Received plans and grants are <b>not</b> replayed here: call {@link #replayPending()} once the sinks are
+     * ready.
      *
      * @param root          {@code getDataDir()/ControlEndpoint} in production (internal storage, R7 §1)
      * @param identityPem   {@code server_identity.pub} text
      * @param signedPrePem  {@code server_signed_pre.pub} text
      * @param ratchetPem    {@code server_ratchet.pub} text
      * @param sink          receives decoded plans
+     * @param grantSink     receives decoded recency grants
      * @return the open endpoint
      * @throws IllegalStateException if another root was opened in this process
      * @throws Exception             if bundle-core cannot initialize (bad keys, I/O)
      */
     public static DropboxControlEndpoint open(Path root, byte[] identityPem, byte[] signedPrePem, byte[] ratchetPem,
-                                              PlanSink sink) throws Exception {
+                                              PlanSink sink, GrantSink grantSink) throws Exception {
         Objects.requireNonNull(sink, "sink");
+        Objects.requireNonNull(grantSink, "grantSink");
         Path r = root.toAbsolutePath().normalize();
         synchronized (DropboxControlEndpoint.class) {
             if (processRoot != null && !processRoot.equals(r)) {
@@ -191,14 +218,26 @@ public final class DropboxControlEndpoint {
             repairBlankLargestReceived(paths.largestBundleIdReceived);
             ensureRoutingMetadata(paths);
             resetClientSecurityIfInitialized();
-            DropboxControlEndpoint endpoint = new DropboxControlEndpoint(r, paths, sink, reset);
+            DropboxControlEndpoint endpoint = new DropboxControlEndpoint(r, paths, sink, grantSink, reset);
             processRoot = r;
             logger.log(Level.INFO, "Control endpoint " + endpoint.clientId + " open at " + r);
             return endpoint;
         }
     }
 
-    /** @return this endpoint's DDD client id (Base64url SHA-1 of its identity key), as the server knows it */
+    /**
+     * {@link #open(Path, byte[], byte[], byte[], PlanSink, GrantSink)} for an endpoint without a recency consumer:
+     * received grants are logged and dropped.
+     */
+    public static DropboxControlEndpoint open(Path root, byte[] identityPem, byte[] signedPrePem, byte[] ratchetPem,
+                                              PlanSink sink) throws Exception {
+        return open(root, identityPem, signedPrePem, ratchetPem, sink, DROP_GRANTS);
+    }
+
+    /**
+     * @return this endpoint's DDD client id (Base64url SHA-1 of its identity key), as the server knows it. Also the
+     *         {@code clientId} a recency request is signed for ({@code RecencyRequestSigner})
+     */
     public String clientId() {
         return clientId;
     }
@@ -213,34 +252,53 @@ public final class DropboxControlEndpoint {
         return root;
     }
 
+    /** {@link #prepareUpstream(byte[], byte[])} without a recency request. */
+    public synchronized ControlChannel.OwnBundle prepareUpstream(byte[] inventoryAdu) throws Exception {
+        return prepareUpstream(inventoryAdu, null);
+    }
+
     /**
-     * Queues {@code inventoryAdu} (if given) and returns the bundle to upload.
+     * Queues {@code inventoryAdu} and {@code recencyRequestAdu} (each if given) and returns the bundle to upload.
      *
      * <p>bundle-core reuses the newest generated bundle unless a newer ack or new ADUs exist
-     * ({@code generateBundleForTransmission}), so passing {@code null} when nothing changed keeps re-offering the
-     * same bundle id instead of using up a new one per visit. Older generated bundles are deleted: bundle-core
-     * never prunes {@code to-send/} itself (R7 §3).
+     * ({@code generateBundleForTransmission}), so passing {@code null} for both when nothing changed keeps
+     * re-offering the same bundle id instead of using up a new one per visit; queuing either one forces a new
+     * bundle. Queued ADUs stay in every new bundle until the server acknowledges a bundle that carried them, so a
+     * request waiting for its grant still rides along without being queued again. Older generated bundles are
+     * deleted: bundle-core never prunes {@code to-send/} itself (R7 §3).
      *
-     * @param inventoryAdu an encoded inventory to send, replacing any older unsent one; {@code null} to keep the
-     *                     queued ADUs as they are
+     * @param inventoryAdu      an encoded inventory to send under {@link DropboxControl#APP_ID}, replacing any older
+     *                          unsent one; {@code null} to keep the queued ones as they are
+     * @param recencyRequestAdu an encoded recency request to send under {@link DropboxControl#RECENCY_APP_ID},
+     *                          replacing any older unsent one; {@code null} to keep the queued ones as they are
      * @return the bundle to upload
      */
-    public synchronized ControlChannel.OwnBundle prepareUpstream(byte[] inventoryAdu) throws Exception {
+    public synchronized ControlChannel.OwnBundle prepareUpstream(byte[] inventoryAdu, byte[] recencyRequestAdu)
+            throws Exception {
         checkOpen();
         StoreADUs send = transmission.applicationDataManager.sendADUsStorage;
-        if (inventoryAdu != null) {
-            long lastAdded = send.getLastADUIdAdded(null, DropboxControl.APP_ID);
-            if (lastAdded > send.getLastADUIdDeleted(null, DropboxControl.APP_ID)) {
-                // Snapshots supersede each other: every unacked ADU would otherwise ride in every bundle (R6 §3.1).
-                send.deleteAllFilesUpTo(null, DropboxControl.APP_ID, lastAdded);
-            }
-            send.addADU(null, DropboxControl.APP_ID, inventoryAdu, -1);
-        }
+        if (inventoryAdu != null) queueSnapshot(send, DropboxControl.APP_ID, inventoryAdu);
+        if (recencyRequestAdu != null) queueSnapshot(send, DropboxControl.RECENCY_APP_ID, recencyRequestAdu);
+        // bundle-core detects new ADUs by comparing millisecond file times with strict ">", so an ADU queued in
+        // the same millisecond as the previous bundle would be missed and that bundle re-offered without it; for
+        // a recency request that would stall until something else changes. Whatever was queued must ride, so the
+        // superseded bundle goes now rather than after generation (pruneToSend would delete it anyway).
+        if (inventoryAdu != null || recencyRequestAdu != null) pruneToSend(null);
         ensureRoutingMetadata(paths);
         Bundle bundle = transmission.generateBundleForTransmission();
         Path file = bundle.getSource().toPath();
         pruneToSend(file);
         return new ControlChannel.OwnBundle(bundle.getBundleId(), file);
+    }
+
+    /** Adds {@code adu} under {@code appId} after deleting the older unsent ones: snapshots supersede each other. */
+    private static void queueSnapshot(StoreADUs send, String appId, byte[] adu) throws IOException {
+        long lastAdded = send.getLastADUIdAdded(null, appId);
+        if (lastAdded > send.getLastADUIdDeleted(null, appId)) {
+            // Every unacked ADU would otherwise ride in every bundle (R6 §3.1).
+            send.deleteAllFilesUpTo(null, appId, lastAdded);
+        }
+        send.addADU(null, appId, adu, -1);
     }
 
     /**
@@ -262,8 +320,8 @@ public final class DropboxControlEndpoint {
 
     /**
      * Processes a bundle addressed to this endpoint: copies it (bundle-core deletes its input), runs
-     * {@code processReceivedBundle}, which stores its ADUs and delivers plans to the sink, then cleans up the
-     * extracted files bundle-core leaves behind.
+     * {@code processReceivedBundle}, which stores its ADUs and delivers plans and grants to their sinks, then
+     * cleans up the extracted files bundle-core leaves behind.
      *
      * @param jar             the downloaded jar (not modified or deleted)
      * @param carrierSenderId the carrier's recency-blob {@code senderId}; bundle-core adds it to this endpoint's
@@ -295,15 +353,15 @@ public final class DropboxControlEndpoint {
         } finally {
             deleteQuietly(copy);
             deleteRecursively(paths.uncompressedPayloadStore.resolve(bundleId));
-            ensureControlAppRegistered();
+            ensureControlAppsRegistered();
         }
         boolean nowLargest = decryptOwnCounter(bundleId) == largestReceivedCounter();
         return nowLargest ? AcceptResult.PROCESSED : AcceptResult.FAILED;
     }
 
     /**
-     * Delivers stored plan ADUs that were not processed yet (a sink failure, or a crash between storing and
-     * applying), then deletes them. Safe to call at any time.
+     * Delivers stored plan and grant ADUs that were not processed yet (a sink failure, or a crash between storing
+     * and applying), then deletes them. Safe to call at any time.
      */
     public synchronized void replayPending() {
         checkOpen();
@@ -323,12 +381,25 @@ public final class DropboxControlEndpoint {
     }
 
     private void drainReceived() {
+        drain(DropboxControl.APP_ID, "plan", bytes -> sink.onPlan(DropboxControlCodec.decodePlan(bytes)));
+        drain(DropboxControl.RECENCY_APP_ID, "grant",
+              bytes -> grantSink.onGrant(DropboxControlCodec.decodeRecencyGrant(bytes)));
+    }
+
+    /** Decodes and delivers one stored control ADU. */
+    @FunctionalInterface
+    private interface AduHandler {
+        void handle(byte[] bytes) throws DropboxControlException, IOException;
+    }
+
+    /** Delivers the stored ADUs of {@code appId} in order and deletes those that are done. */
+    private void drain(String appId, String what, AduHandler handler) {
         StoreADUs received = transmission.applicationDataManager.receiveADUsStorage;
         List<ADU> adus;
         try {
-            adus = received.getAppData(null, DropboxControl.APP_ID);
+            adus = received.getAppData(null, appId);
         } catch (IOException e) {
-            logger.log(Level.WARNING, "Cannot list received control ADUs", e);
+            logger.log(Level.WARNING, "Cannot list received " + appId + " ADUs", e);
             return;
         }
         long done = -1;
@@ -337,40 +408,47 @@ public final class DropboxControlEndpoint {
             try {
                 bytes = Files.readAllBytes(adu.getSource().toPath());
             } catch (IOException e) {
-                logger.log(Level.WARNING, "Cannot read control ADU " + adu.getADUId() + "; retrying later", e);
+                logger.log(Level.WARNING, "Cannot read " + appId + " ADU " + adu.getADUId() + "; retrying later", e);
                 break;
             }
             try {
-                sink.onPlan(DropboxControlCodec.decodePlan(bytes));
+                handler.handle(bytes);
             } catch (DropboxControlException e) {
-                // Unknown type or a malformed message: log and drop, as the contract says (it cannot get better).
-                logger.log(Level.WARNING, "Dropping control ADU " + adu.getADUId() + ": " + e.getKind() + " " +
+                // Unknown or wrong type, or a malformed message: log and drop, as the contract says (it cannot get
+                // better).
+                logger.log(Level.WARNING, "Dropping " + appId + " ADU " + adu.getADUId() + ": " + e.getKind() + " " +
                         e.getMessage());
             } catch (IOException e) {
-                logger.log(Level.WARNING, "Plan ADU " + adu.getADUId() + " not applied yet; will retry", e);
+                logger.log(Level.WARNING, "Control " + what + " ADU " + adu.getADUId() + " not applied yet; will retry",
+                           e);
                 break;
             } catch (RuntimeException e) {
-                // A plan that crashes the executor would otherwise block every later plan forever.
-                logger.log(Level.SEVERE, "Dropping control ADU " + adu.getADUId() + " after an error", e);
+                // A message that crashes its consumer would otherwise block every later one forever.
+                logger.log(Level.SEVERE, "Dropping " + appId + " ADU " + adu.getADUId() + " after an error", e);
             }
             done = adu.getADUId();
         }
         if (done < 0) return;
         try {
             // Also raises lastAduDeleted, so bundle-core skips re-deliveries of these ids (R7 §4).
-            received.deleteAllFilesUpTo(null, DropboxControl.APP_ID, done);
+            received.deleteAllFilesUpTo(null, appId, done);
         } catch (IOException e) {
-            logger.log(Level.WARNING, "Cannot delete processed control ADUs up to " + done, e);
+            logger.log(Level.WARNING, "Cannot delete processed " + appId + " ADUs up to " + done, e);
         }
     }
 
-    /** Backstop for the server's app-id list (class Javadoc). */
-    private void ensureControlAppRegistered() {
+    /** Backstop for the server's app-id list (class Javadoc): both control app ids, kept in the server's order. */
+    private void ensureControlAppsRegistered() {
         List<String> current = transmission.applicationDataManager.getRegisteredAppIds();
-        if (current != null && current.contains(DropboxControl.APP_ID)) return;
         List<String> ids = new ArrayList<>(current == null ? List.of() : current);
-        ids.add(DropboxControl.APP_ID);
-        transmission.applicationDataManager.setRegisteredAppIds(ids);
+        boolean changed = false;
+        for (String appId : List.of(DropboxControl.APP_ID, DropboxControl.RECENCY_APP_ID)) {
+            if (!ids.contains(appId)) {
+                ids.add(appId);
+                changed = true;
+            }
+        }
+        if (changed) transmission.applicationDataManager.setRegisteredAppIds(ids);
     }
 
     // ------------------------------------------------------------------------------------------ bundle ids
@@ -437,7 +515,11 @@ public final class DropboxControlEndpoint {
         if (closed) throw new IllegalStateException("control endpoint closed");
     }
 
-    /** Keeps only {@code keep} in {@code to-send/}: the reuse rule only ever looks at the newest file. */
+    /**
+     * Keeps only {@code keep} in {@code to-send/}: the reuse rule only ever looks at the newest file.
+     *
+     * @param keep the bundle to keep, or {@code null} to delete them all
+     */
     private void pruneToSend(Path keep) {
         File[] files = paths.tosendDir.toFile().listFiles();
         if (files == null) return;

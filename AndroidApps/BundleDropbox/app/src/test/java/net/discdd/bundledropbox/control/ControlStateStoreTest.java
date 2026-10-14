@@ -63,6 +63,63 @@ public class ControlStateStoreTest {
         assertEquals("d100", store.snapshot().downstreamCursor());
     }
 
+    /** 09 Own Recency Blob Design: at most one request outstanding, answered by a grant, persisted. */
+    @Test
+    public void recencyRequestLifecyclePersists() throws Exception {
+        Path file = tmp.getRoot().toPath().resolve(ControlStateStore.FILE_NAME);
+        ControlStateStore store = new ControlStateStore(file);
+        assertFalse(store.snapshot().recencyOutstanding());
+        assertEquals(0, store.snapshot().recencyRequestSeq());
+
+        store.recordRecencyRequested(1, 100);
+        store = new ControlStateStore(file);
+        assertTrue(store.snapshot().recencyOutstanding());
+        assertEquals(1, store.snapshot().recencyRequestSeq());
+        assertEquals(100, store.snapshot().recencyRequestedAtMillis());
+
+        store.recordRecencyGranted(1, true, 200);
+        store = new ControlStateStore(file);
+        assertFalse(store.snapshot().recencyOutstanding());
+        assertEquals(1, store.snapshot().recencyAnsweredSeq());
+        assertEquals(200, store.snapshot().recencyGrantAtMillis());
+        assertEquals(200, store.snapshot().recencyStoredAtMillis());
+
+        store.recordRecencyRequested(2, 300);
+        store.recordRecencyGranted(1, false, 400); // a stale grant does not answer request 2
+        assertTrue(store.snapshot().recencyOutstanding());
+        store.recordRecencyGranted(2, false, 500); // an unusable grant still answers it
+        assertFalse(store.snapshot().recencyOutstanding());
+        assertEquals(200, store.snapshot().recencyStoredAtMillis());
+    }
+
+    @Test
+    public void grantAboveALostCounterLiftsTheNextRequestAndAbandonForgetsOne() throws Exception {
+        Path file = tmp.getRoot().toPath().resolve(ControlStateStore.FILE_NAME);
+        ControlStateStore store = new ControlStateStore(file);
+        store.recordRecencyGranted(7, true, 10); // state file was lost; the server answered request 7
+        assertEquals(7, store.snapshot().recencyRequestSeq());
+        assertFalse(store.snapshot().recencyOutstanding());
+
+        store.recordRecencyRequested(8, 20);
+        store.recordRecencyAbandoned(30);
+        store = new ControlStateStore(file);
+        assertFalse(store.snapshot().recencyOutstanding());
+        assertEquals(8, store.snapshot().recencyAnsweredSeq());
+        assertEquals(8, store.snapshot().recencyRequestSeq());
+        assertEquals("abandoned, not answered: the grant time is untouched", 10,
+                     store.snapshot().recencyGrantAtMillis());
+        assertEquals(30, store.snapshot().recencyAbandonedAtMillis());
+
+        store.recordRecencyAbandoned(40); // nothing outstanding: no-op
+        assertEquals(30, store.snapshot().recencyAbandonedAtMillis());
+        store.recordRecencyRequested(9, 50);
+        assertEquals("a new request clears the abandoned mark", 0, store.snapshot().recencyAbandonedAtMillis());
+        store.recordRecencyAbandoned(60);
+        store.recordRecencyGranted(9, true, 70); // the abandoned request was answered after all
+        assertEquals(0, store.snapshot().recencyAbandonedAtMillis());
+        assertEquals(70, store.snapshot().recencyGrantAtMillis());
+    }
+
     private static InventoryReport.PlanResult result(long planSeq) {
         return new InventoryReport.PlanResult(planSeq, List.of(), List.of());
     }
