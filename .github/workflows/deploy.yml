@@ -8,6 +8,7 @@ on:
       - '.github/workflows/daily.yml'
       - '.github/workflows/release.yml'
       - '.github/workflows/format-action.yml'
+      - 'docs/**'
   workflow_dispatch:
 
 permissions:
