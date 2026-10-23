@@ -198,6 +198,13 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                 if (!Objects.equals(clientId, oldClientId)) {
                     sendADUsStorage.addADU(oldClientId, APP_ID, getEmail("logout", adu.email(), adu.locale()), -1);
                 }
+            } else {
+                // wrong password for an existing email: send the same vague failure ack as
+                // the unknown-email case so we don't reveal which of the two was wrong, and
+                // so the client hears back instead of hanging forever
+                var ack = new ControlAdu.LoginAckControlAdu(Map.of("message",
+                                                                   "Email doesn't exist or password is incorrect."));
+                sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
             }
         } else {
             var ack = new ControlAdu.LoginAckControlAdu(Map.of("message",
