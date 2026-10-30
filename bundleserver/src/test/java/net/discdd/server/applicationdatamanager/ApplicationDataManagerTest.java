@@ -95,8 +95,12 @@ public class ApplicationDataManagerTest {
     }
 
     private ServerApplicationDataManager buildManager() throws Exception {
+        return buildManager(100_000_000L);
+    }
+
+    private ServerApplicationDataManager buildManager(long appDataSizeLimit) throws Exception {
         var cfg = new BundleServerConfig();
-        cfg.getApplicationDataManager().setAppDataSizeLimit(100_000_000L);
+        cfg.getApplicationDataManager().setAppDataSizeLimit(appDataSizeLimit);
         return new ServerApplicationDataManager(new AduStores(tempRootDir),
                                                 (a, b) -> {},
                                                 sentAduDetailsRepository,
@@ -200,5 +204,49 @@ public class ApplicationDataManagerTest {
 
         assertEquals("clientXYZ", mgr.getClientIdForBundle("encBundleXYZ"));
         assertNull(mgr.getClientIdForBundle("bundleThatDoesNotExist"));
+    }
+
+    /**
+     * An ADU too big to ever fit in a bundle is trimmed to the budget instead of wedging the queue,
+     * and it uses up the rest of the budget.
+     */
+    @Test
+    public void testOversizedADUIsTrimmed() throws Exception {
+        registeredAppAdapterRepository.save(new RegisteredAppAdapter("app1", "localhost:11114"));
+        var mgr = buildManager(10L);
+        var sendStorage = getSendStorage(mgr);
+
+        String clientId = "clientOversized";
+        sendStorage.addADU(clientId, "app1", "0123456789abcdefghijklmno".getBytes(), 1L);
+        sendStorage.addADU(clientId, "app1", "small".getBytes(), 2L);
+
+        var sent = mgr.fetchADUsToSend("bundle-oversized", 1L, 0L, clientId);
+
+        assertEquals(1, sent.size());
+        assertEquals(1L, sent.get(0).getADUId());
+        assertEquals(10L, sent.get(0).getSize());
+        assertEquals("0123456789", new String(sendStorage.getADU(clientId, "app1", 1L)));
+    }
+
+    /**
+     * An ADU that would fit in an empty bundle but is crowded out by other apps waits for the next bundle
+     * instead of being trimmed.
+     */
+    @Test
+    public void testCrowdedOutADUIsNotTrimmed() throws Exception {
+        registeredAppAdapterRepository.save(new RegisteredAppAdapter("app1", "localhost:11115"));
+        registeredAppAdapterRepository.save(new RegisteredAppAdapter("app2", "localhost:11116"));
+        var mgr = buildManager(10L);
+        var sendStorage = getSendStorage(mgr);
+
+        String clientId = "clientCrowded";
+        sendStorage.addADU(clientId, "app1", "123456".getBytes(), 1L);
+        sendStorage.addADU(clientId, "app2", "12345678".getBytes(), 1L);
+
+        var sent = mgr.fetchADUsToSend("bundle-crowded", 1L, 0L, clientId);
+
+        assertEquals(1, sent.size());
+        assertEquals(6, sendStorage.getADU(clientId, "app1", 1L).length);
+        assertEquals(8, sendStorage.getADU(clientId, "app2", 1L).length);
     }
 }
