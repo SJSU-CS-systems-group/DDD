@@ -8,13 +8,16 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -245,6 +248,30 @@ public class StoreADUs {
     public File getADUFile(String clientId, String appId, long aduId) {
         var appFolder = getAppFolder(clientId, appId);
         return appFolder.resolve(Long.toString(aduId)).toFile();
+    }
+
+    /**
+     * Last resort for an ADU that can never fit in a bundle: if the oldest ADU of the app is bigger than
+     * maxSize, cut its stored file down to trimTo bytes so it can be sent and stops wedging the app's queue.
+     *
+     * @return the trimmed ADU, or empty if the oldest ADU isn't oversized or is still being written
+     */
+    public Optional<ADU> trimOversizedADU(String clientId, String appId, long maxSize, long trimTo) throws
+            IOException {
+        var oldest = getADUs(clientId, appId).findFirst();
+        // negative aduIds are still being written, so leave them alone
+        if (oldest.isEmpty() || oldest.get().getADUId() < 0 || oldest.get().getSize() <= maxSize || trimTo <= 0) {
+            return Optional.empty();
+        }
+        var adu = oldest.get();
+        try (var channel = FileChannel.open(adu.getSource().toPath(), StandardOpenOption.WRITE)) {
+            channel.truncate(trimTo);
+        }
+        logger.log(WARNING,
+                   "Trimmed oversized ADU " + appId + ":" + adu.getADUId() + " from " + adu.getSize() + " to " +
+                           trimTo + " bytes");
+        adu.setSize(adu.getSource().length());
+        return Optional.of(adu);
     }
 
     public long getLastADUIdAdded(String clientId, String appId) {

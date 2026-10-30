@@ -140,7 +140,7 @@ public class ServerApplicationDataManager {
 
         @Override
         public boolean test(Long size) {
-            if (remaining - size < 0) {
+            if (size < 0 || size > remaining) {
                 return false;
             }
             remaining -= size;
@@ -153,7 +153,8 @@ public class ServerApplicationDataManager {
         List<ADU> adusToSend = new ArrayList<>();
 
         final long dataSizeLimit = this.bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit();
-        var sizeLimiter = new SizeLimiter(Math.max(0, dataSizeLimit - initialSize));
+        final long budget = Math.max(0, dataSizeLimit - initialSize);
+        var sizeLimiter = new SizeLimiter(budget);
         for (String appId : this.getRegisteredAppIds()) {
             var sentAdus = new SentAduDetails();
             sentAdus.appId = appId;
@@ -165,9 +166,12 @@ public class ServerApplicationDataManager {
                     .takeWhile(a -> sizeLimiter.test(a.getSize()))
                     .forEach(appAdus::add);
             if (appAdus.isEmpty()) {
-                // nothing fit (the oldest ADU alone exceeds the remaining budget) — send at least
-                // the oldest one so an oversized ADU can't permanently wedge this app's queue
-                sendADUsStorage.getADUs(clientId, appId).findFirst().ifPresent(appAdus::add);
+                // nothing fit: if the oldest ADU can never fit in a bundle, trim it so it can't
+                // permanently wedge this app's queue
+                sendADUsStorage.trimOversizedADU(clientId, appId, budget, sizeLimiter.remaining).ifPresent(adu -> {
+                    sizeLimiter.test(adu.getSize()); // uses up the rest of the budget
+                    appAdus.add(adu);
+                });
             }
 
             for (ADU adu : appAdus) {
