@@ -11,6 +11,7 @@ import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 
 import net.discdd.bundledropbox.R;
 import net.discdd.bundledropbox.cycle.RadioCallback;
@@ -18,7 +19,11 @@ import net.discdd.bundledropbox.cycle.RadioDriver;
 import net.discdd.bundledropbox.cycle.VisitCallback;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
@@ -61,7 +66,7 @@ import static java.util.logging.Level.WARNING;
  * <p>Wiring (DropboxService): construct, {@link #initialize()}, register {@link DropboxWifiStateBridge},
  * set the environment and hosted-clients listeners, hand the driver to the controller, call
  * {@link #wifiPermissionGranted()} when the UI obtains NEARBY_WIFI_DEVICES, and {@link #shutdown()} after
- * the controller is stopped.
+ * the controller is stopped and {@link #awaitIdle} saw both roles idle.
  *
  * <p>FUTURE: a Wi-Fi Aware or gRPC-over-internet link would be another {@link RadioDriver}; nothing in
  * the controller depends on Wi-Fi Direct.
@@ -152,8 +157,37 @@ public final class WifiDirectRadioDriver implements RadioDriver {
     }
 
     /**
-     * Unregisters the receiver and closes the channel. Call after the controller has stopped (so the
-     * group has been removed); in-flight operations are abandoned without callbacks.
+     * Blocks the calling thread until neither role is active (any stopHosting/stopVisit in flight has
+     * finished, so the group is gone or its removal failed), or {@code timeoutMs} passes. Service teardown
+     * calls it before {@link #shutdown()}, bounded by {@link WifiTimeouts#STOP_WORST_MS}, so closing the
+     * channel cannot cut a stop short (audit WD-2). Each check runs on the main thread after everything
+     * already posted there, such as a stop the controller just issued. Never call it on the main thread.
+     *
+     * @return true if both roles were seen idle in time
+     */
+    public boolean awaitIdle(long timeoutMs) {
+        long deadline = SystemClock.elapsedRealtime() + timeoutMs;
+        while (true) {
+            CompletableFuture<Boolean> idle = new CompletableFuture<>();
+            main.post(() -> idle.complete(!host.isActive() && !joiner.isActive()));
+            try {
+                long left = Math.max(1L, deadline - SystemClock.elapsedRealtime());
+                if (idle.get(left, TimeUnit.MILLISECONDS)) return true;
+            } catch (TimeoutException | ExecutionException e) {
+                return false;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+            if (SystemClock.elapsedRealtime() >= deadline) return false;
+            SystemClock.sleep(100);
+        }
+    }
+
+    /**
+     * Unregisters the receiver and closes the channel. Call after the controller has stopped and
+     * {@link #awaitIdle} returned (so the group has been removed); in-flight operations are abandoned without
+     * callbacks.
      */
     public void shutdown() {
         main.post(() -> {

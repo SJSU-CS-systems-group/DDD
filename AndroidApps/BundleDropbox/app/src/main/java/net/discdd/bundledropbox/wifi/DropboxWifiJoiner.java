@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
@@ -52,7 +53,12 @@ import static java.util.logging.Level.WARNING;
  * A failed attempt (connect error/timeout, became GO, wrong group) just leaves that carrier's group and
  * keeps discovering others until {@link #stop}; it does not produce {@code visitFinished} because no
  * exchange ran. Each attempt follows {@link AttemptLifecycle}: once joined it ends only when its runner
- * returns, so losing Wi-Fi Direct mid-exchange cancels the runner and still reports {@code visitFinished}.
+ * returns, so losing Wi-Fi Direct, or the carrier's group (audit WD-3), mid-exchange cancels the runner and
+ * still reports {@code visitFinished}.
+ *
+ * <p>Requests the current state does not need are not sent (audit WD-1, {@link RadioSteps}): leaving sends
+ * {@code cancelConnect} only while a connect may be pending ({@link AttemptLifecycle#needsCancelConnect()}),
+ * and group removal is skipped when there is no group. Discovery retries stop once a connect starts (WD-4).
  *
  * <p>Join hooks (audit m1): {@link VisitRunner#beginJoin} is called right before {@code connect}, so the
  * service holds the visit gate token for the whole join and a dwell that expires mid-join drains instead of
@@ -179,26 +185,35 @@ final class DropboxWifiJoiner {
         });
     }
 
-    /** Step 3: (re)start DNS-SD discovery. The first success reports ready. */
+    /**
+     * Step 3: (re)start DNS-SD discovery. The first success reports ready. After that, the request and its
+     * BUSY retries are abandoned once a connect starts ({@link RadioSteps#discoveryWanted}, audit WD-4);
+     * {@link #onCarrierLeft} re-issues discovery when the attempt ends.
+     */
     private void discover(Session s) {
-        link.action("discoverServices", WifiTimeouts.SERVICE_OP_MS, P2pLink.DISCOVER_SERVICES, s::live, (ok, why) -> {
+        BooleanSupplier wanted = () -> discoveryWanted(s);
+        link.action("discoverServices", WifiTimeouts.SERVICE_OP_MS, P2pLink.DISCOVER_SERVICES, wanted, (ok, why) -> {
             if (!s.live()) return;
-            if (!ok) {
-                if (!s.readyReported) {
-                    s.failStart(why);
-                    return;
-                }
-                logger.warning(why + " (will retry)");
-            } else if (!s.readyReported) {
+            if (!ok && !s.readyReported) {
+                s.failStart(why);
+                return;
+            }
+            if (ok && !s.readyReported) {
                 s.readyReported = true;
                 phase = Phase.DISCOVERING;
                 link.wifi(INFO, "Searching for transports");
                 stateChanged.run();
                 s.cb.ready(s.gen);
             }
+            if (!wanted.getAsBoolean()) return; // a connect started meanwhile: no retry, no rediscover timer
+            if (!ok) logger.warning(why + " (will retry)");
             scheduleRediscover(s);
             maybeConnect(s);
         });
+    }
+
+    private boolean discoveryWanted(Session s) {
+        return RadioSteps.discoveryWanted(s.live(), s.readyReported, phase == Phase.DISCOVERING && s.attempt == null);
     }
 
     private void scheduleRediscover(Session s) {
@@ -262,7 +277,7 @@ final class DropboxWifiJoiner {
         link.action("connect", WifiTimeouts.CONNECT_MS, connect, a::live, (ok, why) -> {
             if (!a.live()) return;
             if (ok) pollConnectionInfo(a);
-            else attemptFailed(a, why);
+            else attemptFailed(a, why, false); // the request itself failed: nothing to cancel
         });
     }
 
@@ -271,7 +286,7 @@ final class DropboxWifiJoiner {
         if (!a.connecting()) return;
         WifiP2pManager.Channel ch = link.channel();
         if (ch == null) {
-            attemptFailed(a, "Wi-Fi Direct channel lost while connecting");
+            attemptFailed(a, "Wi-Fi Direct channel lost while connecting", true);
             return;
         }
         try {
@@ -281,17 +296,23 @@ final class DropboxWifiJoiner {
                 if (a.connecting()) link.main.postDelayed(() -> pollConnectionInfo(a), WifiTimeouts.CONNECTION_POLL_MS);
             });
         } catch (SecurityException e) {
-            attemptFailed(a, "requestConnectionInfo: permission denied (" + e.getMessage() + ")");
+            attemptFailed(a, "requestConnectionInfo: permission denied (" + e.getMessage() + ")", true);
         }
     }
 
     /**
-     * WIFI_P2P_CONNECTION_CHANGED_ACTION (from the driver's receiver).
+     * WIFI_P2P_CONNECTION_CHANGED_ACTION (from the driver's receiver). A connecting attempt is evaluated per
+     * {@link JoinCheck}; for an exchanging one, a report without a formed group triggers a group re-check
+     * (audit WD-3).
      */
     void onConnectionChanged(WifiP2pInfo info, WifiP2pGroup group) {
         Session s = active;
-        if (s != null && s.attempt != null && s.attempt.connecting()) {
-            evaluateConnection(s.attempt, info, group);
+        Attempt a = s == null ? null : s.attempt;
+        if (a != null && a.connecting()) {
+            evaluateConnection(a, info, group);
+        } else if (a != null && a.exchanging()
+                && JoinCheck.mayHaveLostGroup(info != null, info != null && info.groupFormed)) {
+            recheckCarrierGroup(a);
         }
         if (group != null && !group.isGroupOwner() && isActive()) {
             carrierGroup = group;
@@ -313,13 +334,34 @@ final class DropboxWifiJoiner {
                                    a.carrier.deviceAddress())) {
             case WAIT -> {
             }
-            case BECAME_GO -> attemptFailed(a, "became group owner instead of joining " + a.carrier.label());
-            case WRONG_GO -> attemptFailed(a, "joined " + owner.deviceName + " instead of " + a.carrier.label());
+            // A group formed: removeGroup leaves it, there is no connect left to cancel.
+            case BECAME_GO -> attemptFailed(a, "became group owner instead of joining " + a.carrier.label(), false);
+            case WRONG_GO -> attemptFailed(a, "joined " + owner.deviceName + " instead of " + a.carrier.label(), false);
             case JOINED -> {
                 if (group != null) carrierGroup = group;
                 onJoined(a, info.groupOwnerAddress);
             }
         }
+    }
+
+    /**
+     * Confirms with {@code requestGroupInfo} that we are still a client of the carrier (a late broadcast from
+     * leaving an earlier group looks like a loss). If not, the exchange is cancelled the same way as on a lost
+     * radio, instead of waiting for its gRPC deadlines or the drain cap; its completion then reports
+     * {@code visitFinished}, leaves the carrier and resumes discovery for other carriers.
+     */
+    private void recheckCarrierGroup(Attempt a) {
+        link.pollGroup("re-checking carrier group", WifiTimeouts.SERVICE_OP_MS, g -> true, a::exchanging, g -> {
+            if (!a.exchanging()) return;
+            WifiP2pDevice owner = g == null ? null : g.getOwner();
+            if (JoinCheck.carrierGroupLost(g != null,
+                                           g != null && g.isGroupOwner(),
+                                           owner == null ? null : owner.deviceAddress,
+                                           a.carrier.deviceAddress())) {
+                carrierGroup = null;
+                loseAttempt(a, "left the group of " + a.carrier.label());
+            }
+        }, reason -> logger.fine(reason + " (keeping the exchange)"));
     }
 
     // ---------------------------------------------------------------- exchange
@@ -374,9 +416,13 @@ final class DropboxWifiJoiner {
         leaveCarrier(a);
     }
 
-    /** A join failed (connect error, timeout, became GO, wrong GO): leave and keep discovering. */
-    private void attemptFailed(Attempt a, String reason) {
-        if (!a.live() || !a.lifecycle.failJoin()) return;
+    /**
+     * A join failed (connect error, timeout, became GO, wrong GO): leave and keep discovering.
+     *
+     * @param connectMayBePending see {@link AttemptLifecycle#failJoin(boolean)}
+     */
+    private void attemptFailed(Attempt a, String reason, boolean connectMayBePending) {
+        if (!a.live() || !a.lifecycle.failJoin(connectMayBePending)) return;
         abandonJoin(a, reason);
     }
 
@@ -386,7 +432,11 @@ final class DropboxWifiJoiner {
         leaveCarrier(a);
     }
 
-    /** cancelConnect + removeGroup, then resume discovery for other carriers. */
+    /**
+     * cancelConnect (only while a connect may be pending, audit WD-1) + removeGroup, then resume discovery
+     * for other carriers. After an exchange we are a client in the carrier's group, so removeGroup alone
+     * leaves it.
+     */
     private void leaveCarrier(Attempt a) {
         // Releases the join token if no exchange took it (failed join, or a runner that could not start).
         runner.endJoin(a.carrier.carrierId());
@@ -395,7 +445,16 @@ final class DropboxWifiJoiner {
         phase = Phase.DISCONNECTING;
         stateChanged.run();
         link.bestEffort(s::live, () -> link.removeGroupAndAwaitGone(s::live, (ok, whyNot) -> onCarrierLeft(s, ok, whyNot)),
-                        P2pLink.step("cancelConnect", P2pLink.CANCEL_CONNECT));
+                        cancelConnectIfPending(a));
+    }
+
+    /** @return {@code rest}, preceded by a cancelConnect step if {@code a} may still have a connect pending */
+    private static P2pLink.Step[] cancelConnectIfPending(Attempt a, P2pLink.Step... rest) {
+        if (a == null || !a.lifecycle.needsCancelConnect()) return rest;
+        P2pLink.Step[] steps = new P2pLink.Step[rest.length + 1];
+        steps[0] = P2pLink.step("cancelConnect", P2pLink.CANCEL_CONNECT);
+        System.arraycopy(rest, 0, steps, 1, rest.length);
+        return steps;
     }
 
     private void onCarrierLeft(Session s, boolean removed, String whyNot) {
@@ -417,7 +476,14 @@ final class DropboxWifiJoiner {
      */
     void stop(long gen, RadioCallback cb) {
         Session s = active;
-        Attempt exchanging = s != null && s.attempt != null && s.attempt.runner != null ? s.attempt : null;
+        Attempt attempt = s == null ? null : s.attempt;
+        Attempt exchanging = attempt != null && attempt.runner != null ? attempt : null;
+        // Each step is best effort, except the final group-removal observation, which decides ready vs failed.
+        // cancelConnect leads only while a connect may be pending (audit WD-1); decided before abandoning.
+        P2pLink.Step[] steps =
+                cancelConnectIfPending(attempt,
+                                       P2pLink.step("stopPeerDiscovery", P2pLink.STOP_PEER_DISCOVERY),
+                                       P2pLink.step("clearServiceRequests", P2pLink.CLEAR_SERVICE_REQUESTS));
         if (s != null) s.abandon("cancelled by stopVisit gen " + gen);
         phase = Phase.STOPPING;
         stateChanged.run();
@@ -427,13 +493,9 @@ final class DropboxWifiJoiner {
             finishStop(gen, cb, exchanging);
             return;
         }
-        // Each step is best effort (failures are expected, e.g. cancelConnect with nothing pending), except
-        // the final group-removal observation, which decides ready vs failed.
         link.bestEffort(() -> true,
                         () -> link.removeGroupAndAwaitGone(() -> true, (ok, why) -> onStopRemoval(gen, cb, exchanging, ok, why)),
-                        P2pLink.step("cancelConnect", P2pLink.CANCEL_CONNECT),
-                        P2pLink.step("stopPeerDiscovery", P2pLink.STOP_PEER_DISCOVERY),
-                        P2pLink.step("clearServiceRequests", P2pLink.CLEAR_SERVICE_REQUESTS));
+                        steps);
     }
 
     private void onStopRemoval(long gen, RadioCallback cb, Attempt exchanging, boolean removed, String why) {
@@ -486,19 +548,25 @@ final class DropboxWifiJoiner {
             return false;
         }
         Attempt a = s.attempt;
-        if (a != null && a.live()) {
-            switch (a.lifecycle.radioLost()) {
-                case FAIL_NOW -> abandonJoin(a, reason);
-                case CANCEL_EXCHANGE -> {
-                    link.wifi(WARNING, "Cancelling visit to " + a.carrier.label() + ": " + reason);
-                    a.cancelled.set(true);
-                    if (a.runner != null) a.runner.cancel(true);
-                }
-                case NONE -> {
-                }
+        if (a != null && a.live()) loseAttempt(a, reason);
+        return true;
+    }
+
+    /**
+     * The attempt's link is gone (radio lost, or the carrier's group lost while exchanging): a connecting
+     * attempt fails now, an exchanging one has its runner cancelled ({@link AttemptLifecycle#radioLost()}).
+     */
+    private void loseAttempt(Attempt a, String reason) {
+        switch (a.lifecycle.radioLost()) {
+            case FAIL_NOW -> abandonJoin(a, reason);
+            case CANCEL_EXCHANGE -> {
+                link.wifi(WARNING, "Cancelling visit to " + a.carrier.label() + ": " + reason);
+                a.cancelled.set(true);
+                if (a.runner != null) a.runner.cancel(true);
+            }
+            case NONE -> {
             }
         }
-        return true;
     }
 
     // ---------------------------------------------------------------- session / attempt guards
@@ -575,7 +643,8 @@ final class DropboxWifiJoiner {
         Attempt(Session session, DiscoveredCarrier carrier) {
             this.session = session;
             this.carrier = carrier;
-            this.timeout = () -> attemptFailed(this, "no group-owner address within " + WifiTimeouts.CONNECT_MS + " ms");
+            this.timeout =
+                    () -> attemptFailed(this, "no group-owner address within " + WifiTimeouts.CONNECT_MS + " ms", true);
         }
 
         boolean live() {
@@ -585,6 +654,11 @@ final class DropboxWifiJoiner {
         /** @return true while live and still waiting to join */
         boolean connecting() {
             return live() && lifecycle.stage() == AttemptLifecycle.Stage.CONNECTING;
+        }
+
+        /** @return true while live, joined and not yet cancelled */
+        boolean exchanging() {
+            return live() && lifecycle.stage() == AttemptLifecycle.Stage.EXCHANGING;
         }
     }
 }

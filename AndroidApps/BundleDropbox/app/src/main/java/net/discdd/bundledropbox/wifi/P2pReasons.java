@@ -8,11 +8,15 @@ package net.discdd.bundledropbox.wifi;
  * duplicated here so this class (and code that formats reasons) stays pure Java and JVM-testable.
  */
 public final class P2pReasons {
-    /** {@code WifiP2pManager.ERROR}: internal error (also returned by removeGroup when there is no group). */
+    /** {@code WifiP2pManager.ERROR}: internal error. */
     public static final int ERROR = 0;
     /** {@code WifiP2pManager.P2P_UNSUPPORTED}: the device has no Wi-Fi Direct. */
     public static final int P2P_UNSUPPORTED = 1;
-    /** {@code WifiP2pManager.BUSY}: framework busy with a previous request; retried with backoff. */
+    /**
+     * {@code WifiP2pManager.BUSY}: framework busy with a previous request; retried with backoff. Per AOSP
+     * source (audit WD-1, not yet confirmed on a device) also the answer to a request the current P2P state
+     * does not handle, e.g. removeGroup with no group, hence {@link RadioSteps}.
+     */
     public static final int BUSY = 2;
     /** {@code WifiP2pManager.NO_SERVICE_REQUESTS}: discoverServices without addServiceRequest. */
     public static final int NO_SERVICE_REQUESTS = 3;

@@ -44,6 +44,27 @@ public final class WifiTimeouts {
      */
     public static final long REDISCOVER_INTERVAL_MS = 12_000L;
 
+    /**
+     * Worst case of one {@code P2pLink.removeGroupAndAwaitGone}: group probe, removeGroup and the removal
+     * poll share the {@link #REMOVAL_MS} budget, and the final poll can overrun it by one interval plus its
+     * watchdog interval (the probe itself is bounded by two intervals inside the budget).
+     */
+    public static final long REMOVAL_WORST_MS = REMOVAL_MS + 2 * POLL_INTERVAL_MS;
+    /**
+     * Worst case of stopVisit: up to three best-effort steps (cancelConnect when a connect may be pending,
+     * stopPeerDiscovery, clearServiceRequests), each ended by its {@link #SERVICE_OP_MS} timeout however
+     * often it is BUSY-retried, then the group removal, then the wait for a cancelled runner.
+     */
+    public static final long VISIT_STOP_WORST_MS = 3 * SERVICE_OP_MS + REMOVAL_WORST_MS + RUNNER_EXIT_MS;
+    /** Worst case of stopHosting: clearLocalServices, the endpoint stop, then the group removal. */
+    public static final long HOST_STOP_WORST_MS = SERVICE_OP_MS + ENDPOINT_MS + REMOVAL_WORST_MS;
+    /**
+     * Upper bound on any role stop, for service teardown waiting on the driver to be idle (audit WD-2): the
+     * longer of the two stops plus one poll interval for main-thread posting and the runner-exit check
+     * (100 ms granularity). 46.5 s with the values above; normal stops take a second or two.
+     */
+    public static final long STOP_WORST_MS = Math.max(VISIT_STOP_WORST_MS, HOST_STOP_WORST_MS) + POLL_INTERVAL_MS;
+
     private WifiTimeouts() {
     }
 }

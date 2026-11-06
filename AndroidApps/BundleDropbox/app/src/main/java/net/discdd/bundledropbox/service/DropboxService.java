@@ -50,6 +50,7 @@ import net.discdd.bundledropbox.visit.VisitResult;
 import net.discdd.bundledropbox.wifi.DropboxWifiStateBridge;
 import net.discdd.bundledropbox.wifi.HostingEndpoint;
 import net.discdd.bundledropbox.wifi.WifiDirectRadioDriver;
+import net.discdd.bundledropbox.wifi.WifiTimeouts;
 import net.discdd.utils.UserLogRepository.UserLogType;
 
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -431,7 +432,8 @@ public class DropboxService extends Service implements DropboxControls {
     /**
      * Teardown: unhook preferences, stop the cycle (which drives the radio to idle: group removed or carrier
      * left), then release the radio, the RPC server and the locks. Radio teardown is asynchronous, so the rest
-     * runs on {@code dropbox-service} after waiting (bounded) for the cycle to reach STOPPED.
+     * runs on {@code dropbox-service} after waiting for the cycle to reach STOPPED and then for the driver
+     * itself to be idle, together bounded by the worst-case role stop (audit WD-2).
      *
      * <p>The teardown task is queued on the same single-thread executor as {@link #initialize()}, so if the
      * service dies while still initializing, teardown runs after it and sees every component it built (it
@@ -455,19 +457,28 @@ public class DropboxService extends Service implements DropboxControls {
         super.onDestroy();
     }
 
-    /** Second half of {@link #onDestroy()}, on {@code dropbox-service}. */
+    /**
+     * Second half of {@link #onDestroy()}, on {@code dropbox-service}. The cycle wait orders teardown after the
+     * controller's halt; it ends at STOPPED or after {@link RoleCycleController#SHUTDOWN_TIMEOUT_MS}, when the
+     * controller drops its scheduler and its mode no longer changes. A stop still running then (worst case
+     * {@link WifiTimeouts#STOP_WORST_MS}) is waited out on the driver, so the channel is not closed mid-stop.
+     */
     private void teardown() {
+        long deadline = SystemClock.elapsedRealtime() + WifiTimeouts.STOP_WORST_MS;
         RoleCycleController cycle = controller;
         if (cycle != null) {
             cycle.shutdown(); // idempotent: a second request is ignored or dropped after shutdown
-            long deadline = SystemClock.elapsedRealtime() + RoleCycleController.SHUTDOWN_TIMEOUT_MS;
-            while (cycle.mode() != CycleMode.STOPPED && SystemClock.elapsedRealtime() < deadline) {
+            long cycleDeadline = Math.min(deadline, SystemClock.elapsedRealtime() + RoleCycleController.SHUTDOWN_TIMEOUT_MS);
+            while (cycle.mode() != CycleMode.STOPPED && SystemClock.elapsedRealtime() < cycleDeadline) {
                 SystemClock.sleep(100);
             }
         }
+        WifiDirectRadioDriver driver = radio;
+        if (driver != null && !driver.awaitIdle(deadline - SystemClock.elapsedRealtime())) {
+            logger.warning("Wi-Fi Direct still stopping after " + WifiTimeouts.STOP_WORST_MS + " ms; closing the channel");
+        }
         TransportVisitClient vc = visitClient;
         if (vc != null) vc.cancel();
-        WifiDirectRadioDriver driver = radio;
         if (driver != null) driver.shutdown();
         DropboxRpcServer server = rpcServer;
         if (server != null) server.stop();

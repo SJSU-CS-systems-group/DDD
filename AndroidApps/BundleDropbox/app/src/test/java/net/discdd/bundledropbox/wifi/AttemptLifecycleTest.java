@@ -35,8 +35,8 @@ public class AttemptLifecycleTest {
     @Test
     public void failedJoinEndsTheAttemptOnceWithoutVisitFinished() {
         AttemptLifecycle a = new AttemptLifecycle();
-        assertTrue(a.failJoin());        // connect error
-        assertFalse(a.failJoin());       // the CONNECT_MS timeout firing late
+        assertTrue(a.failJoin(false));   // connect error
+        assertFalse(a.failJoin(true));   // the CONNECT_MS timeout firing late
         assertFalse(a.joined());         // a late "joined" broadcast
         assertFalse(a.exchangeDone());   // no exchange ran: no visitFinished
         assertEquals(DONE, a.stage());
@@ -46,7 +46,7 @@ public class AttemptLifecycleTest {
     public void joinFailureSignalsCannotEndARunningExchange() {
         AttemptLifecycle a = new AttemptLifecycle();
         a.joined();
-        assertFalse("a late timeout must not orphan the runner", a.failJoin());
+        assertFalse("a late timeout must not orphan the runner", a.failJoin(true));
         assertEquals(EXCHANGING, a.stage());
     }
 
@@ -67,7 +67,7 @@ public class AttemptLifecycleTest {
         assertTrue("still joined: stopVisit must keep waiting for the runner", a.isJoined());
         assertFalse(a.isDone());
         assertEquals("a second loss event does nothing more", NONE, a.radioLost());
-        assertFalse(a.failJoin());
+        assertFalse(a.failJoin(true));
         assertTrue("the runner's completion reports visitFinished", a.exchangeDone());
         assertTrue(a.isDone());
     }
@@ -80,5 +80,50 @@ public class AttemptLifecycleTest {
         assertTrue(a.isDone());
         assertFalse(a.exchangeDone());
         assertEquals(NONE, a.radioLost());
+    }
+
+    // ---------------------------------------------------------------- cancelConnect only while pending (WD-1)
+
+    @Test
+    public void aConnectIsPendingUntilJoined() {
+        AttemptLifecycle a = new AttemptLifecycle();
+        assertTrue("connect was just sent", a.needsCancelConnect());
+        a.joined();
+        assertFalse("leaving a joined carrier needs removeGroup only", a.needsCancelConnect());
+        a.radioLost();
+        a.exchangeDone();
+        assertFalse(a.needsCancelConnect());
+    }
+
+    @Test
+    public void failedJoinCancelsOnlyWhenTheConnectMayStillBeNegotiating() {
+        AttemptLifecycle timedOut = new AttemptLifecycle();
+        timedOut.failJoin(true);
+        assertTrue("CONNECT_MS timeout: negotiation may still run", timedOut.needsCancelConnect());
+
+        AttemptLifecycle rejectedOrFormed = new AttemptLifecycle();
+        rejectedOrFormed.failJoin(false);
+        assertFalse("rejected request, or became GO / wrong GO", rejectedOrFormed.needsCancelConnect());
+        rejectedOrFormed.failJoin(true);
+        assertFalse("a late timeout after the failure changes nothing", rejectedOrFormed.needsCancelConnect());
+    }
+
+    @Test
+    public void stopOrRadioLossWhileConnectingStillCancelsTheConnect() {
+        AttemptLifecycle stopped = new AttemptLifecycle();
+        stopped.end(); // stopVisit abandons the session first, then sends its steps
+        assertTrue(stopped.needsCancelConnect());
+
+        AttemptLifecycle lost = new AttemptLifecycle();
+        assertEquals(FAIL_NOW, lost.radioLost());
+        assertTrue(lost.needsCancelConnect());
+    }
+
+    @Test
+    public void stopWhileExchangingDoesNotCancelConnect() {
+        AttemptLifecycle a = new AttemptLifecycle();
+        a.joined();
+        a.end();
+        assertFalse(a.needsCancelConnect());
     }
 }

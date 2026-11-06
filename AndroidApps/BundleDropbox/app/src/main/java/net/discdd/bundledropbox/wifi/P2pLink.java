@@ -294,8 +294,8 @@ final class P2pLink {
 
     /**
      * Runs {@code steps} one after another, each bounded by {@link WifiTimeouts#SERVICE_OP_MS}, ignoring
-     * their outcome (a failure is logged at FINE: e.g. {@code cancelConnect} with nothing pending answers
-     * ERROR), then runs {@code then}. Stops early, without running {@code then}, once {@code stillWanted}
+     * their outcome (a failure is logged at FINE; callers leave out steps the current state does not need,
+     * see {@link RadioSteps}), then runs {@code then}. Stops early, without running {@code then}, once {@code stillWanted}
      * turns false. Flattens what used to be nested best-effort callback chains.
      */
     void bestEffort(BooleanSupplier stillWanted, Runnable then, Step... steps) {
@@ -405,12 +405,30 @@ final class P2pLink {
 
     /**
      * Leaves whatever group this device is in (as GO or client) and waits until {@code requestGroupInfo}
-     * returns null. A failed removeGroup request is not fatal: the framework answers ERROR when there is
-     * no group, so the outcome is decided by observing the group, bounded by {@link WifiTimeouts#REMOVAL_MS}.
+     * returns null. A {@code requestGroupInfo} probe runs first: with no group the step is done at once,
+     * without a removeGroup that AOSP would answer BUSY and {@link #action} would retry for about 8 s (audit
+     * WD-1, {@link RadioSteps#needsRemoveGroup}). With a group, or when the probe gets no answer, removeGroup
+     * is sent with its BUSY retry. A failed removeGroup request is not fatal: the outcome is decided by
+     * observing the group. Probe, request and poll share one {@link WifiTimeouts#REMOVAL_MS} budget (worst
+     * case {@link WifiTimeouts#REMOVAL_WORST_MS}).
      */
     void removeGroupAndAwaitGone(BooleanSupplier stillWanted, Result result) {
         long deadline = now() + WifiTimeouts.REMOVAL_MS;
-        action("removeGroup", WifiTimeouts.REMOVAL_MS, (m, c, l) -> m.removeGroup(c, l), stillWanted, (ok, why) -> {
+        // pollGroup with an always-true predicate answers once; its watchdog bounds a silent framework to 2 intervals.
+        pollGroup("checking for a group", WifiTimeouts.POLL_INTERVAL_MS, g -> true, stillWanted, g -> {
+            RadioSteps.GroupProbe probe = g == null ? RadioSteps.GroupProbe.NO_GROUP : RadioSteps.GroupProbe.GROUP;
+            if (RadioSteps.needsRemoveGroup(probe)) removeGroupThenPoll(deadline, stillWanted, result);
+            else result.done(true, null);
+        }, reason -> {
+            // NO_ANSWER: remove anyway (an abandoned or channel-less removal then fails at once).
+            logger.fine(reason + " (sending removeGroup anyway)");
+            removeGroupThenPoll(deadline, stillWanted, result);
+        });
+    }
+
+    private void removeGroupThenPoll(long deadline, BooleanSupplier stillWanted, Result result) {
+        long budget = Math.max(WifiTimeouts.POLL_INTERVAL_MS, deadline - now());
+        action("removeGroup", budget, (m, c, l) -> m.removeGroup(c, l), stillWanted, (ok, why) -> {
             if (!ok) logger.fine(why + " (checking whether a group is still present)");
             long remaining = Math.max(WifiTimeouts.POLL_INTERVAL_MS, deadline - now());
             pollGroup("waiting for group removal",
