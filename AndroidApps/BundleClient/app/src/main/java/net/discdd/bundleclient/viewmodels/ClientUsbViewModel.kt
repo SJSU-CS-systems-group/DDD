@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
-import net.discdd.grpc.RecencyBlob
+import net.discdd.grpc.GetRecencyBlobResponse
 import net.discdd.model.Bundle
 import net.discdd.viewmodels.UsbViewModel
 import java.io.File
@@ -21,6 +21,7 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.logging.Level.INFO
+import java.util.logging.Level.WARNING
 import java.util.logging.Logger
 
 class ClientUsbViewModel(
@@ -121,11 +122,18 @@ class ClientUsbViewModel(
                         appendMessage("No recency blob found on USB", Color.YELLOW)
                         return@withContext
                     }
-                    val recencyBlob = context.contentResolver.openInputStream(recencyLocation.uri)?.use { inputStream ->
-                        val bytes = inputStream.readAllBytes()
-                        RecencyBlob.parseFrom(bytes)
+                    // The transport writes the server's GetRecencyBlobResponse here. It only shows that the stick
+                    // came from a transport synced with our server: USB names no TLS-bound carrier, so it records
+                    // no routing peer.
+                    val recencyBlobResponse = try {
+                        context.contentResolver.openInputStream(recencyLocation.uri)?.use { inputStream ->
+                            GetRecencyBlobResponse.parseFrom(inputStream.readAllBytes())
+                        }?.also { bundleTransmission!!.verifyRecencyBlob(it) }
+                    } catch (e: Exception) {
+                        logger.log(WARNING, "Rejected recency blob on USB", e)
+                        null
                     }
-                    if (recencyBlob == null) {
+                    if (recencyBlobResponse == null) {
                         appendMessage("Invalid recency blob found on USB", Color.YELLOW)
                         return@withContext
                     }
@@ -153,7 +161,7 @@ class ClientUsbViewModel(
                                                     rootDir.toPath().parent.resolve("BundleTransmission/bundle-generation/to-send")
                                                         .resolve(bundleId)
                                                 bundleTransmission!!.processReceivedBundle(
-                                                    recencyBlob.senderId,
+                                                    null,
                                                     Bundle(targetFile.toFile()))
                                             }
                                         }

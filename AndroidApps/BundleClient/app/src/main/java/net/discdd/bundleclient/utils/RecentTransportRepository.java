@@ -98,7 +98,12 @@ public class RecentTransportRepository implements RecencyTracker {
         });
     }
 
-    // returns true if the blob is more recent than previously seen
+    /**
+     * Returns true if {@code response}'s blob is more recent than the one stored for {@code device}.
+     * <p>
+     * This no longer affects routing: bundle-core records a carrier only when its recency blob names the TLS peer's
+     * key, whatever this returns. A false result is only logged.
+     */
     @Override
     public boolean isNewerRecencyBlob(TransportDevice device, GetRecencyBlobResponse response) {
         boolean returnVal = false;
