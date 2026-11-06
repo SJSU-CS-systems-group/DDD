@@ -142,7 +142,8 @@ public final class VisitResult {
 
     /**
      * @return true if the carrier served a recency blob signed by the server our clients trust: it has synced with
-     *         our server. Informational only (status line, logs, tests); the blob was not stored.
+     *         our server. It gates the by-id own-bundle probe (Research/R11 RT8) and is otherwise informational
+     *         (status line, logs, tests); the blob was not stored.
      */
     public boolean carrierTrusted() { return carrierTrusted; }
 

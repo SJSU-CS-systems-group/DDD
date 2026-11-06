@@ -79,7 +79,8 @@ import static java.util.logging.Level.WARNING;
  *       served</b>: it names the carrier, not the dropbox (09 Own Recency Blob Design). It is only checked with
  *       {@code carrierBlobTrusted} (pinned server key, valid signature, not from the future), which sets
  *       {@link VisitResult#carrierTrusted()}. The dropbox records no routing peers, so the blob's {@code senderId}
- *       is not used. A failure here is logged, not counted as a visit error: nothing else depends on it.</li>
+ *       is not used. A failure here is logged, not counted as a visit error; it only skips the own-bundle probe
+ *       below (download-all still runs).</li>
  *   <li><b>Own control bundle</b> ({@link ControlChannel#ownBundleForVisit()}): the dropbox's own DDD client
  *       bundle, carrying its inventory report, its outstanding recency request (the dropbox's only way to get a
  *       recency blob of its own) and the ack of the last control bundle it processed, is uploaded
@@ -92,7 +93,10 @@ import static java.util.logging.Level.WARNING;
  *   <li><b>Own bundle by id</b>, only from a carrier that synced with our server ({@code carrierTrusted}): each
  *       of {@link ControlChannel#ownProbeIds()} is downloaded by id ({@code downloadBundle}), newest first, until
  *       one is found. The server keeps the dropbox's counter within its window (Research/R11 RT5), so at most ten
- *       requests find the own bundle without any PSI. A miss changes nothing: download-all still finds it.</li>
+ *       requests find the own bundle without any PSI. A miss changes nothing: download-all still finds it. On a
+ *       stock transport each miss also logs one WARNING "Could not produce a path for &lt;id&gt;" on the carrier's
+ *       on-screen Logs (a 100-line buffer) and has no other effect, so up to
+ *       {@code DropboxControlEndpoint.PROBE_WINDOW} such lines per dropbox visit are expected there.</li>
  *   <li><b>Download-all</b> of the carrier's client-bound bundles via repeated PSI sessions (R2 §4.3), committing
  *       each new one to DOWNSTREAM under the id read from the jar's {@code bundle.id}, within the DOWNSTREAM
  *       quota (checked per chunk). An id already held is {@linkplain RelayStore#touch touched} instead, which
@@ -192,8 +196,8 @@ public final class TransportVisitClient {
      * @param store          the relay store (UPSTREAM is read, DOWNSTREAM is written)
      * @param ledger         per-carrier record of acknowledged uploads
      * @param carrierBlobTrusted true if a serialized carrier {@code GetRecencyBlobResponse} is signed by the server
-     *                           the dropbox's clients trust ({@code RecencyBlobStore::isServerSigned}); only
-     *                           decides {@link VisitResult#carrierTrusted()}
+     *                           the dropbox's clients trust ({@code RecencyBlobStore::isServerSigned}); decides
+     *                           {@link VisitResult#carrierTrusted()} and so whether the own-bundle probe runs
      * @param control        the dropbox's own control endpoint, or {@link ControlChannel#NONE}
      * @param identityOrNull the dropbox TLS identity presented as client certificate, or {@code null}
      */
@@ -473,7 +477,7 @@ public final class TransportVisitClient {
 
         /**
          * Asks the carrier for its recency blob, as a stock client would, only to learn whether the carrier synced
-         * with our server ({@code carrierTrusted}, shown in the status line). Its {@code senderId} is not used: the
+         * with our server ({@code carrierTrusted}: it gates {@link #probeOwn} and is shown in the status line). Its {@code senderId} is not used: the
          * dropbox records no routing peers, and the server learns which carriers met the dropbox from their uploads
          * of its bundles (Research/R11 §1.5). The blob is <b>never</b> stored or served: it was minted for the
          * carrier, and the dropbox gets its own through the control channel (09 Own Recency Blob Design). A carrier
@@ -705,6 +709,12 @@ public final class TransportVisitClient {
          * succeeded; otherwise download-all and control-only mode look for the own bundle as before. Only called
          * for a carrier that synced with our server: any other carrier cannot hold a bundle our server made for
          * the dropbox.
+         * <p>
+         * On a stock transport a miss has one visible side effect: its {@code downloadBundle} logs a WARNING
+         * "Could not produce a path for &lt;id&gt;", which reaches the transport's on-screen Logs (a 100-line
+         * buffer); the transport ignores the download events otherwise. Up to
+         * {@code DropboxControlEndpoint.PROBE_WINDOW} such lines per visit are expected. Probing is deliberately not gated on an outstanding dropbox request: the server can
+         * send plans the dropbox never asked for, and gating would hide them until download-all.
          */
         private void probeOwn(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blocking) {
             List<String> ids;
@@ -867,8 +877,9 @@ public final class TransportVisitClient {
             } catch (StatusRuntimeException e) {
                 if (e.getStatus().getCode() == io.grpc.Status.Code.UNIMPLEMENTED) {
                     // A pre-PSI transport only offers downloadBundle(id). The dropbox can derive only its own ids,
-                    // which probeOwn already tried; other clients' ids are encrypted per client (R2 §4.3
-                    // fallback). Nothing more to download from it.
+                    // which probeOwn tried if the carrier synced with our server (an unsynced carrier cannot hold
+                    // them); other clients' ids are encrypted per client (R2 §4.3 fallback). Nothing more to
+                    // download from it.
                     error("carrier does not implement psiExchange; download-all impossible");
                     return null;
                 }
