@@ -1,6 +1,8 @@
 package net.discdd.server.bundlerouting;
 
 import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.grpc.GrpcServerRunner;
+import net.discdd.server.commands.CLRunner;
 import net.discdd.server.repository.DropboxNodeRepository;
 import net.discdd.server.repository.DropboxRecencyGrantRepository;
 import net.discdd.server.repository.ReceivedBundleRepository;
@@ -19,6 +21,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.OrderUtils;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -30,6 +34,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** H2-backed tests of the one-time {@code serverroutingtable} to {@code routing_edge} conversion. */
@@ -164,5 +169,16 @@ class LegacyRoutingImporterTest {
 
         importer.importOnce(NOW);
         assertEquals(before, legacyRows());
+    }
+
+    /** Spring Boot sorts all runners by {@code @Order}: the import must finish before the gRPC server starts */
+    @Test
+    void importRunsAfterCliRunnerAndBeforeGrpcServer() {
+        int importer = OrderUtils.getOrder(LegacyRoutingImporter.class, Ordered.LOWEST_PRECEDENCE);
+        int grpc = OrderUtils.getOrder(GrpcServerRunner.class, Ordered.LOWEST_PRECEDENCE);
+        int cli = OrderUtils.getOrder(CLRunner.class, Ordered.LOWEST_PRECEDENCE);
+        assertFalse(Ordered.class.isAssignableFrom(GrpcServerRunner.class));
+        assertTrue(importer < grpc, "importer " + importer + " must sort before GrpcServerRunner " + grpc);
+        assertTrue(cli < importer, "CLRunner " + cli + " must sort before the importer " + importer);
     }
 }

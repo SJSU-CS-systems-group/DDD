@@ -7,6 +7,8 @@ import net.discdd.server.repository.entity.RoutingMeta;
 import net.discdd.server.repository.entity.ServerRouting;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -30,10 +32,20 @@ import static java.util.logging.Level.WARNING;
  * converted edge is dated now, so it lives one TTL. The legacy table is left untouched, so the previous server
  * version can still run on it; a {@link RoutingMeta#LEGACY_IMPORT_DONE_MS} row stops a second import. A failed import
  * writes no marker and is retried at the next startup.
+ * <p>
+ * Order: Spring Boot sorts {@code ApplicationRunner} and {@code CommandLineRunner} beans together by {@code @Order}.
+ * {@link #RUNNER_ORDER} puts the import after {@code CLRunner} ({@code @Order(0)}, which exits for CLI commands, so
+ * a CLI process never imports) and strictly before the unordered {@code GrpcServerRunner}
+ * ({@link Ordered#LOWEST_PRECEDENCE}). So the import is done before any upload can write routing rows: its UPLOADED
+ * rows are the only ones written outside a client's receive lock, and a colliding insert would fail an upload's
+ * commit after the transport already deleted its copy.
  */
 @Component
+@Order(LegacyRoutingImporter.RUNNER_ORDER)
 public class LegacyRoutingImporter implements ApplicationRunner {
     private static final Logger logger = Logger.getLogger(LegacyRoutingImporter.class.getName());
+    /** runs before {@code GrpcServerRunner}, which has no {@code @Order}; see the class comment */
+    static final int RUNNER_ORDER = Ordered.LOWEST_PRECEDENCE - 1;
 
     private final ServerRoutingRepository serverRoutingRepository;
     private final RoutingMetaRepository routingMetaRepository;

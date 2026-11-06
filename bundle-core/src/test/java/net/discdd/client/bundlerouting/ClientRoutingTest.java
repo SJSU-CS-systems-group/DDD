@@ -105,6 +105,36 @@ class ClientRoutingTest {
     }
 
     @Test
+    void prunesOldEntriesWhenPersisting() throws Exception {
+        var paths = paths(root);
+        var routing = new ClientRouting(paths, NOW);
+        assertTrue(routing.record(P1, NOW));
+        assertTrue(routing.record(P2, NOW + 30 * DAY - 1));
+        assertEquals(Map.of(P1, NOW, P2, NOW + 30 * DAY - 1), fileOf(paths), "younger than 30 d: kept");
+
+        String p3 = peer(3);
+        assertTrue(routing.record(p3, NOW + 30 * DAY));
+        assertEquals(Map.of(P2, NOW + 30 * DAY - 1, p3, NOW + 30 * DAY), fileOf(paths), "30 d old: dropped");
+        assertTrue(routing.record(P1, NOW + 30 * DAY), "a pruned peer met again is new");
+    }
+
+    @Test
+    void failedWriteIsNotMaterial() throws Exception {
+        var paths = paths(root);
+        var routing = new ClientRouting(paths, NOW);
+        // a non-empty directory where the file belongs makes the move into place fail
+        Path blocker = paths.metadataFile.toPath();
+        Files.createDirectories(blocker);
+        Files.writeString(blocker.resolve("x"), "x");
+
+        assertFalse(routing.record(P1, NOW));
+        Files.delete(blocker.resolve("x"));
+        Files.delete(blocker);
+        assertTrue(routing.record(P1, NOW + 1), "the next record retries the write");
+        assertEquals(Map.of(P1, NOW + 1), fileOf(paths));
+    }
+
+    @Test
     void capsNewest32() throws Exception {
         var routing = new ClientRouting(paths(root), NOW);
         for (int i = 0; i < 40; i++) routing.record(peer(i), NOW - i * 1000L);

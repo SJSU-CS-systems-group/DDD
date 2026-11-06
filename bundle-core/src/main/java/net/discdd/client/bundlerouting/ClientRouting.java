@@ -72,7 +72,7 @@ public class ClientRouting {
     /** @param nowMs the time used to clamp future values while loading */
     ClientRouting(ClientPaths clientPaths, long nowMs) {
         this.metadataFile = clientPaths.metadataFile;
-        if (load(nowMs)) persist();
+        if (load(nowMs)) persist(nowMs);
     }
 
     /** @return true if the loaded map differs from the file (so it should be rewritten) */
@@ -117,7 +117,8 @@ public class ClientRouting {
     /**
      * Records that this client met {@code peerId} at {@code nowMs}. The kept time never moves backwards.
      *
-     * @return true if the change was material, so the file was rewritten (see the class comment)
+     * @return true if the change was material and the file was rewritten (see the class comment); false if the
+     *         write failed
      */
     public synchronized boolean record(String peerId, long nowMs) {
         if (!isPeerId(peerId)) {
@@ -128,8 +129,7 @@ public class ClientRouting {
         peers.put(peerId, old == null ? nowMs : Math.max(old, nowMs));
         Long stored = persisted.get(peerId);
         boolean material = stored == null || nowMs - stored >= REFRESH_MS;
-        if (material) persist();
-        return material;
+        return material && persist(nowMs);
     }
 
     /** @return true if the routing file was rewritten after {@code timestampMs} (same mtime idiom as the ack file) */
@@ -160,10 +160,15 @@ public class ClientRouting {
     }
 
     /**
-     * Writes the whole map to a temp file next to the routing file and moves it into place. On failure the file
-     * keeps its old content, so the next {@link #record} of a changed peer tries again.
+     * Drops entries at least {@link #MAX_AGE_MS} older than {@code nowMs} from memory (they would never ride in a
+     * bundle again, so the map stays bounded), then writes the whole map to a temp file next to the routing file and
+     * moves it into place. On failure the file keeps its old content, so the next {@link #record} of a changed peer
+     * tries again.
+     *
+     * @return true if the file was written
      */
-    private void persist() {
+    private boolean persist(long nowMs) {
+        peers.values().removeIf(lastMet -> nowMs - lastMet >= MAX_AGE_MS);
         Path file = metadataFile.toPath().toAbsolutePath();
         Path tmp = null;
         try {
@@ -176,8 +181,10 @@ public class ClientRouting {
                 Files.move(tmp, file, REPLACE_EXISTING);
             }
             persisted = Map.copyOf(peers);
+            return true;
         } catch (IOException e) {
             logger.log(WARNING, "Could not write " + file, e);
+            return false;
         } finally {
             if (tmp != null) {
                 try {

@@ -35,10 +35,14 @@ import static java.util.logging.Level.WARNING;
  * <p>
  * Writes run inside the RPC's transaction, where a repository exception would mark the whole transaction
  * rollback-only and lose the bundle. So they never throw: inputs are validated first, and a row is upserted with a
- * conditional touch followed, only if no row exists, by an insert. A client's UPLOADED and REPORTED rows are written
- * only under that client's receive lock in {@code ServerBundleTransmission}, and DEPOSITED rows only under the
- * dropbox control handler's monitor, so two inserts of the same key cannot race. No deletes run here;
- * {@link RoutingSweeper} removes old rows.
+ * conditional touch followed, only if no row exists, by an insert. Every key names its client, and the writers of a
+ * client's rows are serialized through commit by {@code ServerBundleTransmission}'s receive lock, which it holds until
+ * the RPC's transaction completes: UPLOADED and REPORTED rows are written while the client's own bundle holds it, and
+ * DEPOSITED rows (keyed by the dropbox) while the dropbox's bundle holds it, from the dropbox control handler. The
+ * exceptions run before the gRPC server accepts calls: {@link LegacyRoutingImporter} writes UPLOADED rows, and the
+ * handler may write DEPOSITED rows when it consumes ADUs left from before a restart. The residual risk is the same for
+ * every source: the lock is per JVM, so a second server process on the same database could still insert a colliding
+ * key, and that RPC's commit would then fail. No deletes run here; {@link RoutingSweeper} removes old rows.
  * <p>
  * Edges come from carriers uploading a client's bundles (UPLOADED), from the peers a client lists in its
  * {@code routing.metadata} (REPORTED, {@link #recordReported}), and from the client bundles a dropbox's inventory
@@ -127,7 +131,7 @@ public class BundleRouting {
      * skew cancels.
      * <p>
      * Ignored: a missing, unparseable or oversized ({@link #MAX_METADATA_BYTES}) file, and a v1 report (no
-     * {@link #GEN_KEY}). Entries are kept only if the key is a peer ID other than the client's own and the value is
+     * {@link #GEN_KEY}, or one that is not epoch milliseconds, so relative ages cannot be computed from it). Entries are kept only if the key is a peer ID other than the client's own and the value is
      * epoch milliseconds (legacy counts are not); entries older than the TTL are skipped, and only the newest
      * {@link #MAX_REPORTED_PEERS} are recorded. Call it only for a decrypted, non-duplicate bundle, under the client's
      * receive lock. Never throws.
@@ -143,7 +147,7 @@ public class BundleRouting {
         }
         if (report == null) return;
         Long gen = report.get(GEN_KEY);
-        if (gen == null) {
+        if (gen == null || gen < MIN_EPOCH_MS) {
             logger.log(FINE, "Ignoring v1 routing metadata of " + clientId);
             return;
         }
@@ -167,7 +171,8 @@ public class BundleRouting {
      * {@code firstSeenMs} (the {@code InventorySighting}, server clock): the client visited the dropbox then. This
      * DEPOSITED edge makes the client a via member of the dropbox even if it never reports its peers (an old client).
      * A sighting already older than the TTL at {@code nowMs}, and the dropbox's own ID, are ignored. Call it only from
-     * the dropbox control handler, whose monitor serializes these writes. Never throws.
+     * the dropbox control handler while the dropbox's bundle holds its receive lock (see the class comment). Never
+     * throws.
      */
     public void recordDeposited(String dropboxId, String clientId, long firstSeenMs, long nowMs) {
         if (firstSeenMs < nowMs - ttlMs || clientId == null || clientId.equals(dropboxId)) return;

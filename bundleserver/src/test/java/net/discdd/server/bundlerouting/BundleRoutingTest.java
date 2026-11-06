@@ -204,6 +204,32 @@ class BundleRoutingTest {
         assertEquals(0, routingEdgeRepository.count());
     }
 
+    /** a {@code @gen} that is not epoch ms (a count, non-numeric, null) cannot date entries: the report counts as v1 */
+    @Test
+    void genNotEpochMsTreatedAsV1() throws Exception {
+        routing.recordReported(C, metadata(Map.of(BundleRouting.GEN_KEY, 7L, peer("p1"), NOW - HOUR)), NOW);
+        routing.recordReported(C,
+                               metadata(Map.of(BundleRouting.GEN_KEY,
+                                               BundleRouting.MIN_EPOCH_MS - 1,
+                                               peer("p2"),
+                                               NOW - HOUR)),
+                               NOW);
+        routing.recordReported(C, metadata(Map.of(BundleRouting.GEN_KEY, "soon", peer("p3"), NOW - HOUR)), NOW);
+        var nullGen = new HashMap<String, Long>();
+        nullGen.put(BundleRouting.GEN_KEY, null);
+        nullGen.put(peer("p4"), NOW - HOUR);
+        routing.recordReported(C, metadata(nullGen), NOW);
+        assertEquals(Map.of(), reported(C));
+
+        routing.recordReported(C,
+                               metadata(Map.of(BundleRouting.GEN_KEY,
+                                               BundleRouting.MIN_EPOCH_MS,
+                                               peer("p5"),
+                                               BundleRouting.MIN_EPOCH_MS)),
+                               NOW);
+        assertEquals(Map.of(peer("p5"), NOW), reported(C));
+    }
+
     @Test
     void relativeAgeCancelsClientSkew() throws Exception {
         // the client's clock runs 3 h ahead; it met p1 2 h before writing the report

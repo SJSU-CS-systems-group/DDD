@@ -60,15 +60,18 @@ import static java.util.logging.Level.WARNING;
  * Routing: each accepted report also records a DEPOSITED edge ({@link BundleRouting#recordDeposited}) from the dropbox
  * to every client whose held bundles the server can map, dated by the newest first sighting of those bundles. A
  * client that never reports its peers (an old client) is then still delivered through carriers that reach the
- * dropbox.
+ * dropbox. This object's monitor is released before the RPC commits, so it does not stop two inserts of one
+ * DEPOSITED key from colliding; the dropbox's receive lock, held through commit, does, with the same per-JVM residual
+ * risk as UPLOADED rows (see {@link BundleRouting}).
  * <p>
  * Timing (Research R6 §3.3 "evaluation timing"): a dropbox uploads its own control bundle in the same carrier sync as
  * the relayed bundles it reports, and the server may process the report first. So {@link #beforeBundleGeneration}
  * re-plans the stored report just before each bundle for the dropbox is built, and queues a fresh plan only when the
  * decision changed; the plan that leaves for the dropbox reflects everything the server knows by then.
  * <p>
- * Dependencies are limited to repositories, {@link AduStores} and an {@code ObjectProvider<ServerSecurity>} (see
- * {@link InternalAppHandler} for the Spring cycle this avoids). Without a {@code ServerSecurity} (CLI mode, or keys
+ * Dependencies are limited to repositories, {@link AduStores}, {@link BundleRouting} (which itself needs only
+ * repositories) and an {@code ObjectProvider<ServerSecurity>} (see {@link InternalAppHandler} for the Spring cycle
+ * this avoids). Without a {@code ServerSecurity} (CLI mode, or keys
  * that failed to load) the planner could not map any upstream entry to its client and would expire live pending
  * bundles, so the handler then leaves control ADUs in place for the live server and does not re-plan.
  * <p>
