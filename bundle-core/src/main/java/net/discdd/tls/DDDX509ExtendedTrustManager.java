@@ -42,7 +42,7 @@ public class DDDX509ExtendedTrustManager extends X509ExtendedTrustManager {
         checkedCert = cert;
     }
 
-    private X509Certificate checkedCert = null;
+    private volatile X509Certificate checkedCert = null;
 
     public X509Certificate getCheckedCert() {
         return checkedCert;

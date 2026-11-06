@@ -68,6 +68,7 @@ import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
@@ -111,7 +112,7 @@ public class ClientBundleTransmission {
         this.clientPaths = clientPaths;
         this.bundleSecurity = new ClientBundleSecurity(clientPaths);
         this.applicationDataManager = new ClientApplicationDataManager(clientPaths, aduConsumer);
-        this.clientRouting = ClientRouting.initializeInstance(clientPaths);
+        this.clientRouting = new ClientRouting(clientPaths);
     }
 
     public void registerBundleId(String bundleId) throws IOException, WindowExceptions.BufferOverflow,
@@ -138,14 +139,18 @@ public class ClientBundleTransmission {
         return bundleId.trim();
     }
 
+    /**
+     * Processes a downloaded bundle.
+     *
+     * @param senderId ignored: kept for source compatibility. Peers are recorded only when the TLS peer is bound to
+     *                 its recency blob ({@link #doExchangeWithTransport}), never from who handed over a bundle.
+     */
     public void processReceivedBundle(String senderId, Bundle bundle) throws IOException,
             RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException,
             DuplicateMessageException, InvalidKeyException, GeneralSecurityException, WindowExceptions.BufferOverflow {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, clientPaths.uncompressedPayloadStore);
         Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
-        logger.log(INFO, "Updating client routing metadata for sender:  " + bundleSenderToString(senderId));
-        clientRouting.updateMetaData(senderId);
 
         String bundleId = payload.getBundleId();
 
@@ -238,9 +243,10 @@ public class ClientBundleTransmission {
             File lastSentBundle = sentBundles[0];
             var lastBundleSentTimestamp = lastSentBundle.lastModified();
 
-            // lets check to see if we have gotten new ADUs or a new ack record
+            // lets check to see if we have gotten new ADUs, a new ack record or a material routing change
             if (clientPaths.ackRecordPath.toFile().lastModified() <= lastBundleSentTimestamp &&
-                    !applicationDataManager.hasNewADUs(null, lastBundleSentTimestamp)) {
+                    !applicationDataManager.hasNewADUs(null, lastBundleSentTimestamp) &&
+                    !clientRouting.changedSince(lastBundleSentTimestamp)) {
                 return new Bundle(lastSentBundle.getName(), lastSentBundle);
             }
 
@@ -255,10 +261,13 @@ public class ClientBundleTransmission {
         return generateNewBundle(newBundleId);
     }
 
-    // returns true if the blob is more recent than previously seen
-    public boolean processRecencyBlob(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) throws
-            IOException, InvalidKeyException {
-        // first make sure the data is valid
+    /**
+     * Checks a recency blob: status SUCCESS, at most 60 s in the future, signed by this client's server.
+     *
+     * @throws RecencyException if any check fails
+     */
+    public void verifyRecencyBlob(GetRecencyBlobResponse recencyBlobResponse) throws IOException,
+            InvalidKeyException {
         if (recencyBlobResponse.getStatus() != RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS) {
             throw new RecencyException("Recency request failed");
         }
@@ -276,7 +285,32 @@ public class ClientBundleTransmission {
                                               recencyBlobResponse.getRecencyBlobSignature().toByteArray())) {
             throw new RecencyException("Recency blob signature verification failed");
         }
-        return recencyTracker.isNewerRecencyBlob(device, recencyBlobResponse);
+    }
+
+    /**
+     * {@link #verifyRecencyBlob}, then asks the {@link RecencyTracker} whether the blob is newer than the last one
+     * seen from {@code device}.
+     *
+     * @return true if the blob is more recent than previously seen; false if it is not or no tracker is set
+     * @throws RecencyException if the blob fails verification
+     */
+    public boolean processRecencyBlob(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) throws
+            IOException, InvalidKeyException {
+        verifyRecencyBlob(recencyBlobResponse);
+        return recencyTracker != null && recencyTracker.isNewerRecencyBlob(device, recencyBlobResponse);
+    }
+
+    /**
+     * The peer a verified recency blob binds to the TLS session: the blob's {@code senderId} if it names
+     * {@code peerCert}'s key ({@link SecurityUtils#peerIdForTlsKey}), so a peer cannot replay another peer's blob.
+     *
+     * @return the peer ID, or null if there is no certificate, the blob names no sender, or it names another key
+     */
+    public static String boundPeerId(GetRecencyBlobResponse recencyBlobResponse, X509Certificate peerCert) {
+        if (recencyBlobResponse == null || peerCert == null) return null;
+        String senderId = recencyBlobResponse.getRecencyBlob().getSenderId();
+        if (senderId.isEmpty()) return null;
+        return senderId.equals(SecurityUtils.peerIdForTlsKey(peerCert.getPublicKey())) ? senderId : null;
     }
 
     public void deleteSentBundle(Bundle bundle) {
@@ -348,21 +382,30 @@ public class ClientBundleTransmission {
         Statuses uploadStatus = Statuses.FAILED;
         Statuses downloadStatus = Statuses.FAILED;
 
-        String transportSenderId = null;
         Exception transmissionException = null;
         try {
             if (isServerRunning(transportAddress, port)) {
                 var recencyBlobRequest = GetRecencyBlobRequest.newBuilder().build();
                 var blobRecencyReply = blockingStub.withDeadlineAfter(GRPC_SHORT_TIMEOUT_MS, MILLISECONDS)
                         .getRecencyBlob(recencyBlobRequest);
-                var recencyBlob = blobRecencyReply.getRecencyBlob();
                 if (!processRecencyBlob(device, blobRecencyReply)) {
                     logger.log(SEVERE,
                                "Did not process recency blob. In the future, we need to stop talking to this " +
                                        "device");
                 } else {
-                    transportSenderId = recencyBlob.getSenderId();
-                    logger.log(INFO, "Recency blob processed for " + transportSenderId);
+                    logger.log(INFO, "Recency blob processed for " + blobRecencyReply.getRecencyBlob().getSenderId());
+                }
+                // record the carrier before generating this exchange's upload, so the upload already names it;
+                // a direct server exchange records nothing
+                if (connectingToTransport) {
+                    String peerId = boundPeerId(blobRecencyReply, trustManager.getCheckedCert());
+                    if (peerId != null) {
+                        clientRouting.record(peerId, System.currentTimeMillis());
+                    } else {
+                        logger.log(WARNING,
+                                   "Recency blob senderId " + blobRecencyReply.getRecencyBlob().getSenderId() +
+                                           " does not name the TLS peer; not recorded");
+                    }
                 }
 
                 var clientSecurity = bundleSecurity.getClientSecurity();
@@ -385,7 +428,7 @@ public class ClientBundleTransmission {
                         logger.log(INFO, "No bundles downloaded");
                         downloadStatus = Statuses.EMPTY;
                     } else {
-                        processReceivedBundle(transportSenderId, new Bundle(bundlesDownloaded.toFile()));
+                        processReceivedBundle(null, new Bundle(bundlesDownloaded.toFile()));
                         downloadStatus = Statuses.COMPLETE;
                     }
                 } catch (Exception e) {
