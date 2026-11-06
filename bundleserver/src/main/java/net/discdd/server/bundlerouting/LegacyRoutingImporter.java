@@ -37,7 +37,8 @@ import static java.util.logging.Level.WARNING;
  * {@link #RUNNER_ORDER} puts the import after {@code CLRunner} ({@code @Order(0)}, which exits for CLI commands, so
  * a CLI process never imports) and strictly before the unordered {@code GrpcServerRunner}
  * ({@link Ordered#LOWEST_PRECEDENCE}). So the import is done before any upload can write routing rows: its UPLOADED
- * rows are the only ones written outside a client's receive lock, and a colliding insert would fail an upload's
+ * rows are the only UPLOADED rows written outside a client's receive lock (the ADU deliverer's startup pass may also
+ * write DEPOSITED rows before gRPC starts; see {@link BundleRouting}), and a colliding insert would fail an upload's
  * commit after the transport already deleted its copy.
  */
 @Component

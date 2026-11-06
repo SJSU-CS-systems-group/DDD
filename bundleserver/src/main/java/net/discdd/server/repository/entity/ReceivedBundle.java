@@ -45,7 +45,10 @@ public class ReceivedBundle {
     @Column(length = 64)
     public String clientKeyFingerprint;
 
-    /** when the server first received this bundle, in epoch milliseconds */
+    /**
+     * when the server first received this bundle, in epoch milliseconds, or 0 if undated (first recorded by a
+     * duplicate upload, so the real first receipt is unknown); read only by the routing replay guard
+     */
     public long receivedAtMs;
 
     /**

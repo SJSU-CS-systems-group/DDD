@@ -35,7 +35,8 @@ import static java.util.logging.Level.WARNING;
  * <p>
  * Writes run inside the RPC's transaction, where a repository exception would mark the whole transaction
  * rollback-only and lose the bundle. So they never throw: inputs are validated first, and a row is upserted with a
- * conditional touch followed, only if no row exists, by an insert. Every key names its client, and the writers of a
+ * non-locking existence check followed by a conditional touch if it exists, or an insert if it does not (never a
+ * touch that misses: see {@link #upsert}). Every key names its client, and the writers of a
  * client's rows are serialized through commit by {@code ServerBundleTransmission}'s receive lock, which it holds until
  * the RPC's transaction completes: UPLOADED and REPORTED rows are written while the client's own bundle holds it, and
  * DEPOSITED rows (keyed by the dropbox) while the dropbox's bundle holds it, from the dropbox control handler. The
@@ -104,7 +105,8 @@ public class BundleRouting {
      * Carrier {@code peerId} uploaded a bundle of {@code clientId} the server had already processed. This refreshes
      * the edge only if the server first received this bundle ({@code ReceivedBundle.receivedAtMs}) within the TTL,
      * so re-uploading an old jar cannot make a carrier a route. A bundle with no receipt row (one superseded before
-     * it arrived) cannot be dated and refreshes nothing. Call it before the duplicate's receipt row is written.
+     * it arrived) cannot be dated and refreshes nothing, and nor does the undated row ({@code receivedAtMs} 0) its
+     * first duplicate upload writes. Call it before the duplicate's receipt row is written.
      * Never throws.
      */
     public void recordUploadedDuplicate(String peerId, String clientId, String bundleId, long nowMs) {
@@ -260,16 +262,27 @@ public class BundleRouting {
                 .toList();
     }
 
-    /** keeps {@code max(lastSeenMs, nowMs)} for the edge, creating it if needed; invalid input is ignored */
+    /**
+     * Keeps {@code max(lastSeenMs, nowMs)} for the edge, creating it if needed; invalid input is ignored.
+     * <p>
+     * The existence check comes first and is a plain (non-locking) read, so a missing key is only ever inserted. The
+     * conditional touch is a locking UPDATE: on MySQL InnoDB (REPEATABLE READ) one that matches no row takes a gap
+     * lock until commit, and two RPCs whose misses share a gap (different clients' new edges, or a dropbox's
+     * DEPOSITED rows against a client's own) would deadlock on their inserts and lose a bundle. An insert takes only
+     * insert-intention and record locks, which do not conflict across keys; same-key writers are serialized through
+     * commit by the receive lock (see the class comment), as for {@code ReceivedBundle}'s check-then-insert.
+     */
     private void upsert(String peerId, String clientId, RoutingSource source, long nowMs) {
         if (!validId(peerId) || !validId(clientId) || nowMs <= 0) {
             logger.log(FINE, "Ignoring route " + peerId + " -> " + clientId + " (" + source + ")");
             return;
         }
         try {
-            if (routingEdgeRepository.touch(peerId, clientId, source, nowMs) > 0) return;
             var id = new RoutingEdgeId(peerId, clientId, source);
-            if (routingEdgeRepository.existsById(id)) return; // already at least as new
+            if (routingEdgeRepository.existsById(id)) {
+                routingEdgeRepository.touch(peerId, clientId, source, nowMs); // no-op if already at least as new
+                return;
+            }
             routingEdgeRepository.save(new RoutingEdge(id, nowMs));
         } catch (RuntimeException e) {
             // validation above should make this unreachable; the transaction may now be rollback-only

@@ -432,6 +432,22 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
     }
 
     /**
+     * replay guard: a duplicate with no receipt row (superseded before it arrived) writes an undated row, so neither
+     * that upload nor a later one of the same jar makes its carrier a route
+     */
+    @Test
+    void test09bUndatedDuplicateRefreshesNoCarrier() throws Exception {
+        String bundleId = BundleJarInfo.read(upstream4Jar).getBundleId();
+        receivedBundleRepository.deleteById(bundleId);
+
+        deliverToServer(upstream4Jar, "T7");
+        assertEquals(0, receivedBundleRepository.findById(bundleId).orElseThrow().receivedAtMs, "undated row");
+        deliverToServer(upstream4Jar, "T8");
+        assertFalse(routingEdgeRepository.existsById(uploaded("T7", clientId)));
+        assertFalse(routingEdgeRepository.existsById(uploaded("T8", clientId)), "upload order makes no route");
+    }
+
+    /**
      * One-hop via routing: the stock client reports meeting the dropbox (its {@code routing.metadata} names the
      * dropbox's TLS peer ID) through one carrier; a carrier that only ever met the dropbox then gets the client's reply.
      */

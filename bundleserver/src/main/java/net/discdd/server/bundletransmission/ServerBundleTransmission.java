@@ -174,8 +174,9 @@ public class ServerBundleTransmission {
                                                               uncompressedBundle.getBundleId(),
                                                               System.currentTimeMillis());
                     }
-                    // The counter advances only after every ADU was stored.
-                    recordReceivedBundle(uncompressedBundle, clientId, receivedBundleCounter, senderId);
+                    // The counter advances only after every ADU was stored. A duplicate without a row cannot be
+                    // dated, so its row is undated (0) and the replay guard never refreshes a route from it.
+                    recordReceivedBundle(uncompressedBundle, clientId, receivedBundleCounter, senderId, 0);
                     deleteStagedPayloadAfterCommit(stagedPayload);
                     logger.log(WARNING,
                                "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() +
@@ -237,7 +238,11 @@ public class ServerBundleTransmission {
                                                               receivedBundleCounter,
                                                               uncompressedPayload.getADUs());
                 // only now: the payload decrypted and its ack and ADUs are stored (ack-only bundles included)
-                recordReceivedBundle(uncompressedBundle, clientId, receivedBundleCounter, senderId);
+                recordReceivedBundle(uncompressedBundle,
+                                     clientId,
+                                     receivedBundleCounter,
+                                     senderId,
+                                     System.currentTimeMillis());
                 deleteStagedPayloadAfterCommit(stagedPayload);
             } finally {
                 if (!unlockWithTransaction) receiveLock.unlock();
@@ -353,11 +358,16 @@ public class ServerBundleTransmission {
      * the RPC's transaction still commits whatever ran before). Ack-only bundles advance the same counter after
      * their acknowledgement is processed. A failure to record is logged and does not fail the bundle; the dropbox
      * then keeps its copy a while longer.
+     *
+     * @param receivedAtMs when the server first received the bundle, or 0 for a duplicate that had no row (superseded
+     *                     before it arrived, or processed before this table existed): such a row is undated, so the
+     *                     routing replay guard never refreshes a carrier from it
      */
     private void recordReceivedBundle(UncompressedBundle uncompressedBundle,
                                       String clientId,
                                       long bundleCounter,
-                                      String uploaderId) {
+                                      String uploaderId,
+                                      long receivedAtMs) {
         try {
             String bundleId = uncompressedBundle.getBundleId();
             if (receivedBundleRepository.existsById(bundleId)) return;
@@ -370,7 +380,7 @@ public class ServerBundleTransmission {
                                                              clientId,
                                                              bundleCounter,
                                                              fingerprint,
-                                                             System.currentTimeMillis(),
+                                                             receivedAtMs,
                                                              uploaderId));
         } catch (Exception e) {
             logger.log(WARNING, "Could not record received bundle for client " + clientId, e);
