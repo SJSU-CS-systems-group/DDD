@@ -386,20 +386,31 @@ public final class RoleCycleController {
      * Stop cycling, then release the scheduler thread once the radio is torn down (or after
      * {@link #SHUTDOWN_TIMEOUT_MS}). The controller cannot be restarted afterwards. Call from
      * {@code Service.onDestroy}.
+     *
+     * @return completes once this request's owner-thread task has run, so {@link #halt} has issued any stop
+     *         (including the best-effort stop of a dirty role) and {@link #mode()} reflects it; at once if the
+     *         scheduler already shut down
      */
-    public void shutdown() {
-        post(() -> {
-            shutdownRequested = true;
-            running = false;
-            runningSnapshot = false;
-            halt("shutdown");
-            if (mode == CycleMode.STOPPED) {
-                finishShutdown();
-            } else {
-                // Plain scheduler delay (not the sliced state timer): a bound on teardown, not a deadline.
-                scheduler.schedule(this::finishShutdown, SHUTDOWN_TIMEOUT_MS);
+    public CompletableFuture<Void> shutdown() {
+        CompletableFuture<Void> halted = new CompletableFuture<>();
+        boolean posted = post(() -> {
+            try {
+                shutdownRequested = true;
+                running = false;
+                runningSnapshot = false;
+                halt("shutdown");
+                if (mode == CycleMode.STOPPED) {
+                    finishShutdown();
+                } else {
+                    // Plain scheduler delay (not the sliced state timer): a bound on teardown, not a deadline.
+                    scheduler.schedule(this::finishShutdown, SHUTDOWN_TIMEOUT_MS);
+                }
+            } finally {
+                halted.complete(null);
             }
         });
+        if (!posted) halted.complete(null);
+        return halted;
     }
 
     /** @return current mode (snapshot). */

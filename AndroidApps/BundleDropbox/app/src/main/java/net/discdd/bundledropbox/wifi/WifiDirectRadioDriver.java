@@ -229,7 +229,11 @@ public final class WifiDirectRadioDriver implements RadioDriver {
 
     @Override
     public void stopHosting(long gen, RadioCallback cb) {
-        main.post(() -> host.stop(gen, cb));
+        main.post(() -> {
+            // after shutdown a late stop must not reopen the channel (host.stop calls ensureChannel)
+            if (!initialized) cb.failed(gen, "Wi-Fi Direct driver not initialized");
+            else host.stop(gen, cb);
+        });
     }
 
     @Override
@@ -252,7 +256,10 @@ public final class WifiDirectRadioDriver implements RadioDriver {
 
     @Override
     public void stopVisit(long gen, RadioCallback cb) {
-        main.post(() -> joiner.stop(gen, cb));
+        main.post(() -> {
+            if (!initialized) cb.failed(gen, "Wi-Fi Direct driver not initialized");
+            else joiner.stop(gen, cb);
+        });
     }
 
     // ---------------------------------------------------------------- observable state

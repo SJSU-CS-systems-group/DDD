@@ -21,6 +21,22 @@ public class RadioStepsTest {
     }
 
     @Test
+    public void removeGroupIsSentWhileACreateGroupMayStillBeForming() {
+        assertTrue("a stop superseding a HOST start before the group formed",
+                   RadioSteps.needsRemoveGroup(NO_GROUP, true));
+        assertFalse("no createGroup in flight", RadioSteps.needsRemoveGroup(NO_GROUP, false));
+        assertTrue(RadioSteps.needsRemoveGroup(GROUP, false));
+        assertTrue(RadioSteps.needsRemoveGroup(NO_ANSWER, false));
+    }
+
+    @Test
+    public void cancelConnectIsSkippedWhenTheJoinAlreadyReachedAGroup() {
+        assertFalse("timed out after the group started (DHCP or GO address pending)",
+                    RadioSteps.needsCancelConnect(true));
+        assertTrue("no group yet: the connect may still be negotiating", RadioSteps.needsCancelConnect(false));
+    }
+
+    @Test
     public void discoveryBeforeReadyIsTheStartStepItself() {
         assertTrue(RadioSteps.discoveryWanted(true, false, false));
         assertFalse("session ended", RadioSteps.discoveryWanted(false, false, false));

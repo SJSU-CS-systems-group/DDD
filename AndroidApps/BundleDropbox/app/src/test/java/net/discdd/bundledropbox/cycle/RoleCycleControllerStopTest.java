@@ -127,6 +127,28 @@ public class RoleCycleControllerStopTest {
         assertTrue(h.s.isShutdown());
     }
 
+    /**
+     * Teardown waits on shutdown's future before reading the mode: it completes only once the halt ran, so a
+     * dirty role's stop is already issued and the mode is no longer STOPPED (audit fix W4 dropbox-wifi-2).
+     */
+    @Test
+    public void shutdownFutureCompletesAfterTheDirtyStopIsIssued() {
+        h.startToHosting();
+        h.c.pause();
+        h.s.runReady();
+        h.fail("busy");
+        assertEquals(CycleMode.STOPPED, h.c.mode());
+        CompletableFuture<Void> halted = h.c.shutdown();
+        assertFalse("not before the owner thread ran the halt", halted.isDone());
+        h.s.runReady();
+        assertTrue(halted.isDone());
+        assertEquals("stopHosting", h.radio.last().op);
+        assertFalse("a stop is in flight, so teardown keeps waiting", h.c.mode() == CycleMode.STOPPED);
+        h.ready();
+        assertTrue(h.s.isShutdown());
+        assertTrue("after shutdown a request completes at once", h.c.shutdown().isDone());
+    }
+
     @Test
     public void roleLostDuringHostDrainingStopsNow() {
         h.startToHosting();

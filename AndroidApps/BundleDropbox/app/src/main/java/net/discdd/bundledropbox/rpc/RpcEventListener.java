@@ -33,8 +33,9 @@ public interface RpcEventListener {
     default void onActiveSessionsChanged(int activeSessions) {}
 
     /**
-     * A new client was refused because admissions are closed (the cycle is draining or not hosting).
-     * The client got {@code UNAVAILABLE} and will retry on its own schedule.
+     * A new client was refused because admissions are closed (draining, or between roles). It got
+     * {@code UNAVAILABLE}; a stock client still stamps {@code lastExchange} for our transportId and skips us until a
+     * newer recency blob is advertised (R3 §7), so the cycle works to minimize refusals.
      *
      * @param remoteIp   the refused client's IP
      * @param fullMethod the gRPC method it tried to call

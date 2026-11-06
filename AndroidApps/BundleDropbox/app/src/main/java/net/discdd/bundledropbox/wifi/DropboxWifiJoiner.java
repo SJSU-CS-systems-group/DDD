@@ -431,7 +431,9 @@ final class DropboxWifiJoiner {
     /**
      * cancelConnect (only while a connect may be pending, audit WD-1) + removeGroup, then resume discovery
      * for other carriers. After an exchange we are a client in the carrier's group, so removeGroup alone
-     * leaves it.
+     * leaves it. A join that timed out may already be in the carrier's group (started, but DHCP or the GO
+     * address never completed), where cancelConnect is only answered BUSY and retried; so when a connect may
+     * be pending, a group probe decides: a visible group skips cancelConnect and goes straight to removal.
      */
     private void leaveCarrier(Attempt a) {
         // Releases the join token if no exchange took it (failed join, or a runner that could not start).
@@ -440,8 +442,19 @@ final class DropboxWifiJoiner {
         if (!s.live()) return;
         phase = Phase.DISCONNECTING;
         stateChanged.run();
-        link.bestEffort(s::live, () -> link.removeGroupAndAwaitGone(s::live, (ok, whyNot) -> onCarrierLeft(s, ok, whyNot)),
-                        cancelConnectIfPending(a));
+        Runnable remove = () -> link.removeGroupAndAwaitGone(s::live, (ok, whyNot) -> onCarrierLeft(s, ok, whyNot));
+        if (!a.lifecycle.needsCancelConnect()) {
+            link.bestEffort(s::live, remove);
+            return;
+        }
+        link.pollGroup("checking for a carrier group", WifiTimeouts.POLL_INTERVAL_MS, g -> true, s::live, g -> {
+            if (!s.live()) return;
+            if (RadioSteps.needsCancelConnect(g != null)) link.bestEffort(s::live, remove, cancelConnectIfPending(a));
+            else remove.run();
+        }, reason -> {
+            // no answer: unknown state, so cancel as before (an abandoned session stops in bestEffort)
+            if (s.live()) link.bestEffort(s::live, remove, cancelConnectIfPending(a));
+        });
     }
 
     /** @return {@code rest}, preceded by a cancelConnect step if {@code a} may still have a connect pending */

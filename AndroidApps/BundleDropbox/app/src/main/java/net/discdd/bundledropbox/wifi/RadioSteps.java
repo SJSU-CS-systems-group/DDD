@@ -31,7 +31,30 @@ final class RadioSteps {
      *         removal is already done. An unknown state still sends it (the old, always-send behaviour).
      */
     static boolean needsRemoveGroup(GroupProbe probe) {
-        return probe != GroupProbe.NO_GROUP;
+        return needsRemoveGroup(probe, false);
+    }
+
+    /**
+     * @param probe         result of the group probe
+     * @param groupMayForm  a {@code createGroup} we sent may still be forming its group: AOSP's
+     *                      {@code requestGroupInfo} answers null from the request until the group starts, so a
+     *                      NO_GROUP probe then proves nothing, and removeGroup (whose BUSY retry waits for the
+     *                      group to exist) is sent as before WD-1
+     * @return true if {@code removeGroup} must be sent
+     */
+    static boolean needsRemoveGroup(GroupProbe probe, boolean groupMayForm) {
+        return probe != GroupProbe.NO_GROUP || groupMayForm;
+    }
+
+    /**
+     * Leaving an attempt whose connect may still be pending: whether to send {@code cancelConnect} first.
+     *
+     * @param groupVisible a {@code requestGroupInfo} probe just answered with a group
+     * @return false when a group exists (the join got past group formation, so cancelConnect would only be
+     *         answered BUSY and retried; removeGroup leaves it); true otherwise, including no answer
+     */
+    static boolean needsCancelConnect(boolean groupVisible) {
+        return !groupVisible;
     }
 
     /**

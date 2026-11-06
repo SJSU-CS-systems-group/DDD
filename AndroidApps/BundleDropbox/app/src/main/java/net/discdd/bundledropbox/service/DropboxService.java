@@ -116,6 +116,12 @@ import java.util.logging.Logger;
  */
 public class DropboxService extends Service implements DropboxControls {
     private static final Logger logger = Logger.getLogger(DropboxService.class.getName());
+    /**
+     * Bumped by each {@link #onCreate()}: a teardown that outlives its instance (it can wait up to
+     * {@link WifiTimeouts#STOP_WORST_MS}) must not overwrite a newer instance's global status and roles.
+     */
+    private static final java.util.concurrent.atomic.AtomicInteger INSTANCE_GEN =
+            new java.util.concurrent.atomic.AtomicInteger();
 
     /** Notification channel id (the transport uses "DDD-Transport"). */
     public static final String NOTIFICATION_CHANNEL_ID = "DDD-Dropbox";
@@ -150,6 +156,8 @@ public class DropboxService extends Service implements DropboxControls {
 
     private boolean started; // main thread only: true while initialized or initializing; reset on failure
     private volatile boolean destroyed;
+    /** this instance's {@link #INSTANCE_GEN} */
+    private volatile int instanceGen;
     /** The operator pressed Stop ({@link #stopRelay}); cleared by an {@link #ACTION_START} command. */
     private volatile boolean relayStopped;
     /** What the Status tab's "Last error" card shows, and when it clears (audit m12). */
@@ -195,6 +203,7 @@ public class DropboxService extends Service implements DropboxControls {
     @Override
     public void onCreate() {
         super.onCreate();
+        instanceGen = INSTANCE_GEN.incrementAndGet();
         logger.info("DropboxService created");
     }
 
@@ -456,17 +465,32 @@ public class DropboxService extends Service implements DropboxControls {
      * controller's halt; it ends at STOPPED or after {@link RoleCycleController#SHUTDOWN_TIMEOUT_MS}, when the
      * controller drops its scheduler and its mode no longer changes. A stop still running then (worst case
      * {@link WifiTimeouts#STOP_WORST_MS}) is waited out on the driver, so the channel is not closed mid-stop.
+     * <p>
+     * The wait first lets the owner thread run its halt (the returned future), so a dirty role's best-effort
+     * stop is already issued, and posted to the driver ahead of {@code awaitIdle}'s check, when the mode is read.
+     * The client server is stopped before the long wait, so port 7777 is free for a new instance at once (a
+     * HOST stop only ends sessions, which is safe on a stopped server), and again after it in case a superseded
+     * HOST start re-bound it. The global status and roles are cleared only if no newer instance exists.
      */
     private void teardown() {
         long deadline = SystemClock.elapsedRealtime() + WifiTimeouts.STOP_WORST_MS;
         RoleCycleController cycle = controller;
         if (cycle != null) {
-            cycle.shutdown(); // idempotent: a second request is ignored or dropped after shutdown
+            // idempotent: a second request is ignored (or dropped after shutdown, completing at once)
             long cycleDeadline = Math.min(deadline, SystemClock.elapsedRealtime() + RoleCycleController.SHUTDOWN_TIMEOUT_MS);
+            try {
+                cycle.shutdown().get(Math.max(1L, cycleDeadline - SystemClock.elapsedRealtime()), TimeUnit.MILLISECONDS);
+            } catch (TimeoutException | ExecutionException e) {
+                logger.fine("role cycle halt not observed: " + e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             while (cycle.mode() != CycleMode.STOPPED && SystemClock.elapsedRealtime() < cycleDeadline) {
                 SystemClock.sleep(100);
             }
         }
+        DropboxRpcServer server = rpcServer;
+        if (server != null) server.stop();
         WifiDirectRadioDriver driver = radio;
         if (driver != null && !driver.awaitIdle(deadline - SystemClock.elapsedRealtime())) {
             logger.warning("Wi-Fi Direct still stopping after " + WifiTimeouts.STOP_WORST_MS + " ms; closing the channel");
@@ -474,13 +498,16 @@ public class DropboxService extends Service implements DropboxControls {
         TransportVisitClient vc = visitClient;
         if (vc != null) vc.cancel();
         if (driver != null) driver.shutdown();
-        DropboxRpcServer server = rpcServer;
-        if (server != null) server.stop();
-        DropboxWifiState.clearRoles();
-        DropboxStatusRepository.modify(s -> s.toBuilder()
-                .cycle(CycleMode.STOPPED, clock.nowMillis(), CycleListener.NO_DEADLINE)
-                .activeSessions(0)
-                .build());
+        if (server != null) server.stop(); // no-op unless a superseded HOST start re-bound it meanwhile
+        if (INSTANCE_GEN.get() == instanceGen) {
+            DropboxWifiState.clearRoles();
+            DropboxStatusRepository.modify(s -> s.toBuilder()
+                    .cycle(CycleMode.STOPPED, clock.nowMillis(), CycleListener.NO_DEADLINE)
+                    .activeSessions(0)
+                    .build());
+        } else {
+            logger.info("A newer DropboxService is running; leaving its status and roles alone");
+        }
         logger.info("DropboxService teardown complete");
     }
 

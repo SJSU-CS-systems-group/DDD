@@ -184,6 +184,8 @@ final class DropboxWifiHost {
                 .enablePersistentMode(true)
                 .build();
         P2pLink.P2pCall create = (m, c, l) -> m.createGroup(c, config, l);
+        // Sent before the answer: a stop that supersedes this start must not trust a null group probe.
+        link.noteCreateGroupSent();
         link.action("createGroup", WifiTimeouts.GROUP_CREATE_MS, create, op::live, (ok, why) -> {
             if (!op.live()) return;
             if (ok) {
@@ -544,7 +546,8 @@ final class DropboxWifiHost {
             if (current) activeOp = null;
             // A failed start/stop makes no claim of HOSTING. A group left behind is reused or removed by the
             // next startHosting (step 1 inspects the group) or by stopHosting/startVisit (both remove any
-            // group). If the cycle halts right after a failed stop, the controller records the role as dirty
+            // group they observe, and also any a superseded createGroup may still be forming:
+            // P2pLink#noteCreateGroupSent). If the cycle halts right after a failed stop, the controller records the role as dirty
             // and re-issues stopHosting before its next start or at its next halt (audit m4/m22).
             if (current) {
                 state = State.IDLE;

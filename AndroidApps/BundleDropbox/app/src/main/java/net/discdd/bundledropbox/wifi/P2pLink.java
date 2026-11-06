@@ -93,6 +93,11 @@ final class P2pLink {
 
     /** Last {@code EXTRA_WIFI_STATE}; -1 until known. */
     private int p2pState = -1;
+    /**
+     * {@link #now()} until which a {@code createGroup} we sent may still be forming a group that
+     * {@code requestGroupInfo} cannot see yet; 0 when none is. Main thread only.
+     */
+    private long groupFormingUntil;
     private String deviceName;
 
     /**
@@ -372,6 +377,7 @@ final class P2pLink {
             }
             try {
                 manager.requestGroupInfo(ch, group -> {
+                    if (group != null) groupFormingUntil = 0; // a group is visible: probes are reliable again
                     if (finished) return;
                     if (until.test(group)) {
                         finished = true;
@@ -401,8 +407,9 @@ final class P2pLink {
      * Leaves whatever group this device is in (as GO or client) and waits until {@code requestGroupInfo}
      * returns null. A {@code requestGroupInfo} probe runs first: with no group the step is done at once,
      * without a removeGroup that AOSP would answer BUSY and {@link #action} would retry for about 8 s (audit
-     * WD-1, {@link RadioSteps#needsRemoveGroup}). With a group, or when the probe gets no answer, removeGroup
-     * is sent with its BUSY retry. A failed removeGroup request is not fatal: the outcome is decided by
+     * WD-1, {@link RadioSteps#needsRemoveGroup}). With a group, when the probe gets no answer, or while a
+     * {@code createGroup} we sent may still be forming its group ({@link #noteCreateGroupSent}), removeGroup
+     * is sent with its BUSY retry, which waits for a forming group to exist and then removes it. A failed removeGroup request is not fatal: the outcome is decided by
      * observing the group. Probe, request and poll share one {@link WifiTimeouts#REMOVAL_MS} budget (worst
      * case {@link WifiTimeouts#REMOVAL_WORST_MS}).
      */
@@ -411,8 +418,12 @@ final class P2pLink {
         // pollGroup with an always-true predicate answers once; its watchdog bounds a silent framework to 2 intervals.
         pollGroup("checking for a group", WifiTimeouts.POLL_INTERVAL_MS, g -> true, stillWanted, g -> {
             RadioSteps.GroupProbe probe = g == null ? RadioSteps.GroupProbe.NO_GROUP : RadioSteps.GroupProbe.GROUP;
-            if (RadioSteps.needsRemoveGroup(probe)) removeGroupThenPoll(deadline, stillWanted, result);
-            else result.done(true, null);
+            if (RadioSteps.needsRemoveGroup(probe, groupMayBeForming())) {
+                if (g == null) logger.fine("no group yet, but a createGroup may still be forming one: removing anyway");
+                removeGroupThenPoll(deadline, stillWanted, result);
+            } else {
+                result.done(true, null);
+            }
         }, reason -> {
             // NO_ANSWER: remove anyway (an abandoned or channel-less removal then fails at once).
             logger.fine(reason + " (sending removeGroup anyway)");
@@ -420,10 +431,25 @@ final class P2pLink {
         });
     }
 
+    /**
+     * Call just before sending {@code createGroup}: until a group is observed, a removal succeeds, or
+     * {@link WifiTimeouts#GROUP_CREATE_MS} passes, a group probe answering null does not prove there is no group
+     * (a stop that supersedes a HOST start can come before the group forms).
+     */
+    void noteCreateGroupSent() {
+        groupFormingUntil = now() + WifiTimeouts.GROUP_CREATE_MS;
+    }
+
+    private boolean groupMayBeForming() {
+        if (groupFormingUntil != 0 && now() >= groupFormingUntil) groupFormingUntil = 0;
+        return groupFormingUntil != 0;
+    }
+
     private void removeGroupThenPoll(long deadline, BooleanSupplier stillWanted, Result result) {
         long budget = Math.max(WifiTimeouts.POLL_INTERVAL_MS, deadline - now());
         action("removeGroup", budget, (m, c, l) -> m.removeGroup(c, l), stillWanted, (ok, why) -> {
-            if (!ok) logger.fine(why + " (checking whether a group is still present)");
+            if (ok) groupFormingUntil = 0; // whatever createGroup formed has been removed
+            else logger.fine(why + " (checking whether a group is still present)");
             long remaining = Math.max(WifiTimeouts.POLL_INTERVAL_MS, deadline - now());
             pollGroup("waiting for group removal",
                       remaining,
