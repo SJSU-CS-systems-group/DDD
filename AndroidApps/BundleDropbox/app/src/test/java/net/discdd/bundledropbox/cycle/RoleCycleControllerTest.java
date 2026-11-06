@@ -3,7 +3,6 @@ package net.discdd.bundledropbox.cycle;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -15,61 +14,49 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * Fake-clock tests for the role cycle semantics in 03 Architecture ("Role cycle", "Admission and drain").
- * Everything runs on the test thread: {@link FakeScheduler} is both the clock and the owner thread,
- * {@link FakeRadio} records radio calls that the test completes by hand.
+ * Everything runs on the test thread through {@link CycleHarness}: {@link FakeScheduler} is both the clock
+ * and the owner thread, {@link FakeRadio} records radio calls that the test completes by hand.
  */
 public class RoleCycleControllerTest {
-    private static final long CLIENT = CycleConfig.DEFAULT_CLIENT_PERIOD_MS;
-    private static final long TRANSPORT = CycleConfig.DEFAULT_TRANSPORT_PERIOD_MS;
-    private static final long CAP = CycleConfig.DEFAULT_DRAIN_CAP_MS;
+    private static final long CLIENT = CycleHarness.CLIENT;
+    private static final long TRANSPORT = CycleHarness.TRANSPORT;
+    private static final long CAP = CycleHarness.CAP;
 
+    private CycleHarness h;
+    // Short aliases for the harness parts, so the test bodies read as before.
     private FakeScheduler s;
     private FakeRadio radio;
     private AtomicBoolean blob;
     private ActivityGate gate;
     private RoleCycleController c;
-    private final List<CycleMode> modes = new ArrayList<>();
-    private final List<Long> deadlines = new ArrayList<>();
-    private final List<String> errors = new ArrayList<>();
+    private List<CycleMode> modes;
+    private List<Long> deadlines;
+    private List<String> errors;
 
     @Before
     public void setUp() {
-        s = new FakeScheduler();
-        radio = new FakeRadio();
-        blob = new AtomicBoolean(true);
-        gate = new ActivityGate();
         newController(CycleConfig.DEFAULTS);
     }
 
+    /** Replaces the harness (and with it the controller) with a fresh one using {@code config}. */
     private void newController(CycleConfig config) {
-        c = new RoleCycleController(radio, s, s, gate, blob::get, config);
-        c.addListener(new CycleListener() {
-            @Override
-            public void onModeChanged(CycleMode previous, CycleMode current, long startedAt, long deadlineAt) {
-                modes.add(current);
-                deadlines.add(deadlineAt);
-            }
-
-            @Override
-            public void onCycleError(CycleMode mode, String reason) {
-                errors.add(mode + ":" + reason);
-            }
-        });
+        h = new CycleHarness(config);
+        s = h.s;
+        radio = h.radio;
+        blob = h.blob;
+        gate = h.gate;
+        c = h.c;
+        modes = h.modes;
+        deadlines = h.deadlines;
+        errors = h.errors;
     }
 
-    /** Complete the most recent radio call successfully and let the controller react. */
     private void ready() {
-        radio.last().ready();
-        s.runReady();
+        h.ready();
     }
 
     private void startToHosting() {
-        c.start();
-        s.runReady();
-        assertEquals(CycleMode.HOST_STARTING, c.mode());
-        assertEquals("startHosting", radio.last().op);
-        ready();
-        assertEquals(CycleMode.HOSTING, c.mode());
+        h.startToHosting();
     }
 
     private void hostingToVisiting() {
@@ -334,7 +321,8 @@ public class RoleCycleControllerTest {
 
     @Test
     public void exhaustedStartFallsBackToOtherRoleOnce() {
-        // E.g. VISIT keeps failing for a VISIT-only reason: with a blob the dropbox should still host.
+        // HOST keeps failing (e.g. createGroup broken) but joining still works: fall back to VISIT; if both
+        // fail, park.
         c.start();
         s.runReady();
         assertEquals("startHosting", radio.last().op);
@@ -384,13 +372,8 @@ public class RoleCycleControllerTest {
         assertEquals(CycleMode.VISIT_STARTING, c.mode());
     }
 
-    /** Fail the pending op and each of its backoff retries. */
     private void failAllAttempts() {
-        for (int i = 0; i < RoleCycleController.MAX_ATTEMPTS; i++) {
-            radio.last().fail("busy");
-            s.runReady();
-            if (i < RoleCycleController.MAX_ATTEMPTS - 1) s.advance(RoleCycleController.RETRY_BACKOFF_BASE_MS << i);
-        }
+        h.failAllAttempts();
     }
 
     @Test

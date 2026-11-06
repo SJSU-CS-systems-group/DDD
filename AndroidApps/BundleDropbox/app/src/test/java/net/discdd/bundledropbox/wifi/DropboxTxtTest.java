@@ -48,10 +48,10 @@ public class DropboxTxtTest {
     @Test
     public void hostRecordHasAllKeysInOrder() {
         String encoded = DropboxTxt.encodeRecencyBlob(realisticBlob(1_700_000_000_000L).toByteArray());
-        Map<String, String> txt = DropboxTxt.hostRecord("base-3", encoded);
+        Map<String, String> txt = DropboxTxt.hostRecord("abcdefghijklmnop", encoded);
         assertEquals(List.of("ddd", "transportId", "recencyBlob", "dropbox"), List.copyOf(txt.keySet()));
         assertEquals("dropbox", txt.get("ddd"));
-        assertEquals("base-3", txt.get("transportId"));
+        assertEquals("abcdefghijklmnop", txt.get("transportId"));
         assertEquals("1", txt.get("dropbox"));
         assertEquals(encoded, txt.get("recencyBlob"));
     }

@@ -472,7 +472,7 @@ public final class RoleCycleController {
             issueOp(Op.stopFor(failed != null ? failed.role : Role.HOST));
             return;
         }
-        Op stop = Op.stopFor(mode.isHostSide() ? Role.HOST : Role.VISIT);
+        Op stop = Op.stopFor(currentRole());
         if (pendingOp != stop) issueOp(stop); // already stopping: onRoleStopped will see the flags
     }
 
@@ -626,7 +626,7 @@ public final class RoleCycleController {
      */
     private void beginDrain(long expiryAt, String why) {
         if (!mode.isDwelling()) return;
-        Role role = mode == CycleMode.HOSTING ? Role.HOST : Role.VISIT;
+        Role role = currentRole();
         long now = clock.nowMillis();
         long drainStart = Math.max(expiryAt, now);
         if (now - expiryAt > TIMER_SLICE_MS) {
@@ -722,7 +722,7 @@ public final class RoleCycleController {
         if (!mode.isDraining() || gate.activeCount() != 0) return; // stale or late: already switched
         if (joinGraceUntil != CycleListener.NO_DEADLINE) return; // the grace check decides
         logger.info(mode + ": drained before cap");
-        issueOp(Op.stopFor(mode == CycleMode.HOST_DRAINING ? Role.HOST : Role.VISIT));
+        issueOp(Op.stopFor(currentRole()));
     }
 
     /** Gate admission or joined-client change (re-posted): lets the grace end without waiting for a poll. */
@@ -734,7 +734,7 @@ public final class RoleCycleController {
     private void onDrainCap() {
         if (!mode.isDraining()) return;
         logger.info(mode + ": drain cap reached with " + gate.activeCount() + " active; forcing switch");
-        Role role = mode == CycleMode.HOST_DRAINING ? Role.HOST : Role.VISIT;
+        Role role = currentRole();
         gate.forceReleaseAll("drain cap");
         issueOp(Op.stopFor(role));
     }
@@ -744,7 +744,7 @@ public final class RoleCycleController {
             logger.fine("roleLost(" + reason + ") ignored in " + mode);
             return;
         }
-        Role role = mode.isHostSide() ? Role.HOST : Role.VISIT;
+        Role role = currentRole();
         logger.warning(mode + ": role lost (" + reason + "); stopping " + role + " now");
         notifyError(reason);
         issueOp(Op.stopFor(role)); // closes admissions and force-releases whatever was still active
@@ -789,7 +789,7 @@ public final class RoleCycleController {
             retryFromUnavailable();
             return;
         }
-        Role current = mode.isHostSide() ? Role.HOST : Role.VISIT;
+        Role current = currentRole();
         boolean startingOrDwelling = mode.isDwelling() || mode == CycleMode.HOST_STARTING ||
                 mode == CycleMode.VISIT_STARTING;
         if (current == target && startingOrDwelling) {
@@ -882,6 +882,14 @@ public final class RoleCycleController {
     // ------------------------------------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------------------------------------
+
+    /**
+     * @return the role of the current mode: HOST for the four host-side modes, VISIT otherwise. Only
+     *         meaningful in a role mode (not STOPPED/UNAVAILABLE); one mapping for every site (audit CL-5).
+     */
+    private Role currentRole() {
+        return mode.isHostSide() ? Role.HOST : Role.VISIT;
+    }
 
     private boolean blobAvailable() {
         try {

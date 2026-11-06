@@ -9,7 +9,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * Shared wiring for the fake-clock controller tests: a {@link FakeScheduler} that is both clock and owner
  * thread, a {@link FakeRadio} completed by hand, a real {@link ActivityGate}, and a listener that records
- * modes, errors and pause reports.
+ * modes (with their deadlines), errors and pause reports.
  */
 final class CycleHarness {
     static final long CLIENT = CycleConfig.DEFAULT_CLIENT_PERIOD_MS;
@@ -19,8 +19,12 @@ final class CycleHarness {
     final FakeScheduler s = new FakeScheduler();
     final FakeRadio radio = new FakeRadio();
     final AtomicBoolean blob = new AtomicBoolean(true);
+    /** If set, the controller's {@code hasRecencyBlob} supplier throws it instead of reading {@link #blob}. */
+    volatile RuntimeException blobError;
     final ActivityGate gate = new ActivityGate();
     final List<CycleMode> modes = new ArrayList<>();
+    /** Deadline reported with each entry of {@link #modes}. */
+    final List<Long> deadlines = new ArrayList<>();
     final List<String> errors = new ArrayList<>();
     final List<Boolean> pauseReports = new ArrayList<>();
     final RoleCycleController c;
@@ -30,11 +34,16 @@ final class CycleHarness {
     }
 
     CycleHarness(CycleConfig config) {
-        c = new RoleCycleController(radio, s, s, gate, blob::get, config);
+        c = new RoleCycleController(radio, s, s, gate, () -> {
+            RuntimeException e = blobError;
+            if (e != null) throw e;
+            return blob.get();
+        }, config);
         c.addListener(new CycleListener() {
             @Override
             public void onModeChanged(CycleMode previous, CycleMode current, long startedAt, long deadlineAt) {
                 modes.add(current);
+                deadlines.add(deadlineAt);
             }
 
             @Override

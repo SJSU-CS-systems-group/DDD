@@ -73,12 +73,11 @@ import static java.util.logging.Level.WARNING;
 final class DropboxWifiHost {
     private static final Logger logger = Logger.getLogger(DropboxWifiHost.class.getName());
 
-    /** Host lifecycle as seen by the UI. */
+    /** Host lifecycle. */
     enum State { IDLE, STARTING, HOSTING, STOPPING }
 
     private final P2pLink link;
     private final String baseId;
-    private final Supplier<String> advertisedId;
     private final Supplier<byte[]> recencyBlob;
     private final HostingEndpoint endpoint;
     private final Runnable stateChanged;
@@ -91,15 +90,13 @@ final class DropboxWifiHost {
     /** The start op that reached HOSTING; lets a late group re-check tell "still this hosting" apart. */
     private Op hostedBy;
     private boolean endpointRunning;
-    private String currentAdvertisedId;
     /** Our group while STARTING (after formation) or HOSTING; null otherwise. */
     private WifiP2pGroup group;
     private InetAddress groupOwnerAddress;
 
     /**
      * @param link               shared channel and helpers
-     * @param baseId             stable 16-char id for the group name
-     * @param advertisedId       supplies the TXT {@code transportId} at each start (the stable {@code baseId})
+     * @param baseId             stable 16-char id for the group name and the TXT {@code transportId}
      * @param recencyBlob        supplies the dropbox's own raw {@code GetRecencyBlobResponse}, or null if none
      *                           yet
      * @param endpoint           client server hooks: ensure it is up before advertising, end sessions on stop
@@ -109,7 +106,6 @@ final class DropboxWifiHost {
      */
     DropboxWifiHost(P2pLink link,
                     String baseId,
-                    Supplier<String> advertisedId,
                     Supplier<byte[]> recencyBlob,
                     HostingEndpoint endpoint,
                     Runnable stateChanged,
@@ -117,7 +113,6 @@ final class DropboxWifiHost {
                     IntConsumer clientCountChanged) {
         this.link = link;
         this.baseId = baseId;
-        this.advertisedId = advertisedId;
         this.recencyBlob = recencyBlob;
         this.endpoint = endpoint;
         this.stateChanged = stateChanged;
@@ -125,17 +120,9 @@ final class DropboxWifiHost {
         this.clientCountChanged = clientCountChanged;
     }
 
-    State state() {
-        return state;
-    }
-
     /** @return true while starting, hosting or stopping */
     boolean isActive() {
         return state != State.IDLE;
-    }
-
-    String currentAdvertisedId() {
-        return currentAdvertisedId;
     }
 
     /** @return UI view of our group, or null when not hosting */
@@ -158,7 +145,7 @@ final class DropboxWifiHost {
         supersede("superseded by startHosting gen " + gen);
         Op op = new Op(gen, cb, true);
         activeOp = op;
-        String problem = link.precheck(false);
+        String problem = link.precheck();
         if (problem != null) {
             op.fail(problem);
             return;
@@ -238,10 +225,8 @@ final class DropboxWifiHost {
 
     /** Step 4: (re)register the DNS-SD service; ready on success. */
     private void advertise(Op op) {
-        String id;
         Map<String, String> txt;
         try {
-            id = advertisedId.get();
             byte[] rawBlob = recencyBlob.get();
             String encoded = DropboxTxt.encodeRecencyBlob(rawBlob);
             if (rawBlob == null) {
@@ -251,7 +236,7 @@ final class DropboxWifiHost {
                 // Same refusal as DDDWifiServer.updateRecencyBlob (>255 chars), but we still advertise.
                 link.wifi(SEVERE, "Recency blob too large for a TXT record (" + rawBlob.length + " bytes); omitted");
             }
-            txt = DropboxTxt.hostRecord(id, encoded);
+            txt = DropboxTxt.hostRecord(baseId, encoded);
         } catch (RuntimeException e) {
             op.fail("cannot build TXT record: " + e.getMessage());
             return;
@@ -264,23 +249,22 @@ final class DropboxWifiHost {
             return;
         }
         P2pLink.P2pCall add = (m, c, l) -> m.addLocalService(c, info, l);
-        // clearLocalServices first: a stale record from a previous cycle would advertise an old blob or id.
+        // clearLocalServices first: a stale record from a previous cycle would advertise an old blob.
         link.action("clearLocalServices", WifiTimeouts.SERVICE_OP_MS, P2pLink.CLEAR_LOCAL_SERVICES, op::live, (cleared, whyNot) -> {
             if (!op.live()) return;
             if (!cleared) logger.warning(whyNot);
             link.action("addLocalService", WifiTimeouts.SERVICE_OP_MS, add, op::live, (ok, why) -> {
                 if (!op.live()) return;
-                if (ok) onAdvertised(op, id);
+                if (ok) onAdvertised(op);
                 else op.fail(why);
             });
         });
     }
 
-    private void onAdvertised(Op op, String id) {
-        currentAdvertisedId = id;
+    private void onAdvertised(Op op) {
         state = State.HOSTING;
         hostedBy = op;
-        link.wifi(INFO, "Hosting " + (group == null ? "" : group.getNetworkName()) + " as transportId " + id);
+        link.wifi(INFO, "Hosting " + (group == null ? "" : group.getNetworkName()) + " as transportId " + baseId);
         op.ready();
     }
 
@@ -368,11 +352,13 @@ final class DropboxWifiHost {
     }
 
     /**
-     * Fails the in-flight op (if any) so its callback still fires exactly once with its own generation.
+     * Cancels the in-flight op (if any) so its callback still fires exactly once with its own generation. A
+     * supersession is the controller's own doing (force, pause, stop), not a radio failure, so it is logged
+     * quietly ({@link Op#cancel}, audit CL-3).
      */
     private void supersede(String reason) {
         Op old = activeOp;
-        if (old != null) old.fail(reason);
+        if (old != null) old.cancel(reason);
     }
 
     /**
@@ -534,12 +520,28 @@ final class DropboxWifiHost {
             cb.ready(gen);
         }
 
+        /** A real step failure: logged at SEVERE in the user Wi-Fi log. */
         void fail(String reason) {
             if (finished) return;
+            link.wifi(SEVERE, "Hosting step failed (gen " + gen + "): " + reason);
+            end(reason);
+        }
+
+        /**
+         * Superseded by a newer start/stop: the same cleanup and {@code failed} callback as {@link #fail}
+         * (which the controller drops as stale), but logged at INFO outside the user log, like the joiner's
+         * silent {@code Session.abandon} (audit CL-3).
+         */
+        void cancel(String reason) {
+            if (finished) return;
+            logger.info("Hosting op gen " + gen + " cancelled: " + reason);
+            end(reason);
+        }
+
+        private void end(String reason) {
             finished = true;
             boolean current = activeOp == this;
             if (current) activeOp = null;
-            link.wifi(SEVERE, "Hosting step failed (gen " + gen + "): " + reason);
             // A failed start/stop makes no claim of HOSTING. A group left behind is reused or removed by the
             // next startHosting (step 1 inspects the group) or by stopHosting/startVisit (both remove any
             // group). If the cycle halts right after a failed stop, the controller records the role as dirty

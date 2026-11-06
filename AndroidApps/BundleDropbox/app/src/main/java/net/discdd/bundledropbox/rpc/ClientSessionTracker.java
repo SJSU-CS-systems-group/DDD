@@ -19,7 +19,7 @@ import java.util.logging.Logger;
  * <ul>
  *   <li>Key = client remote IP ({@link RemoteAddrInterceptor}). The stock client has no session id.</li>
  *   <li>The first RPC from an IP calls {@link ActivityGate#tryAdmit(String)}. A {@code null} token means
- *       admissions are closed (draining / not hosting): the RPC is refused and the interceptor answers
+ *       admissions are closed (draining / between roles): the RPC is refused and the interceptor answers
  *       {@code UNAVAILABLE}. This is NOT a harmless "try later" for the stock client: it stamps
  *       {@code lastExchange} for our advertised transportId even though the exchange failed, and then skips
  *       us until a newer recency blob is advertised (R3 §7). That is why the
@@ -44,7 +44,7 @@ import java.util.logging.Logger;
  *       refused). The server keeps running across roles, so RPCs still in flight are not cut here: they die
  *       when {@code DropboxWifiHost.stop} removes the group (uploads are then aborted from staging, never
  *       committed truncated). {@link DropboxRpcServer#stop()} ({@code shutdownNow}) only runs at service
- *       teardown.</li>
+ *       teardown or after a failed service initialization.</li>
  * </ul>
  *
  * <p>Why not use bundle-core's {@code BundleExchangeEvent}s for busy detection: they are unbalanced on
@@ -152,16 +152,19 @@ public final class ClientSessionTracker {
     }
 
     /**
-     * Ends every session and releases its token (server stopping). In-flight RPCs keep their tickets;
-     * ending them later is harmless.
+     * Ends every session and releases its token: at the end of each HOST role
+     * ({@link DropboxRpcServer#endClientSessions()}) and when the server stops. In-flight RPCs keep their
+     * tickets; ending them later is harmless.
+     *
+     * @param why logged with each ended session, e.g. "HOST role ended" or "server stopping"
      */
-    public void closeAll() {
+    public void closeAll(String why) {
         List<Session> ended;
         synchronized (this) {
             ended = new ArrayList<>(sessions.values());
             sessions.clear();
         }
-        finish(ended, 0, "server stopping");
+        finish(ended, 0, why);
     }
 
     /** @return number of currently admitted client sessions. */

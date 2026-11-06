@@ -156,7 +156,7 @@ public class ClientSessionTrackerTest {
         tracker.beginRpc(B);
         assertEquals(2, gate.activeCount());
         gate.closeAdmissions();
-        tracker.closeAll();
+        tracker.closeAll("test");
         assertEquals(0, tracker.activeSessions());
         assertEquals(0, gate.activeCount());
         assertEquals(1, drained.get());

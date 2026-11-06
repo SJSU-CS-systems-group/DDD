@@ -33,7 +33,34 @@ final class AvailabilityEdges {
         return edge;
     }
 
-    /** @return the last observed availability */
+    /** What the driver tells its {@link RadioEnvironmentListener} after one observation. */
+    enum Report {
+        /** Nothing: no edge, and no established role ended. */
+        NONE,
+        /** An availability edge: {@link RadioEnvironmentListener#onRadioAvailabilityChanged}. */
+        EDGE,
+        /**
+         * No edge (the state already said "unavailable"), but an established role just ended:
+         * {@link RadioEnvironmentListener#onRoleLost}, so the cycle never keeps a role on a dead radio.
+         */
+        ROLE_LOST
+    }
+
+    /**
+     * Records an observation of the real environment and decides what to report (audit m3/m10). An edge
+     * wins: the service maps an "unavailable" edge to roleLost itself, so role loss is reported separately
+     * only when there is no edge (audit CL-7: one decision for every driver path).
+     *
+     * @param available whether the radio is usable right now
+     * @param lostRole  true if this observation just ended an established HOSTING or VISIT role
+     * @return the report the listener should hear
+     */
+    Report report(boolean available, boolean lostRole) {
+        if (observe(available)) return Report.EDGE;
+        return lostRole ? Report.ROLE_LOST : Report.NONE;
+    }
+
+    /** @return the last observed availability (visible for tests) */
     boolean lastAvailable() {
         return lastAvailable;
     }

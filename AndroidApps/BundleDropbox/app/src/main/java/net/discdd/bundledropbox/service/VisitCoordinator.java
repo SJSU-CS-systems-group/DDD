@@ -91,8 +91,9 @@ public final class VisitCoordinator implements VisitRunner {
      * @param gate       the cycle's gate; read lazily because the driver (which holds this runner) is built
      *                   before the controller. {@code null} means "not wired": every visit is skipped
      * @param exchange   the visit client; read lazily for the same reason
-     * @param ownBlobHeld true while the dropbox holds its own server-issued recency blob
-     *                    ({@code recency.currentTimestamp() > 0}), i.e. while it may HOST
+     * @param ownBlobHeld true while the dropbox holds its own server-issued recency blob, i.e. while it may
+     *                    HOST; must be the controller's {@code hasRecencyBlob} predicate (DropboxService passes
+     *                    the same method to both, audit CYC-4)
      * @param events     status/log reactions
      */
     public VisitCoordinator(Supplier<ActivityGate> gate, Supplier<Exchange> exchange, BooleanSupplier ownBlobHeld,

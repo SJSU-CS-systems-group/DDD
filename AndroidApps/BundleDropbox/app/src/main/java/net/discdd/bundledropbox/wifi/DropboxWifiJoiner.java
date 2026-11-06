@@ -73,7 +73,7 @@ import static java.util.logging.Level.WARNING;
 final class DropboxWifiJoiner {
     private static final Logger logger = Logger.getLogger(DropboxWifiJoiner.class.getName());
 
-    /** Joiner lifecycle as seen by the UI. */
+    /** Joiner lifecycle. */
     enum Phase { IDLE, STARTING, DISCOVERING, CONNECTING, EXCHANGING, DISCONNECTING, STOPPING }
 
     private final P2pLink link;
@@ -96,10 +96,6 @@ final class DropboxWifiJoiner {
         this.link = link;
         this.runner = runner;
         this.stateChanged = stateChanged;
-    }
-
-    Phase phase() {
-        return phase;
     }
 
     boolean isActive() {
@@ -136,7 +132,7 @@ final class DropboxWifiJoiner {
             // The controller never overlaps visits; if it does, the newer one wins.
             active.abandon("superseded by startVisit gen " + gen);
         }
-        String problem = link.precheck(true);
+        String problem = link.precheck();
         if (problem != null) {
             cb.failed(gen, problem);
             return;

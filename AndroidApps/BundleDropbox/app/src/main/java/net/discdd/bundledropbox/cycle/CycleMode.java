@@ -9,9 +9,12 @@ package net.discdd.bundledropbox.cycle;
  * (admissions closed, finishing in-flight work) → STOPPING (radio teardown, no dwell time consumed).
  *
  * <pre>
- * STOPPED → (no recency blob? skip HOST) → VISIT_STARTING → VISITING → VISIT_DRAINING → VISIT_STOPPING
- *         → HOST_STARTING → HOSTING → HOST_DRAINING → HOST_STOPPING → VISIT_STARTING → ...
- * any radio failure after bounded retries → UNAVAILABLE → (30 s or Wi-Fi/permission change) → retry
+ * STOPPED → HOST_STARTING (recency blob held) | VISIT_STARTING (no blob) → ...
+ * HOST_STARTING → HOSTING → HOST_DRAINING → HOST_STOPPING → VISIT_STARTING
+ * VISIT_STARTING → VISITING → VISIT_DRAINING → VISIT_STOPPING → HOST_STARTING (no blob: VISIT_STARTING)
+ * a START that exhausts its retries → the other role's START, once (HOST only with a blob)
+ * a radio failure after that, or a STOP after bounded retries → UNAVAILABLE → (30 s or Wi-Fi/permission
+ *     change) → retry
  * stop/pause/shutdown from any state → *_STOPPING → STOPPED
  * </pre>
  */

@@ -57,12 +57,12 @@ final class HostedGroupTracker {
     private final Map<String, String> clients = new LinkedHashMap<>();
     private ClientChange lastChange = ClientChange.NONE;
 
-    /** @return true between {@link #formed} and {@link #reset}/{@link Event#LOST} */
+    /** @return true between {@link #formed} and {@link #reset}/{@link Event#LOST} (visible for tests) */
     boolean isFormed() {
         return formed;
     }
 
-    /** @return number of clients currently in the group (0 when not formed) */
+    /** @return number of clients currently in the group, 0 when not formed (visible for tests) */
     int clientCount() {
         return clients.size();
     }

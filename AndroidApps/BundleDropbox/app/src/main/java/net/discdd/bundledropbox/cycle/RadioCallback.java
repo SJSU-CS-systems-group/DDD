@@ -19,12 +19,13 @@ public interface RadioCallback {
     void ready(long gen);
 
     /**
-     * The operation failed. The controller retries with bounded backoff (3 attempts), then enters
-     * {@link CycleMode#UNAVAILABLE}; a stop issued by a stop/pause/shutdown is tried once and then left
-     * for the next start.
+     * The operation failed. The controller retries with bounded backoff (3 attempts). A START that exhausts
+     * its attempts first tries the other role once (HOST only with a recency blob); if that fails too, the
+     * controller enters {@link CycleMode#UNAVAILABLE}. A stop issued by a stop/pause/shutdown is tried once
+     * and then left for the next start.
      *
      * @param gen    generation passed to the {@link RadioDriver} call
-     * @param reason human-readable cause for logs and {@code DropboxStatus.lastError}
+     * @param reason human-readable cause for logs and the Status card error ({@code StatusErrors})
      */
     void failed(long gen, String reason);
 }

@@ -93,23 +93,20 @@ public final class WifiDirectRadioDriver implements RadioDriver {
     private int channelRecoveryAttempt;
     private boolean initialized;
     private boolean receiverRegistered;
-    private String lastError;
 
     /**
      * @param context              service context (the application context is used internally)
-     * @param baseId               stable 16-char id derived from the dropbox TLS key, exactly like the
-     *                             transport's transportId (R1 §2.4); used for the group name
-     * @param advertisedIdSupplier TXT {@code transportId} to advertise, read at each startHosting (the stable
-     *                             {@code baseId}, 09 Own Recency Blob Design)
-     * @param recencyBlobSupplier  the dropbox's own raw {@code GetRecencyBlobResponse} bytes, or null if none
-     *                             (e.g. {@code () -> recencyBlobStore.current().orElse(null)})
-     * @param endpoint             client-server hooks around hosting: ensure the always-on gRPC server (7777)
-     *                             is up before advertising, end client sessions on stopHosting
-     * @param visitRunner          carrier exchange run after joining a carrier (TransportVisitClient)
+     * @param baseId              stable 16-char id derived from the dropbox TLS key, exactly like the
+     *                            transport's transportId (R1 §2.4); used for the group name and advertised as
+     *                            the TXT {@code transportId} (09 Own Recency Blob Design)
+     * @param recencyBlobSupplier the dropbox's own raw {@code GetRecencyBlobResponse} bytes, or null if none
+     *                            (e.g. {@code () -> recencyBlobStore.current().orElse(null)})
+     * @param endpoint            client-server hooks around hosting: ensure the always-on gRPC server (7777)
+     *                            is up before advertising, end client sessions on stopHosting
+     * @param visitRunner         carrier exchange run after joining a carrier (TransportVisitClient)
      */
     public WifiDirectRadioDriver(Context context,
                                  String baseId,
-                                 Supplier<String> advertisedIdSupplier,
                                  Supplier<byte[]> recencyBlobSupplier,
                                  HostingEndpoint endpoint,
                                  VisitRunner visitRunner) {
@@ -117,7 +114,6 @@ public final class WifiDirectRadioDriver implements RadioDriver {
         this.link = new P2pLink(this.context, main, this::onChannelLost);
         this.host = new DropboxWifiHost(link,
                                         baseId,
-                                        advertisedIdSupplier,
                                         recencyBlobSupplier,
                                         endpoint == null ? HostingEndpoint.NONE : endpoint,
                                         this::publish,
@@ -142,8 +138,7 @@ public final class WifiDirectRadioDriver implements RadioDriver {
             initialized = true;
             link.wifiRes(INFO, R.string.initializing_wifidirectmanager);
             if (link.manager == null) {
-                lastError = "Wi-Fi Direct is not supported on this device";
-                link.wifi(WARNING, lastError);
+                link.wifi(WARNING, "Wi-Fi Direct is not supported on this device");
             } else if (!link.ensureChannel()) {
                 link.wifiRes(WARNING, R.string.could_not_initialize_wifi_direct_s, "channel is null");
             } else {
@@ -213,7 +208,7 @@ public final class WifiDirectRadioDriver implements RadioDriver {
             registerReceiver();
             requestStates();
             publish();
-            reportAvailabilityEdge("permission granted");
+            reportObservation("permission granted", false);
         });
     }
 
@@ -227,14 +222,14 @@ public final class WifiDirectRadioDriver implements RadioDriver {
             } else if (joiner.isActive()) {
                 cb.failed(gen, "cannot host while a visit is active (stopVisit first)");
             } else {
-                host.start(gen, new FailureRecorder(cb));
+                host.start(gen, cb);
             }
         });
     }
 
     @Override
     public void stopHosting(long gen, RadioCallback cb) {
-        main.post(() -> host.stop(gen, new FailureRecorder(cb)));
+        main.post(() -> host.stop(gen, cb));
     }
 
     @Override
@@ -250,31 +245,22 @@ public final class WifiDirectRadioDriver implements RadioDriver {
             } else if (host.isActive()) {
                 cb.failed(gen, "cannot visit while hosting (stopHosting first)");
             } else {
-                joiner.start(gen, new FailureRecorder(cb));
+                joiner.start(gen, cb);
             }
         });
     }
 
     @Override
     public void stopVisit(long gen, RadioCallback cb) {
-        main.post(() -> joiner.stop(gen, new FailureRecorder(cb)));
+        main.post(() -> joiner.stop(gen, cb));
     }
 
     // ---------------------------------------------------------------- observable state
-
-    /** @return latest snapshot (thread-safe) */
-    public WifiRadioState getState() {
-        return state;
-    }
 
     /** Adds a listener and immediately posts the current state to it (on the main thread). */
     public void addStateListener(WifiRadioStateListener listener) {
         listeners.add(listener);
         main.post(() -> listener.onWifiRadioStateChanged(state));
-    }
-
-    public void removeStateListener(WifiRadioStateListener listener) {
-        listeners.remove(listener);
     }
 
     /** Sets (or clears with null) the single environment listener. */
@@ -306,38 +292,13 @@ public final class WifiDirectRadioDriver implements RadioDriver {
 
     /** Rebuilds the snapshot from host, joiner and link; main thread only. */
     private void publish() {
-        WifiRadioState.Phase phase;
-        if (!initialized) {
-            phase = WifiRadioState.Phase.OFF;
-        } else if (host.isActive()) {
-            phase = switch (host.state()) {
-                case STARTING -> WifiRadioState.Phase.HOST_STARTING;
-                case HOSTING -> WifiRadioState.Phase.HOSTING;
-                default -> WifiRadioState.Phase.HOST_STOPPING;
-            };
-        } else {
-            phase = switch (joiner.phase()) {
-                case IDLE -> WifiRadioState.Phase.IDLE;
-                case STARTING -> WifiRadioState.Phase.VISIT_STARTING;
-                case DISCOVERING -> WifiRadioState.Phase.DISCOVERING;
-                case CONNECTING -> WifiRadioState.Phase.CONNECTING;
-                case EXCHANGING -> WifiRadioState.Phase.EXCHANGING;
-                case DISCONNECTING -> WifiRadioState.Phase.DISCONNECTING;
-                case STOPPING -> WifiRadioState.Phase.VISIT_STOPPING;
-            };
-        }
         WifiRadioState.GroupInfo group = host.isActive() ? host.groupInfo() : joiner.groupInfo();
-        boolean permissions = link.hasNearbyPermission(); // the only runtime permission P2P needs (P2pLink.precheck)
         state = WifiRadioState.builder()
-                .phase(phase)
                 .p2pEnabled(link.manager != null && link.p2pConfirmedEnabled())
-                .permissionsGranted(permissions)
                 .deviceName(link.deviceName())
-                .advertisedId(host.currentAdvertisedId())
                 .group(group)
                 .currentCarrier(joiner.currentCarrier())
                 .discoveredCarriers(joiner.isActive() ? joiner.discoveredCarriers() : List.of())
-                .lastError(lastError)
                 .build();
         notifyListeners();
     }
@@ -353,36 +314,6 @@ public final class WifiDirectRadioDriver implements RadioDriver {
         }
     }
 
-    /**
-     * Wraps a start/stop callback so failures land in {@link WifiRadioState#lastError()} before the
-     * controller hears them. Implements {@link VisitCallback} so one wrapper serves both kinds of op;
-     * {@code visitFinished} is forwarded only if the wrapped callback is a VisitCallback.
-     */
-    private final class FailureRecorder implements VisitCallback {
-        private final RadioCallback cb;
-
-        FailureRecorder(RadioCallback cb) {
-            this.cb = cb;
-        }
-
-        @Override
-        public void ready(long gen) {
-            cb.ready(gen);
-        }
-
-        @Override
-        public void failed(long gen, String reason) {
-            lastError = reason;
-            publish();
-            cb.failed(gen, reason);
-        }
-
-        @Override
-        public void visitFinished(long gen, boolean success) {
-            if (cb instanceof VisitCallback v) v.visitFinished(gen, success);
-        }
-    }
-
     // ---------------------------------------------------------------- environment
 
     /** @return true when the radio is usable: P2P supported, channel up, P2P not disabled, NEARBY granted */
@@ -391,21 +322,28 @@ public final class WifiDirectRadioDriver implements RadioDriver {
     }
 
     /**
-     * Observes the real environment and reports it if it is an edge.
+     * Observes the real environment and tells the listener what {@link AvailabilityEdges#report} decides: an
+     * availability edge, or, when there is no edge but an established role just ended ({@code lostRole}), a
+     * role loss (audit m3/m10; one decision for every path, CL-7).
      *
-     * @return true if an edge was reported
+     * @param lostRole true if {@link #loseRoles} just ended an established role
      */
-    private boolean reportAvailabilityEdge(String reason) {
+    private void reportObservation(String reason, boolean lostRole) {
         boolean available = isAvailable();
-        if (!availability.observe(available)) return false;
-        RadioEnvironmentListener l = environmentListener;
-        if (l == null) return true;
-        try {
-            l.onRadioAvailabilityChanged(available, reason);
-        } catch (RuntimeException e) {
-            logger.log(WARNING, "environment listener threw", e);
+        switch (availability.report(available, lostRole)) {
+            case EDGE -> {
+                RadioEnvironmentListener l = environmentListener;
+                if (l == null) return;
+                try {
+                    l.onRadioAvailabilityChanged(available, reason);
+                } catch (RuntimeException e) {
+                    logger.log(WARNING, "environment listener threw", e);
+                }
+            }
+            case ROLE_LOST -> reportRoleLost(reason);
+            case NONE -> {
+            }
         }
-        return true;
     }
 
     /** A role was lost while the radio stays usable; deliberately not an availability observation. */
@@ -444,12 +382,12 @@ public final class WifiDirectRadioDriver implements RadioDriver {
     }
 
     private void onChannelLost() {
-        lastError = "Wi-Fi Direct channel lost";
-        boolean lostRole = loseRoles(lastError);
+        String reason = "Wi-Fi Direct channel lost";
+        boolean lostRole = loseRoles(reason);
         publish();
         // The channel is part of availability, so this is normally a real "unavailable" edge (which the
-        // service maps to roleLost); report role loss explicitly only if the edge state already said so.
-        if (!reportAvailabilityEdge(lastError) && lostRole) reportRoleLost(lastError);
+        // service maps to roleLost); role loss is reported explicitly only if the edge state already said so.
+        reportObservation(reason, lostRole);
         channelRecoveryAttempt = 0;
         scheduleChannelRecovery();
     }
@@ -500,12 +438,11 @@ public final class WifiDirectRadioDriver implements RadioDriver {
         publish();
         // Only edges are reported: the sticky broadcast repeats the current state on registration. If a role
         // was running although the edge state already said "unavailable", still tell the cycle it is gone.
-        String reason = enabled ? "Wi-Fi Direct enabled" : "Wi-Fi Direct disabled";
-        if (!reportAvailabilityEdge(reason) && lostRole) reportRoleLost(reason);
+        reportObservation(enabled ? "Wi-Fi Direct enabled" : "Wi-Fi Direct disabled", lostRole);
     }
 
     private void onDeviceInfo(WifiP2pDevice device) {
-        if (device != null) link.setDevice(device.deviceName, device.deviceAddress);
+        if (device != null) link.setDevice(device.deviceName);
         publish();
     }
 

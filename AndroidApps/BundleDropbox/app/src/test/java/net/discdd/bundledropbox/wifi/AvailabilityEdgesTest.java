@@ -2,13 +2,15 @@ package net.discdd.bundledropbox.wifi;
 
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
  * JVM tests for {@link AvailabilityEdges}: only real environment changes are edges, so a role-loss signal
  * (which the driver no longer feeds in) cannot hide the next Wi-Fi-disabled or channel-recovered edge
- * (audit findings m3/m10).
+ * (audit findings m3/m10), plus the driver's edge-or-role-lost decision {@link AvailabilityEdges#report}
+ * (audit CL-7).
  */
 public class AvailabilityEdgesTest {
     @Test
@@ -48,5 +50,33 @@ public class AvailabilityEdgesTest {
         assertFalse(e.lastAvailable());
         assertFalse(e.observe(false)); // a broadcast while the channel is still down
         assertTrue(e.observe(true));
+    }
+
+    @Test
+    public void reportPrefersTheEdgeOverRoleLoss() {
+        // P2P disabled during an established role: the "unavailable" edge is reported (the service maps it
+        // to roleLost), not a second, separate role loss.
+        AvailabilityEdges e = new AvailabilityEdges();
+        assertEquals(AvailabilityEdges.Report.EDGE, e.report(true, false));
+        assertEquals(AvailabilityEdges.Report.EDGE, e.report(false, true));
+    }
+
+    @Test
+    public void roleLostWithoutAnEdgeIsStillReported() {
+        // m3 symptom guard: P2P disabled (edge), quickly on and off again, and the next "disabled" observation
+        // is not an edge while a VISIT runs. The role loss must still reach the cycle.
+        AvailabilityEdges e = new AvailabilityEdges();
+        assertEquals(AvailabilityEdges.Report.EDGE, e.report(true, false));
+        assertEquals(AvailabilityEdges.Report.EDGE, e.report(false, false));
+        assertEquals(AvailabilityEdges.Report.ROLE_LOST, e.report(false, true));
+    }
+
+    @Test
+    public void noEdgeAndNoRoleLossReportsNothing() {
+        AvailabilityEdges e = new AvailabilityEdges();
+        assertEquals(AvailabilityEdges.Report.NONE, e.report(false, false)); // sticky "disabled", nothing running
+        assertEquals(AvailabilityEdges.Report.EDGE, e.report(true, false));
+        assertEquals(AvailabilityEdges.Report.NONE, e.report(true, false));  // receiver re-registered
+        assertTrue(e.lastAvailable());
     }
 }

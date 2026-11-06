@@ -26,9 +26,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * The dropbox's client-facing gRPC server; clients can reach it only while the dropbox is in HOST mode. To an
- * unmodified BundleClient it is indistinguishable from BundleTransport's {@code RpcServer}, which it is
- * adapted from (Research/R1 §2.1, §6):
+ * The dropbox's client-facing gRPC server. It listens on the wildcard address for the whole service lifetime;
+ * stock clients reach it through the dropbox's own group (HOST), and admission is decided by the role-agnostic
+ * cycle {@link ActivityGate}, not by the listening socket (see Lifecycle). To an unmodified BundleClient it is
+ * indistinguishable from BundleTransport's {@code RpcServer}, which it is adapted from (Research/R1 §2.1, §6):
  * <ul>
  *   <li>OkHttp server on port {@value #PORT}; the stock client hard-codes 7777 and connects to the Wi-Fi
  *       Direct group owner address (Research/R3 §1e).</li>
@@ -228,7 +229,7 @@ public final class DropboxRpcServer {
             executor.shutdownNow();
             reaper = null;
             executor = null;
-            tracker.closeAll();
+            tracker.closeAll("server stopping");
             service.clearPsiSessions();
         }
     }
@@ -241,7 +242,7 @@ public final class DropboxRpcServer {
      * staging on cancel, so nothing truncated is committed).
      */
     public void endClientSessions() {
-        tracker.closeAll();
+        tracker.closeAll("HOST role ended");
         service.clearPsiSessions();
     }
 

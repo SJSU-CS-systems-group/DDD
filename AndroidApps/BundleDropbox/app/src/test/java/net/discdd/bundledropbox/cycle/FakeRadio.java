@@ -42,6 +42,8 @@ final class FakeRadio implements RadioDriver {
     int hostedClients;
     /** If set, {@link #hostedClientCount()} throws it. */
     RuntimeException hostedClientsError;
+    /** If set, the next start/stop call throws it synchronously (and clears it) without being recorded. */
+    RuntimeException throwOnNextCall;
 
     Call last() {
         return calls.get(calls.size() - 1);
@@ -53,14 +55,23 @@ final class FakeRadio implements RadioDriver {
         return out;
     }
 
+    private void record(String op, long gen, RadioCallback cb) {
+        RuntimeException e = throwOnNextCall;
+        if (e != null) {
+            throwOnNextCall = null;
+            throw e;
+        }
+        calls.add(new Call(op, gen, cb));
+    }
+
     @Override
     public void startHosting(long gen, RadioCallback cb) {
-        calls.add(new Call("startHosting", gen, cb));
+        record("startHosting", gen, cb);
     }
 
     @Override
     public void stopHosting(long gen, RadioCallback cb) {
-        calls.add(new Call("stopHosting", gen, cb));
+        record("stopHosting", gen, cb);
     }
 
     @Override
@@ -76,11 +87,11 @@ final class FakeRadio implements RadioDriver {
 
     @Override
     public void startVisit(long gen, VisitCallback cb) {
-        calls.add(new Call("startVisit", gen, cb));
+        record("startVisit", gen, cb);
     }
 
     @Override
     public void stopVisit(long gen, RadioCallback cb) {
-        calls.add(new Call("stopVisit", gen, cb));
+        record("stopVisit", gen, cb);
     }
 }

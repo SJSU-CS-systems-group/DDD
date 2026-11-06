@@ -94,7 +94,6 @@ final class P2pLink {
     /** Last {@code EXTRA_WIFI_STATE}; -1 until known. */
     private int p2pState = -1;
     private String deviceName;
-    private String deviceAddress;
 
     /**
      * @param context       application or service context
@@ -171,17 +170,13 @@ final class P2pLink {
         return p2pState == WifiP2pManager.WIFI_P2P_STATE_ENABLED;
     }
 
-    void setDevice(String name, String address) {
+    /** Records this phone's P2P device name from the last device-info answer or broadcast. */
+    void setDevice(String name) {
         deviceName = name;
-        deviceAddress = address;
     }
 
     String deviceName() {
         return deviceName;
-    }
-
-    String deviceAddress() {
-        return deviceAddress;
     }
 
     /**
@@ -193,10 +188,9 @@ final class P2pLink {
      * Requiring FINE here used to block every VISIT, and with it the bootstrap, on a permission the UI could
      * not even obtain on API 31+ (a FINE request without COARSE is dropped by the system).
      *
-     * @param forVisit true for VISIT, false for HOST (currently the same requirements; kept for clarity)
      * @return null if OK, otherwise a clear reason for {@code RadioCallback.failed}
      */
-    String precheck(boolean forVisit) {
+    String precheck() {
         if (manager == null) return "Wi-Fi Direct is not supported on this device";
         if (!hasNearbyPermission()) return "NEARBY_WIFI_DEVICES permission not granted";
         if (!p2pEnabled()) return "Wi-Fi Direct is disabled (turn on Wi-Fi)";

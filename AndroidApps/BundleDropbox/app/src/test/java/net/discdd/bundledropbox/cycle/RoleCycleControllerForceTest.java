@@ -16,8 +16,10 @@ import static org.junit.Assert.assertNotNull;
  * finishes, bounded by the drain cap) and must respect the bootstrap rule (no HOST without a recency blob).
  */
 public class RoleCycleControllerForceTest {
-    private static final long CAP = CycleConfig.DEFAULT_DRAIN_CAP_MS;
+    private static final long CAP = CycleHarness.CAP;
 
+    private CycleHarness h;
+    // Short aliases for the harness parts.
     private FakeScheduler s;
     private FakeRadio radio;
     private AtomicBoolean blob;
@@ -26,23 +28,20 @@ public class RoleCycleControllerForceTest {
 
     @Before
     public void setUp() {
-        s = new FakeScheduler();
-        radio = new FakeRadio();
-        blob = new AtomicBoolean(true);
-        gate = new ActivityGate();
-        c = new RoleCycleController(radio, s, s, gate, blob::get, CycleConfig.DEFAULTS);
+        h = new CycleHarness();
+        s = h.s;
+        radio = h.radio;
+        blob = h.blob;
+        gate = h.gate;
+        c = h.c;
     }
 
     private void ready() {
-        radio.last().ready();
-        s.runReady();
+        h.ready();
     }
 
     private void startToHosting() {
-        c.start();
-        s.runReady();
-        ready();
-        assertEquals(CycleMode.HOSTING, c.mode());
+        h.startToHosting();
     }
 
     @Test
@@ -141,11 +140,7 @@ public class RoleCycleControllerForceTest {
         blob.set(false);
         c.start();
         s.runReady();
-        for (int i = 0; i < RoleCycleController.MAX_ATTEMPTS; i++) {
-            radio.last().fail("p2p busy");
-            s.runReady();
-            if (i < RoleCycleController.MAX_ATTEMPTS - 1) s.advance(RoleCycleController.RETRY_BACKOFF_BASE_MS << i);
-        }
+        h.failAllAttempts();
         assertEquals(CycleMode.UNAVAILABLE, c.mode());
         blob.set(true);
         c.forceHost();

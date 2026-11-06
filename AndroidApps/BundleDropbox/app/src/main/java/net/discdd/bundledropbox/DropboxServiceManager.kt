@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import net.discdd.bundledropbox.service.DropboxService
-import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
 
 /**
@@ -92,8 +91,8 @@ interface DropboxControls {
 
 /**
  * Process-wide handle on the bound [DropboxService], mirroring BundleTransport's
- * `TransportServiceManager`: the activity passes [connection] to `bindService`, view models read
- * [getService] / [controls], and code that must wait for the first bind uses [serviceReady].
+ * `TransportServiceManager`: the activity passes [connection] to `bindService`, and view models read
+ * [controls] and [connected].
  *
  * Unlike the transport, the activity never stops the service when it is destroyed: the dropbox is
  * a stationary relay that keeps cycling with the screen off. Only the operator's Stop button does.
@@ -112,9 +111,6 @@ object DropboxServiceManager {
     /** Activity instances currently bound with [connection] (main thread only). */
     private var bindings = 0
 
-    /** Completes with the service on the first successful bind (never reset, as in the transport). */
-    val serviceReady = CompletableFuture<DropboxService>()
-
     private val _connected = MutableStateFlow(false)
 
     /** true while the activity is bound to the service; screens use it to enable action buttons. */
@@ -125,7 +121,6 @@ object DropboxServiceManager {
         override fun onServiceConnected(className: ComponentName, binder: IBinder) {
             val dropboxService = (binder as DropboxService.LocalBinder).service
             setService(dropboxService)
-            serviceReady.complete(dropboxService)
         }
 
         override fun onServiceDisconnected(className: ComponentName) {
@@ -133,13 +128,13 @@ object DropboxServiceManager {
         }
     }
 
-    fun setService(s: DropboxService) {
+    private fun setService(s: DropboxService) {
         logger.info("Setting dropbox service: $s")
         service = s
         _connected.value = true
     }
 
-    fun clearService() {
+    private fun clearService() {
         logger.info("Clearing dropbox service")
         service = null
         _connected.value = false
@@ -167,9 +162,6 @@ object DropboxServiceManager {
         val intent = Intent(context, DropboxService::class.java).setAction(DropboxService.ACTION_START)
         context.applicationContext.startForegroundService(intent)
     }
-
-    /** @return the bound service, or `null` before the bind completes / after unbinding. */
-    fun getService(): DropboxService? = service
 
     /** @return the operator controls of the bound service, or `null` before the bind completes / after unbinding */
     fun controls(): DropboxControls? = service

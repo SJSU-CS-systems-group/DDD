@@ -10,9 +10,13 @@ import net.discdd.bundlerouting.service.BundleExchangeServiceImpl.BundleExchange
  * {@code DropboxStatusRepository} (active sessions, store counts) and to write user-visible log lines.
  * The rpc package itself never touches Android or the status repository, so it stays JVM-testable.
  *
- * <p>Threading: callbacks arrive on gRPC executor threads (or the session reaper thread for
- * {@link #onActiveSessionsChanged}), possibly concurrently. Implementations must be thread-safe and fast;
- * never block or call back into the server from a callback. Every method has a no-op default.
+ * <p>Threading: callbacks arrive on gRPC executor threads, possibly concurrently.
+ * {@link #onActiveSessionsChanged} can also arrive on the session reaper thread, on the role cycle's thread
+ * (the gate's cancel hook when it force-releases sessions at the drain cap, a pause or a stop), on a Wi-Fi
+ * worker thread ({@link DropboxRpcServer#endClientSessions()} at the end of each HOST role) and on the service
+ * thread ({@link DropboxRpcServer#stop()} at teardown or after a failed initialization). Implementations must be
+ * thread-safe and fast; never block or call back into the server from a callback. Every method has a no-op
+ * default.
  */
 public interface RpcEventListener {
 
@@ -21,7 +25,8 @@ public interface RpcEventListener {
 
     /**
      * The number of admitted client sessions changed (a client was admitted, finished its upload, went
-     * idle, or all sessions were dropped on {@link DropboxRpcServer#stop()}).
+     * idle, was force-released by the cycle, or all sessions were dropped at the end of a HOST role or on
+     * {@link DropboxRpcServer#stop()}).
      *
      * @param activeSessions current number of open sessions (each holds one ActivityGate token)
      */

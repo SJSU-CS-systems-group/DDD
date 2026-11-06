@@ -184,13 +184,8 @@ public class DropboxService extends Service implements DropboxControls {
     private PowerManager.WakeLock wakeLock;
 
     /** The joiner's {@code VisitRunner}: one gate token per carrier visit, taken when the join starts. */
-    private final VisitCoordinator visits = new VisitCoordinator(() -> gate,
-                                                                 () -> visitExchange,
-                                                                 () -> {
-                                                                     FileRecencyBlobStore r = recency;
-                                                                     return r != null && r.currentTimestamp() > 0;
-                                                                 },
-                                                                 new VisitEvents());
+    private final VisitCoordinator visits =
+            new VisitCoordinator(() -> gate, () -> visitExchange, this::ownBlobHeld, new VisitEvents());
 
     /** Must be a field: SharedPreferences holds listeners weakly. Runs on the main thread. */
     private final SharedPreferences.OnSharedPreferenceChangeListener prefsListener = (p, key) -> onPrefChanged(key);
@@ -316,17 +311,16 @@ public class DropboxService extends Service implements DropboxControls {
 
             WifiDirectRadioDriver driver = new WifiDirectRadioDriver(this,
                                                                      id.baseId(),
-                                                                     id::advertisedId,
                                                                      () -> recencyStore.current().orElse(null),
                                                                      hostingEndpoint,
                                                                      visits);
             radio = driver;
 
             // Bootstrap rule: HOST only while the dropbox holds its own server-issued recency blob (stock clients
-            // abort without a SUCCESS blob).
+            // abort without a SUCCESS blob). The same predicate as the visits' early return (CYC-4).
             RoleCycleController cycle = new RoleCycleController(driver,
                                                                 clock,
-                                                                () -> recencyStore.currentTimestamp() > 0,
+                                                                this::ownBlobHeld,
                                                                 DropboxPrefs.cycleConfig(p));
             controller = cycle;
             gate = cycle.gate();
@@ -357,7 +351,7 @@ public class DropboxService extends Service implements DropboxControls {
             });
 
             logUi(UserLogType.WIFI, Level.INFO, "Dropbox " + id.baseId() + " (sender id " + id.ownSenderId() +
-                    ") starting (" + (recencyStore.currentTimestamp() > 0 ? "own recency blob held" :
+                    ") starting (" + (ownBlobHeld() ? "own recency blob held" :
                                       "waiting for a server-issued recency blob: visiting transports first") +
                     ", trusting " + keys.describe() + " server keys)");
             errors.clear(StatusErrors.Source.STARTUP);
@@ -597,6 +591,17 @@ public class DropboxService extends Service implements DropboxControls {
         public void statusChanged() {
             refreshStatus();
         }
+    }
+
+    /**
+     * The bootstrap rule: true while the dropbox holds its own server-issued recency blob, i.e. while it may
+     * HOST. The one predicate behind both the controller's {@code hasRecencyBlob} and the visits'
+     * {@code ownBlobHeld}, so an early return can never disagree with the controller skipping HOST (audit
+     * CYC-4, Review #9). False before the recency store is built.
+     */
+    private boolean ownBlobHeld() {
+        FileRecencyBlobStore r = recency;
+        return r != null && r.currentTimestamp() > 0;
     }
 
     /**
