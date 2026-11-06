@@ -34,6 +34,11 @@ public interface RoutingEdgeRepository extends CrudRepository<RoutingEdge, Routi
                                                                                Collection<RoutingSource> sources,
                                                                                long minLastSeenMs);
 
+    /** fresh edges of one source from any of {@code peerIds}; for a carrier's one-hop (via) clients */
+    List<RoutingEdge> findByIdPeerIdInAndIdSourceAndLastSeenMsGreaterThanEqual(Collection<String> peerIds,
+                                                                               RoutingSource source,
+                                                                               long minLastSeenMs);
+
     /** keys of rows last seen before {@code cutoffMs}, a page at a time, for the sweeper */
     @Query("select e.id from RoutingEdge e where e.lastSeenMs < :cutoff order by e.lastSeenMs")
     List<RoutingEdgeId> findIdsLastSeenBefore(@Param("cutoff") long cutoffMs, Pageable page);

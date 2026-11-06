@@ -1,6 +1,8 @@
 package net.discdd.server.bundlerouting;
 
 import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.server.repository.DropboxNodeRepository;
+import net.discdd.server.repository.DropboxRecencyGrantRepository;
 import net.discdd.server.repository.ReceivedBundleRepository;
 import net.discdd.server.repository.RoutingEdgeRepository;
 import net.discdd.server.repository.RoutingMetaRepository;
@@ -52,6 +54,10 @@ class LegacyRoutingImporterTest {
     @Autowired
     ReceivedBundleRepository receivedBundleRepository;
     @Autowired
+    DropboxNodeRepository dropboxNodeRepository;
+    @Autowired
+    DropboxRecencyGrantRepository dropboxRecencyGrantRepository;
+    @Autowired
     PlatformTransactionManager transactionManager;
     @Autowired
     TestEntityManager entityManager;
@@ -60,7 +66,12 @@ class LegacyRoutingImporterTest {
 
     @BeforeEach
     void setUp() {
-        var routing = new BundleRouting(routingEdgeRepository, receivedBundleRepository, Duration.ofDays(14));
+        var routing = new BundleRouting(routingEdgeRepository,
+                                        receivedBundleRepository,
+                                        dropboxNodeRepository,
+                                        dropboxRecencyGrantRepository,
+                                        Duration.ofDays(14),
+                                        64);
         importer = new LegacyRoutingImporter(serverRoutingRepository, routingMetaRepository, routing,
                                              transactionManager);
     }

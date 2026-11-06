@@ -48,6 +48,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -59,6 +60,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.StreamSupport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -173,7 +175,7 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
     }
 
     @Test
-    void test1InventoryRegistersDropboxAndPlanArrivesInItsBundle() throws Exception {
+    void test01InventoryRegistersDropboxAndPlanArrivesInItsBundle() throws Exception {
         assertFalse(dropboxNodeRepository.existsById(dropboxId));
         assertFalse(serverApplicationDataManager.getRegisteredAppIds(dropboxId).contains(DropboxControl.APP_ID),
                     "a client is not a dropbox until it reports an inventory");
@@ -199,7 +201,7 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
     }
 
     @Test
-    void test2UpstreamReceivedByServerAndSupersededAreDeleted() throws Exception {
+    void test02UpstreamReceivedByServerAndSupersededAreDeleted() throws Exception {
         // the stock client makes bundles 1 and 2; only 2 reaches the server (via some other carrier)
         Path jar1 = stockClientBundle(1, null);
         Path jar2 = stockClientBundle(2, null);
@@ -237,7 +239,7 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
     }
 
     @Test
-    void test3DownstreamIsDeletedOnlyAfterTheClientAcks() throws Exception {
+    void test03DownstreamIsDeletedOnlyAfterTheClientAcks() throws Exception {
         downstream1 = generateBundleForClient(clientId);
         aduStores.getSendADUsStorage().addADU(clientId, TEST_APPID, "reply".getBytes(), -1);
         downstream2 = generateBundleForClient(clientId);
@@ -284,7 +286,7 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
     }
 
     @Test
-    void test4StaleAndReplayedReportsAreIgnoredAndPlansAreReplaySafe() throws Exception {
+    void test04StaleAndReplayedReportsAreIgnoredAndPlansAreReplaySafe() throws Exception {
         var before = dropboxNodeRepository.findById(dropboxId).orElseThrow();
         assertEquals(3, before.lastReportSeq);
         assertEquals(4, before.lastPlanSeq);
@@ -331,7 +333,7 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
      * the gRPC {@code getRecencyBlob} would give the TLS certificate the dropbox presents.
      */
     @Test
-    void test5RecencyRequestIsAnsweredWithTheDropboxsOwnBlob() throws Exception {
+    void test05RecencyRequestIsAnsweredWithTheDropboxsOwnBlob() throws Exception {
         assertFalse(serverApplicationDataManager.getRegisteredAppIds(dropboxId).contains(DropboxControl.RECENCY_APP_ID),
                     "a client gets the recency app ID only after it asks");
         assertFalse(dropbox.applicationDataManager.getRegisteredAppIds().contains(DropboxControl.RECENCY_APP_ID));
@@ -361,7 +363,7 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
     }
 
     @Test
-    void test6NextRequestGetsAFresherBlobAndAReSentRequestIsNotReAnswered() throws Exception {
+    void test06NextRequestGetsAFresherBlobAndAReSentRequestIsNotReAnswered() throws Exception {
         var sendStore = aduStores.getSendADUsStorage();
         dropboxUploads(DropboxControl.RECENCY_APP_ID, recencyRequest(2));
         long queuedId = sendStore.getLastADUIdAdded(dropboxId, DropboxControl.RECENCY_APP_ID);
@@ -380,7 +382,7 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
 
     /** a carrier that uploads a bundle the server already has (a duplicate) becomes a route to its client too */
     @Test
-    void test7SecondCarrierReUploadGetsRoute() throws Exception {
+    void test07SecondCarrierReUploadGetsRoute() throws Exception {
         upstream4Jar = stockClientBundle(4, null);
         deliverToServer(upstream4Jar, "T1");
         assertTrue(routingEdgeRepository.existsById(uploaded("T1", clientId)));
@@ -397,7 +399,7 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
 
     /** a client uploading its own bundle is not a carrier: neither a new bundle nor a duplicate records an edge */
     @Test
-    void test8ClientSenderWritesNoEdge() throws Exception {
+    void test08ClientSenderWritesNoEdge() throws Exception {
         Path jar5 = stockClientBundle(5, null);
         deliverToServer(jar5, BundleSenderType.CLIENT, "clientSelf");
         assertTrue(receivedBundleRepository.existsById(BundleJarInfo.read(jar5).getBundleId()), "it was processed");
@@ -408,7 +410,7 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
 
     /** replay guard: re-uploading a bundle first received longer ago than the TTL refreshes no route */
     @Test
-    void test9DuplicateOlderThanTtlDoesNotRefresh() throws Exception {
+    void test09DuplicateOlderThanTtlDoesNotRefresh() throws Exception {
         long t1Before = routingEdgeRepository.findById(uploaded("T1", clientId)).orElseThrow().lastSeenMs;
         var received = receivedBundleRepository.findById(BundleJarInfo.read(upstream4Jar).getBundleId()).orElseThrow();
         received.receivedAtMs = System.currentTimeMillis() - bundleRouting.ttlMs() - 60_000;
@@ -421,10 +423,71 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
         assertFalse(routingEdgeRepository.existsById(uploaded("T9", clientId)));
     }
 
+    /**
+     * One-hop via routing: the stock client reports meeting the dropbox (its {@code routing.metadata} names the
+     * dropbox's TLS peer ID) through one carrier; a carrier that only ever met the dropbox then gets the client's reply.
+     */
+    @Test
+    void test10ReplyRidesCarrierThatOnlyMetDropbox() throws Exception {
+        String dropboxPeerId = dropboxRecencyGrantRepository.findById(dropboxId).orElseThrow().senderId;
+        long t = System.currentTimeMillis();
+        deliverToServer(stockClientBundle(6, null, "{\"" + dropboxPeerId + "\":" + t + ",\"@gen\":" + t + "}"), "T1");
+        assertTrue(routingEdgeRepository.existsById(reported(dropboxPeerId, clientId)));
+
+        dropboxUploads(DropboxControl.RECENCY_APP_ID, recencyRequest(3), "T3");
+        assertTrue(routingEdgeRepository.existsById(uploaded("T3", dropboxId)));
+        assertFalse(routingEdgeRepository.existsById(uploaded("T3", clientId)), "T3 never carried the client");
+
+        aduStores.getSendADUsStorage().addADU(clientId, TEST_APPID, "reply via the dropbox".getBytes(), -1);
+        var toT3 = inventory("T3");
+        String current = generateBundleForClient(clientId);
+        assertEquals(2, toT3.bundlesToDownload().size(), () -> "the dropbox's bundle, then the client's: " + toT3);
+        assertEquals(current, toT3.bundlesToDownload().get(1), "direct clients come before via clients");
+    }
+
+    @Test
+    void test11UnparseableMetadataStillWritesUploaded() throws Exception {
+        long reportedBefore = reportedEdgeCount(clientId);
+        Path jar = stockClientBundle(7, null, "{not json");
+        deliverToServer(jar, "T4");
+        assertTrue(receivedBundleRepository.existsById(BundleJarInfo.read(jar).getBundleId()), "it was processed");
+        assertTrue(routingEdgeRepository.existsById(uploaded("T4", clientId)));
+        assertEquals(reportedBefore, reportedEdgeCount(clientId));
+    }
+
+    /** once the carrier's own edge to the dropbox is older than the TTL, the dropbox's members stop riding it */
+    @Test
+    void test12StaleDropboxEdgeStopsVia() throws Exception {
+        var edge = routingEdgeRepository.findById(uploaded("T3", dropboxId)).orElseThrow();
+        edge.lastSeenMs = System.currentTimeMillis() - bundleRouting.ttlMs() - 60_000;
+        routingEdgeRepository.save(edge);
+
+        assertEquals(List.of(), inventory("T3").bundlesToDownload());
+        String dropboxPeerId = dropboxRecencyGrantRepository.findById(dropboxId).orElseThrow().senderId;
+        assertTrue(routingEdgeRepository.existsById(reported(dropboxPeerId, clientId)),
+                   "the client's report is still fresh; only the carrier's route to the dropbox went stale");
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private static RoutingEdgeId uploaded(String peerId, String client) {
         return new RoutingEdgeId(peerId, client, RoutingSource.UPLOADED);
+    }
+
+    private static RoutingEdgeId reported(String peerId, String client) {
+        return new RoutingEdgeId(peerId, client, RoutingSource.REPORTED);
+    }
+
+    private long reportedEdgeCount(String client) {
+        return StreamSupport.stream(routingEdgeRepository.findAll().spliterator(), false)
+                .filter(e -> e.id.source == RoutingSource.REPORTED && e.id.clientId.equals(client))
+                .count();
+    }
+
+    /** carrier {@code carrierId}'s inventory call with nothing on the carrier yet */
+    private ServerBundleTransmission.BundlesToExchange inventory(String carrierId) throws Exception {
+        return inRpcTransaction(() -> serverBundleTransmission.inventoryBundlesForTransmission(
+                BundleSenderType.TRANSPORT, carrierId, Set.of()));
     }
 
     private static GrpcSecurityKey dropboxTls() {
@@ -462,11 +525,16 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
 
     /** The same visit with a control ADU under any app ID. */
     private void dropboxUploads(String appId, byte[] adu) throws Exception {
+        dropboxUploads(appId, adu, TRANSPORT_ID);
+    }
+
+    /** {@link #dropboxUploads(String, byte[])} through carrier {@code carrierId} */
+    private void dropboxUploads(String appId, byte[] adu, String carrierId) throws Exception {
         // the endpoint reuses its last bundle unless an ADU is newer than it (millisecond mtimes)
         Thread.sleep(20);
         dropbox.applicationDataManager.sendADUsStorage.addADU(null, appId, adu, -1);
         Bundle bundle = dropbox.generateBundleForTransmission();
-        deliverToServer(bundle.getSource().toPath());
+        deliverToServer(bundle.getSource().toPath(), carrierId);
     }
 
     /** {@link #deliverToServer(Path, String)} by the default test carrier */
@@ -543,8 +611,17 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
      * client's Signal session.
      */
     private static Path stockClientBundle(long counter, String ackedBundleId) throws Exception {
+        return stockClientBundle(counter, ackedBundleId, "{}");
+    }
+
+    /** {@link #stockClientBundle(long, String)} carrying {@code metadataJson} as its {@code routing.metadata} */
+    private static Path stockClientBundle(long counter, String ackedBundleId, String metadataJson) throws Exception {
         var payload = new ByteArrayOutputStream();
-        BundleUtils.createBundlePayloadForAdus(List.of(), "{}".getBytes(), ackedBundleId, null, payload,
+        BundleUtils.createBundlePayloadForAdus(List.of(),
+                                               metadataJson.getBytes(StandardCharsets.UTF_8),
+                                               ackedBundleId,
+                                               null,
+                                               payload,
                                                List.of(TEST_APPID));
         String encryptedId =
                 encryptBundleID(BundleIDGenerator.generateBundleID(clientId, counter, BundleIDGenerator.UPSTREAM));

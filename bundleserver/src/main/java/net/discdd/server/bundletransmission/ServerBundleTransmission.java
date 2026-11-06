@@ -219,10 +219,17 @@ public class ServerBundleTransmission {
                     this.serverWindowService.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
                 }
 
-                // the carrier that uploaded an authenticated bundle can reach the client (never throws)
+                // the carrier that uploaded an authenticated bundle can reach the client, then the peers the client
+                // reports meeting can too (neither throws)
+                long receiptMs = System.currentTimeMillis();
                 if (senderType != CLIENT) {
-                    bundleRouting.recordUploaded(senderId, clientId, System.currentTimeMillis());
+                    bundleRouting.recordUploaded(senderId, clientId, receiptMs);
                 }
+                bundleRouting.recordReported(clientId,
+                                             uncompressedPayload.getSource()
+                                                     .toPath()
+                                                     .resolve(BundleRouting.ROUTING_METADATA_FILE),
+                                             receiptMs);
 
                 this.applicationDataManager.processAcknowledgement(clientId,
                                                                    uncompressedPayload.getAckRecord().getBundleId());
