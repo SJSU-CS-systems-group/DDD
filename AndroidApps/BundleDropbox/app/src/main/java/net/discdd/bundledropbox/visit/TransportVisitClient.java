@@ -12,6 +12,7 @@ import net.discdd.bundledropbox.store.ForwardLedger;
 import net.discdd.bundledropbox.store.RelayStore;
 import net.discdd.bundledropbox.store.Staged;
 import net.discdd.grpc.BundleChunk;
+import net.discdd.grpc.BundleDownloadRequest;
 import net.discdd.grpc.BundleDownloadResponse;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.BundleSenderType;
@@ -55,6 +56,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -87,6 +89,10 @@ import static java.util.logging.Level.WARNING;
  *   <li><b>Upload</b> every UPSTREAM bundle not yet in the {@link ForwardLedger} for this carrier, newest first.
  *       Upload goes before download so the most valuable direction (client mail toward the internet) gets the
  *       radio time if the transport dwell is short (R2 §8).</li>
+ *   <li><b>Own bundle by id</b>, only from a carrier that synced with our server ({@code carrierTrusted}): each
+ *       of {@link ControlChannel#ownProbeIds()} is downloaded by id ({@code downloadBundle}), newest first, until
+ *       one is found. The server keeps the dropbox's counter within its window (Research/R11 RT5), so at most ten
+ *       requests find the own bundle without any PSI. A miss changes nothing: download-all still finds it.</li>
  *   <li><b>Download-all</b> of the carrier's client-bound bundles via repeated PSI sessions (R2 §4.3), committing
  *       each new one to DOWNSTREAM under the id read from the jar's {@code bundle.id}, within the DOWNSTREAM
  *       quota (checked per chunk). An id already held is {@linkplain RelayStore#touch touched} instead, which
@@ -95,7 +101,8 @@ import static java.util.logging.Level.WARNING;
  *       several visits. A bundle addressed to the dropbox itself ({@link ControlChannel#classify}) goes to
  *       {@link ControlChannel#accept} and <b>never</b> into the relay store: no client could ever use it. When
  *       the quota is full the walk goes on in <b>control-only</b> mode (see {@link #CONTROL_BUNDLE_MAX_BYTES}),
- *       because the retention plan that frees the space arrives in exactly such a bundle.</li>
+ *       because the retention plan that frees the space arrives in exactly such a bundle; if the own bundle was
+ *       already found by id, downloads simply stop there.</li>
  *   <li><b>Ack re-upload</b>: if a control bundle (retention plan, recency grant) was processed during this visit,
  *       the dropbox's own bundle is regenerated (it now acks that bundle, reports the plan's results and carries
  *       the next recency request) and uploaded once more, which saves the server a full carrier round trip
@@ -357,6 +364,12 @@ public final class TransportVisitClient {
         private String lastError;
         private int controlUploaded;
         private int controlProcessed;
+        /** The own bundle was fetched by id this visit, so control-only mode has nothing left to look for. */
+        private boolean ownFoundThisVisit;
+        private int probes;
+        private int psiExchanges;
+        private int carrierBundleCount = -1;
+        private long downloadAllMs;
 
         Visit(InetAddress host, int port, String carrierId, BooleanSupplier keepGoing, BooleanSupplier cancelled) {
             this.host = host;
@@ -392,8 +405,12 @@ public final class TransportVisitClient {
                                                  skipped,
                                                  errors,
                                                  stoppedEarly,
-                                                 lastError).withControl(controlUploaded, controlProcessed);
+                                                 lastError).withControl(controlUploaded, controlProcessed)
+                    .withCost(carrierBundleCount, psiExchanges, downloadAllMs, ownFoundThisVisit);
             logger.log(INFO, "visit finished: " + result);
+            logger.log(INFO, "[VisitCost] carrier=" + carrierId + " carrierBundles=" + carrierBundleCount +
+                    " psiExchanges=" + psiExchanges + " downloadAllMs=" + downloadAllMs + " probes=" + probes +
+                    " ownByProbe=" + ownFoundThisVisit);
             return result;
         }
 
@@ -409,7 +426,13 @@ public final class TransportVisitClient {
                 fetchRecencyBlob(blocking);
                 uploadOwnBundle(async);
                 uploadAll(async);
-                downloadAll(blocking);
+                if (carrierTrusted) probeOwn(blocking);
+                long downloadStart = System.nanoTime();
+                try {
+                    downloadAll(blocking);
+                } finally {
+                    downloadAllMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - downloadStart);
+                }
                 // Optional extra (class Javadoc): only while the dwell lasts, so it never turns a complete visit
                 // into a "stopped early" one.
                 if (controlProcessed > 0 && keepGoing.getAsBoolean()) uploadOwnBundle(async);
@@ -669,6 +692,49 @@ public final class TransportVisitClient {
             return !response.isDone();
         }
 
+        // ---------------------------------------------------------------- own bundle by id
+
+        /**
+         * Downloads the dropbox's own newest bundle by id, before download-all and without PSI (Research/R11 RT8).
+         * A stock carrier answers {@code downloadBundle} from its file name and NOT_FOUND otherwise (R11 §0 item
+         * 8). Probing stops at the first hit, and also at any answer other than "not there", leaving the rest to
+         * download-all. Only called for a carrier that synced with our server: any other carrier cannot hold a
+         * bundle our server made for the dropbox.
+         */
+        private void probeOwn(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blocking) {
+            List<String> ids;
+            try {
+                ids = control.ownProbeIds();
+            } catch (RuntimeException e) {
+                logger.log(WARNING, "control channel failed to derive its bundle ids", e); // must not break the relay
+                return;
+            }
+            if (ids == null || ids.isEmpty()) return;
+            for (String id : ids) {
+                checkContinue();
+                probes++;
+                BundleDownloadRequest request = BundleDownloadRequest.newBuilder()
+                        .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(id))
+                        .setSenderType(BundleSenderType.CLIENT)
+                        .build();
+                // controlOnly staging: the own bundle never enters the relay store, so the quota does not apply
+                IndexOutcome outcome = stageAndCommit("own id " + id,
+                                                      () -> blocking.withDeadlineAfter(options.longDeadlineMs(),
+                                                                                       MILLISECONDS)
+                                                              .downloadBundle(request),
+                                                      id,
+                                                      true);
+                if (outcome.own) {
+                    ownFoundThisVisit = true;
+                    logger.log(INFO, "own bundle " + id + " found by id on " + carrierId + " after " + probes +
+                            " request(s)");
+                    return;
+                }
+                if (!outcome.listingChanged) return; // not a plain "not there": leave it to download-all
+            }
+            logger.log(INFO, "no own bundle by id on " + carrierId + " (" + probes + " ids tried)");
+        }
+
         // ---------------------------------------------------------------- download-all
 
         /**
@@ -767,11 +833,14 @@ public final class TransportVisitClient {
          * Records why relayed downloads stop (an error, as before: the visit did not fetch everything) and reports
          * whether the walk can go on looking for the own bundle.
          *
-         * @return false if no control channel is wired, so nothing addressed to the dropbox can exist
+         * @return false if no control channel is wired, so nothing addressed to the dropbox can exist, or if the
+         *         own bundle was already found by id this visit
          */
         private boolean enterControlOnly(String why) {
-            boolean go = control != ControlChannel.NONE;
-            error(why + (go ? "; looking only for the dropbox's own bundle" : "; stopping downloads"));
+            boolean go = control != ControlChannel.NONE && !ownFoundThisVisit;
+            error(why + (go ? "; looking only for the dropbox's own bundle" :
+                         ownFoundThisVisit ? "; own bundle already found by id, stopping downloads" :
+                         "; stopping downloads"));
             return go;
         }
 
@@ -782,13 +851,17 @@ public final class TransportVisitClient {
          * @return the response, or {@code null} if downloads must stop (non-fatal error already recorded)
          */
         private PSIResponse countingExchange(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blocking) {
+            psiExchanges++;
             try {
-                return blocking.withDeadlineAfter(options.longDeadlineMs(), MILLISECONDS)
+                PSIResponse response = blocking.withDeadlineAfter(options.longDeadlineMs(), MILLISECONDS)
                         .psiExchange(PSIRequest.getDefaultInstance());
+                carrierBundleCount = response.getTransportBlindedValuesCount();
+                return response;
             } catch (StatusRuntimeException e) {
                 if (e.getStatus().getCode() == io.grpc.Status.Code.UNIMPLEMENTED) {
-                    // A pre-PSI transport only offers downloadBundle(id), which needs per-client encrypted ids
-                    // the dropbox cannot derive (R2 §4.3 fallback). Nothing to download from it.
+                    // A pre-PSI transport only offers downloadBundle(id). The dropbox can derive only its own ids,
+                    // which probeOwn already tried; other clients' ids are encrypted per client (R2 §4.3
+                    // fallback). Nothing more to download from it.
                     error("carrier does not implement psiExchange; download-all impossible");
                     return null;
                 }
@@ -797,8 +870,23 @@ public final class TransportVisitClient {
             }
         }
 
+        /** Downloads PSI index {@code index} of session {@code sessionId}: {@link #stageAndCommit} with no expected id. */
+        private IndexOutcome downloadIndex(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blocking,
+                                           String sessionId,
+                                           int index,
+                                           boolean controlOnly) {
+            return stageAndCommit("index " + index,
+                                  () -> blocking.withDeadlineAfter(options.longDeadlineMs(), MILLISECONDS)
+                                          .psiDownloadBundle(PSIDownloadRequest.newBuilder()
+                                                                     .setSessionId(sessionId)
+                                                                     .setTransportIndex(index)
+                                                                     .build()),
+                                  null,
+                                  controlOnly);
+        }
+
         /**
-         * Streams index {@code i} into staging, names it from {@code bundle.id}, then commits or discards it.
+         * Streams one carrier bundle into staging, names it from {@code bundle.id}, then commits or discards it.
          *
          * <p>The DOWNSTREAM quota and {@link RelayStore#MAX_BUNDLE_BYTES} are enforced per chunk, so one carrier
          * bundle cannot overshoot the capacity or fill the device (Audit m7). A full quota stops the pass at this
@@ -810,11 +898,17 @@ public final class TransportVisitClient {
          * <p>{@code controlOnly}: the quota is full, so the bundle is staged without the quota check but only up
          * to {@link #CONTROL_BUNDLE_MAX_BYTES}, and is kept only if it is the dropbox's own (see
          * {@link #downloadAll}). Relayed bundles passed over this way are not counted as skipped or as errors.
+         *
+         * @param what       names the bundle in logs ("index 3", "own id ...")
+         * @param source     opens the server stream (deadline applied); called once
+         * @param expectedId the id the bundle was requested by, which its {@code bundle.id} must match, or
+         *                   {@code null} to take the id from the jar (PSI index)
+         * @return the outcome; NOT_FOUND / INVALID_ARGUMENT give {@code listingChanged} (the file is gone)
          */
-        private IndexOutcome downloadIndex(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blocking,
-                                           String sessionId,
-                                           int index,
-                                           boolean controlOnly) {
+        private IndexOutcome stageAndCommit(String what,
+                                            Supplier<Iterator<BundleDownloadResponse>> source,
+                                            String expectedId,
+                                            boolean controlOnly) {
             Staged staged;
             try {
                 staged = store.beginStaging(Direction.DOWNSTREAM);
@@ -827,12 +921,7 @@ public final class TransportVisitClient {
             Context.CancellableContext context = Context.current().withCancellation();
             Context previous = context.attach();
             try (OutputStream out = staged.open()) {
-                Iterator<BundleDownloadResponse> chunks = blocking.withDeadlineAfter(options.longDeadlineMs(),
-                                                                                     MILLISECONDS)
-                        .psiDownloadBundle(PSIDownloadRequest.newBuilder()
-                                                   .setSessionId(sessionId)
-                                                   .setTransportIndex(index)
-                                                   .build());
+                Iterator<BundleDownloadResponse> chunks = source.get();
                 while (chunks.hasNext()) {
                     ByteString chunk = chunks.next().getChunk().getChunk();
                     bytes += chunk.size();
@@ -851,15 +940,14 @@ public final class TransportVisitClient {
                         // later visit would restart at this index and never reach the rest of the listing.
                         store.abort(staged);
                         context.cancel(null); // ends the server stream now instead of at its deadline
-                        error("bundle at index " + index + " exceeds " + RelayStore.MAX_BUNDLE_BYTES + " B; skipped");
+                        error("bundle at " + what + " exceeds " + RelayStore.MAX_BUNDLE_BYTES + " B; skipped");
                         return new IndexOutcome(null, false);
                     }
                     // The staged bytes written so far already count as used; add only this chunk.
                     if (!store.hasCapacityFor(Direction.DOWNSTREAM, chunk.size())) {
                         store.abort(staged);
                         context.cancel(null);
-                        logger.log(INFO, "bundle at index " + index + " exceeds the downstream quota after " + bytes +
-                                " B");
+                        logger.log(INFO, "bundle at " + what + " exceeds the downstream quota after " + bytes + " B");
                         return IndexOutcome.STOP; // downloadAll records the error
                     }
                     chunk.writeTo(out);
@@ -868,12 +956,12 @@ public final class TransportVisitClient {
                 store.abort(staged);
                 io.grpc.Status.Code code = e.getStatus().getCode();
                 if (code == io.grpc.Status.Code.NOT_FOUND || code == io.grpc.Status.Code.INVALID_ARGUMENT) {
-                    // The carrier's session expired or the file vanished (T<->S sync deleted it); not a failure of
-                    // the dropbox, but the listing is different now.
-                    logger.log(INFO, "index " + index + " gone on carrier: " + e.getStatus());
+                    // The carrier's session expired or the file vanished (T<->S sync deleted it), or a probed id is
+                    // not there; not a failure of the dropbox, but the listing is different now.
+                    logger.log(expectedId == null ? INFO : FINE, what + " not on carrier: " + e.getStatus());
                     return new IndexOutcome(null, true);
                 }
-                rpcFailed(e.getStatus(), "psiDownloadBundle(" + index + ")");
+                rpcFailed(e.getStatus(), "download of " + what);
                 return new IndexOutcome(null, false);
             } catch (IOException e) {
                 store.abort(staged);
@@ -887,17 +975,22 @@ public final class TransportVisitClient {
             if (bytes == 0) {
                 store.abort(staged);
                 skipped++;
-                logger.log(INFO, "carrier file at index " + index + " is empty (its own server download failed?); " +
-                        "skipped");
+                logger.log(INFO, "carrier file at " + what + " is empty (its own server download failed?); skipped");
                 return new IndexOutcome(null, false);
             }
             String bundleId = readJarBundleId(staged.path());
             if (bundleId == null) {
                 store.abort(staged);
                 skipped++;
-                logger.log(INFO, "carrier file at index " + index + " is not a bundle jar with a clean bundle.id " +
+                logger.log(INFO, "carrier file at " + what + " is not a bundle jar with a clean bundle.id " +
                         "(truncated?); skipped");
                 return new IndexOutcome(null, false);
+            }
+            if (expectedId != null && !expectedId.equals(bundleId)) {
+                store.abort(staged);
+                skipped++;
+                logger.log(WARNING, "carrier file " + expectedId + " holds bundle " + bundleId + "; skipped");
+                return new IndexOutcome(bundleId, false);
             }
             ControlChannel.Ownership ownership = classifyOwn(bundleId);
             if (ownership != ControlChannel.Ownership.NOT_MINE) {

@@ -1,6 +1,7 @@
 package net.discdd.bundledropbox.control;
 
 import net.discdd.bundledropbox.visit.ControlChannel;
+import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.client.bundlesecurity.ClientSecurity;
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
@@ -13,6 +14,7 @@ import net.discdd.dropbox.control.RetentionPlan;
 import net.discdd.model.ADU;
 import net.discdd.model.Bundle;
 import net.discdd.pathutils.ClientPaths;
+import net.discdd.utils.Constants;
 import net.discdd.utils.StoreADUs;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -72,9 +74,10 @@ import javax.crypto.spec.SecretKeySpec;
  * <h2>Rules around {@code processReceivedBundle} (R7 §4)</h2>
  * <ul>
  *   <li><b>Addressed-to-me by decryption, not the 10-id window.</b> {@link #classify} decrypts the jar's
- *       {@code bundle.id} with a cached AES key (option B in R7 §4.1). The window ({@code getNextBundles()}) wedges
- *       once the server's counter runs 10 past the largest received, which happens because its window never
- *       fills (R7 §2, §6).</li>
+ *       {@code bundle.id} with a cached AES key (option B in R7 §4.1). The window ({@code getNextBundles()}) wedged
+ *       once the server's counter ran 10 past the largest received, because the server's window never filled
+ *       (R7 §2, §6). The server now bounds its counter to that window (Research/R11 RT5), so the same key also
+ *       derives the few ids the server can currently use for the dropbox ({@link #ownProbeIds}).</li>
  *   <li><b>Pre-filter by counter.</b> Only a bundle whose counter is above the largest received is processed;
  *       bundle-core decrypts the payload <em>before</em> its own latest-id check, so feeding an old bundle would
  *       re-run Signal decryption on an old message.</li>
@@ -111,6 +114,9 @@ public final class DropboxControlEndpoint {
 
     /** Downstream bundle-id layout: 8-byte counter, then the client id bytes (BundleIDGenerator, DOWNSTREAM). */
     private static final int COUNTER_BYTES = 8;
+
+    /** The client's downstream window: the server issues at most this many counters past the last acked one. */
+    static final int PROBE_WINDOW = Constants.DEFAULT_WINDOW_SIZE;
 
     /** Receives each decoded plan, in ADU order. */
     @FunctionalInterface
@@ -320,6 +326,39 @@ public final class DropboxControlEndpoint {
         if (counter < 0) return ControlChannel.Ownership.NOT_MINE;
         return counter > largestReceivedCounter() ? ControlChannel.Ownership.MINE_NEW :
                ControlChannel.Ownership.MINE_ALREADY_PROCESSED;
+    }
+
+    /**
+     * The ids under which a carrier may hold the dropbox's newest downstream bundle, newest first: counters L+10
+     * down to L+1, where L is the largest counter processed. The server never issues a counter more than a window
+     * past the dropbox's last ack (Research/R11 RT5), and that ack never runs ahead of L, so a bundle newer than L
+     * has one of these ids. A visit downloads them by id ({@code downloadBundle}), which a stock carrier serves by
+     * file name, before any PSI.
+     *
+     * @return {@value #PROBE_WINDOW} encrypted bundle ids, highest counter first
+     */
+    public synchronized List<String> ownProbeIds() {
+        checkOpen();
+        long largest = largestReceivedCounter();
+        List<String> ids = new ArrayList<>(PROBE_WINDOW);
+        for (long counter = largest + PROBE_WINDOW; counter > largest; counter--) ids.add(ownIdFor(counter));
+        return ids;
+    }
+
+    /**
+     * The encrypted downstream id the server gives this endpoint's bundle {@code counter}: the inverse of
+     * {@link #decryptOwnCounter}, the same string as {@code ServerSecurity.createEncryptedBundleId} (zero IV, so
+     * deterministic).
+     */
+    synchronized String ownIdFor(long counter) {
+        String plainId = BundleIDGenerator.generateBundleID(clientId, counter, BundleIDGenerator.DOWNSTREAM);
+        try {
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, bundleIdKey, new IvParameterSpec(new byte[16]));
+            return Base64.getUrlEncoder().encodeToString(cipher.doFinal(plainId.getBytes(StandardCharsets.UTF_8)));
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("Bundle id encryption unavailable", e);
+        }
     }
 
     /**

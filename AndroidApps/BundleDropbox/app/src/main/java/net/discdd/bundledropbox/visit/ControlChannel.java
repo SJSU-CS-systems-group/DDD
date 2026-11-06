@@ -1,6 +1,7 @@
 package net.discdd.bundledropbox.visit;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -10,6 +11,8 @@ import java.util.Objects;
  *   <li>after the carrier's {@code getRecencyBlob} (used only to see whether the carrier synced with our server),
  *       it uploads {@link #ownBundleForVisit()} <b>first</b>, before any relayed bundle, so the inventory, the
  *       recency request and the acks it carries are never starved by a short dwell;</li>
+ *   <li>after the relayed uploads, if the carrier synced with our server, it downloads {@link #ownProbeIds()} by
+ *       id, so the dropbox's own bundle is usually found without any PSI;</li>
  *   <li>during download-all, every downloaded jar is {@linkplain #classify classified}: a bundle addressed to the
  *       dropbox goes to {@link #accept} and <b>never</b> into the relay store, since no stock client could ever
  *       PSI-match it.</li>
@@ -68,6 +71,14 @@ public interface ControlChannel {
      * @return whether it is the dropbox's own bundle, and whether it is new
      */
     Ownership classify(String bundleId);
+
+    /**
+     * Ids under which a carrier may hold the dropbox's newest own bundle, tried by id before download-all
+     * ({@link TransportVisitClient}).
+     *
+     * @return encrypted bundle ids, most likely first; empty if the dropbox cannot derive them
+     */
+    default List<String> ownProbeIds() { return List.of(); }
 
     /**
      * Processes a bundle {@link #classify} called {@link Ownership#MINE_NEW}. The caller still owns

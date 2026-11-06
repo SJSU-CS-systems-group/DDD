@@ -296,6 +296,17 @@ public final class DropboxControlManager implements ControlChannel {
     }
 
     @Override
+    public synchronized List<String> ownProbeIds() {
+        if (endpoint == null) return List.of();
+        try {
+            return endpoint.ownProbeIds();
+        } catch (RuntimeException e) {
+            logger.log(Level.WARNING, "Could not derive the own bundle ids", e);
+            return List.of();
+        }
+    }
+
+    @Override
     public synchronized boolean accept(Path stagedJar) {
         if (endpoint == null) return false;
         DropboxControlEndpoint.AcceptResult r = endpoint.accept(stagedJar);

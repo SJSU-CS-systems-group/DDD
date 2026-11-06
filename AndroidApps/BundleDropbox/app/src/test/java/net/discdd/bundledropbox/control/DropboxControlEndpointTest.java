@@ -323,6 +323,41 @@ public class DropboxControlEndpointTest {
     }
 
     @Test
+    public void ownIdForMatchesBundleCoreEncryption() throws Exception {
+        DropboxControlEndpoint ep = open(keysA);
+        ClientSecurity cs = ClientSecurity.getInstance();
+        assertEquals(cs.encryptBundleID(BundleIDGenerator.generateBundleID(ep.clientId(), 5,
+                                                                           BundleIDGenerator.DOWNSTREAM)),
+                     ep.ownIdFor(5));
+        assertEquals(ControlChannel.Ownership.MINE_NEW, ep.classify(ep.ownIdFor(7)));
+        // The id a server makes for the dropbox is the same string (it is the carrier's file name).
+        server.receive(ep.prepareUpstream(inventory(1)).path(), work("w")); // gives the server our keys
+        assertEquals(server.security.createEncryptedBundleId(ep.clientId(), 3, BundleIDGenerator.DOWNSTREAM),
+                     ep.ownIdFor(3));
+    }
+
+    @Test
+    public void probeIdsCoverWindowDescending() throws Exception {
+        DropboxControlEndpoint ep = open(keysA);
+        assertEquals(idsFor(ep, 10, 1), ep.ownProbeIds()); // nothing received: the server's first window
+
+        ControlChannel.OwnBundle own = ep.prepareUpstream(inventory(1));
+        server.receive(own.path(), work("w"));
+        Path jar = server.send(ep.clientId(), 4, 1, plan(1, 1, List.of()), own.bundleId(), work("out"));
+        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(jar));
+
+        List<String> ids = ep.ownProbeIds();
+        assertEquals(idsFor(ep, 14, 5), ids); // L+10 down to L+1, L = 4
+        assertFalse(ids.contains(BundleJarInfo.read(jar).getBundleId()));
+    }
+
+    private static List<String> idsFor(DropboxControlEndpoint ep, long from, long to) {
+        List<String> ids = new ArrayList<>();
+        for (long c = from; c >= to; c--) ids.add(ep.ownIdFor(c));
+        return ids;
+    }
+
+    @Test
     public void upstreamBundleCarriesOnlyTheNewestInventoryAndIsReusedWhenNothingChanged() throws Exception {
         DropboxControlEndpoint ep = open(keysA);
         ep.prepareUpstream(inventory(1)); // never uploaded: superseded by the next snapshot

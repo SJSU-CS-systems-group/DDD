@@ -22,6 +22,10 @@ import java.util.Objects;
  * <em>own</em> bundles, which never enter the relay store; {@link #uploaded()}, {@link #downloaded()} and
  * {@link #skipped()} count relayed bundles only.
  *
+ * <p>The visit-cost metrics ({@link #carrierBundleCount()}, {@link #psiExchanges()}, {@link #downloadAllMs()},
+ * {@link #ownByProbe()}) measure what download-all costs, so the server-issued pickup list it may be replaced by
+ * can be judged on data (Research/R11 §2). Each visit also logs them on one {@code [VisitCost]} line.
+ *
  * <p>Plain final class rather than a Java record (project rule); record-style accessors.
  */
 public final class VisitResult {
@@ -36,6 +40,10 @@ public final class VisitResult {
     private final String lastError;
     private final int controlUploaded;
     private final int controlProcessed;
+    private final int carrierBundleCount;
+    private final int psiExchanges;
+    private final long downloadAllMs;
+    private final boolean ownByProbe;
 
     /**
      * @param carrierId      the carrier's DNS-SD {@code transportId} the visit was made to
@@ -72,9 +80,19 @@ public final class VisitResult {
         this.lastError = lastError;
         this.controlUploaded = 0;
         this.controlProcessed = 0;
+        this.carrierBundleCount = -1;
+        this.psiExchanges = 0;
+        this.downloadAllMs = 0;
+        this.ownByProbe = false;
     }
 
-    private VisitResult(VisitResult base, int controlUploaded, int controlProcessed) {
+    private VisitResult(VisitResult base,
+                        int controlUploaded,
+                        int controlProcessed,
+                        int carrierBundleCount,
+                        int psiExchanges,
+                        long downloadAllMs,
+                        boolean ownByProbe) {
         this.carrierId = base.carrierId;
         this.reachable = base.reachable;
         this.carrierTrusted = base.carrierTrusted;
@@ -86,6 +104,10 @@ public final class VisitResult {
         this.lastError = base.lastError;
         this.controlUploaded = controlUploaded;
         this.controlProcessed = controlProcessed;
+        this.carrierBundleCount = carrierBundleCount;
+        this.psiExchanges = psiExchanges;
+        this.downloadAllMs = downloadAllMs;
+        this.ownByProbe = ownByProbe;
     }
 
     /**
@@ -94,7 +116,21 @@ public final class VisitResult {
      * @return a copy of this result carrying the control-channel counters
      */
     public VisitResult withControl(int controlUploaded, int controlProcessed) {
-        return new VisitResult(this, controlUploaded, controlProcessed);
+        return new VisitResult(this, controlUploaded, controlProcessed, carrierBundleCount, psiExchanges,
+                               downloadAllMs, ownByProbe);
+    }
+
+    /**
+     * @param carrierBundleCount client-bound bundles the carrier listed in its last {@code psiExchange}, or -1 if
+     *                           download-all never listed them
+     * @param psiExchanges       {@code psiExchange} calls made (each costs the carrier one modPow per bundle)
+     * @param downloadAllMs      time spent in download-all, 0 if it did not run
+     * @param ownByProbe         true if the dropbox's own bundle was fetched by id, before download-all
+     * @return a copy of this result carrying the visit-cost metrics
+     */
+    public VisitResult withCost(int carrierBundleCount, int psiExchanges, long downloadAllMs, boolean ownByProbe) {
+        return new VisitResult(this, controlUploaded, controlProcessed, carrierBundleCount, psiExchanges,
+                               downloadAllMs, ownByProbe);
     }
 
     /** @return the carrier's DNS-SD {@code transportId}. */
@@ -136,6 +172,18 @@ public final class VisitResult {
     /** @return bundles addressed to the dropbox (retention plans) processed by its control endpoint. */
     public int controlProcessed() { return controlProcessed; }
 
+    /** @return client-bound bundles the carrier last listed, or -1 if download-all never listed them. */
+    public int carrierBundleCount() { return carrierBundleCount; }
+
+    /** @return {@code psiExchange} calls made during this visit. */
+    public int psiExchanges() { return psiExchanges; }
+
+    /** @return milliseconds spent in download-all, 0 if it did not run. */
+    public long downloadAllMs() { return downloadAllMs; }
+
+    /** @return true if the dropbox's own bundle was fetched by id before download-all. */
+    public boolean ownByProbe() { return ownByProbe; }
+
     /**
      * @return true if the carrier was reached, every phase (recency probe, upload, download-all) ran to
      *         completion, and no error occurred. A carrier without a blob of our server is not an error. The
@@ -155,7 +203,9 @@ public final class VisitResult {
         return reachable == that.reachable && carrierTrusted == that.carrierTrusted && uploaded == that.uploaded &&
                 downloaded == that.downloaded && skipped == that.skipped && errors == that.errors &&
                 stoppedEarly == that.stoppedEarly && controlUploaded == that.controlUploaded &&
-                controlProcessed == that.controlProcessed && carrierId.equals(that.carrierId) &&
+                controlProcessed == that.controlProcessed && carrierBundleCount == that.carrierBundleCount &&
+                psiExchanges == that.psiExchanges && downloadAllMs == that.downloadAllMs &&
+                ownByProbe == that.ownByProbe && carrierId.equals(that.carrierId) &&
                 Objects.equals(lastError, that.lastError);
     }
 
@@ -171,7 +221,11 @@ public final class VisitResult {
                             stoppedEarly,
                             lastError,
                             controlUploaded,
-                            controlProcessed);
+                            controlProcessed,
+                            carrierBundleCount,
+                            psiExchanges,
+                            downloadAllMs,
+                            ownByProbe);
     }
 
     @Override
@@ -180,7 +234,8 @@ public final class VisitResult {
                 ", carrierTrusted=" + carrierTrusted + ", uploaded=" + uploaded + ", downloaded=" + downloaded +
                 ", skipped=" + skipped +
                 ", errors=" + errors + ", stoppedEarly=" + stoppedEarly + ", controlUploaded=" + controlUploaded +
-                ", controlProcessed=" + controlProcessed +
+                ", controlProcessed=" + controlProcessed + ", carrierBundleCount=" + carrierBundleCount +
+                ", psiExchanges=" + psiExchanges + ", downloadAllMs=" + downloadAllMs + ", ownByProbe=" + ownByProbe +
                 (lastError == null ? "" : ", lastError=" + lastError) + "}";
     }
 }

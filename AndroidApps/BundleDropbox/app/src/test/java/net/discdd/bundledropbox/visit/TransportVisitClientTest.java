@@ -554,6 +554,33 @@ public class TransportVisitClientTest {
                 .build();
     }
 
+    /** The visit-cost metrics count what download-all cost; a relay-only dropbox never probes by id. */
+    @Test(timeout = 60_000)
+    public void visitResultReportsCost() throws Exception {
+        carrier.recency = successBlob(1_000);
+        carrierHolds("d1", 100);
+        carrierHolds("d2", 200);
+        carrierHolds("d3", 300);
+
+        VisitResult r = visit();
+
+        assertTrue(r.toString(), r.ok());
+        assertEquals(3, r.carrierBundleCount());
+        assertEquals("one fresh session per index, the counting one reused", 3, r.psiExchanges());
+        assertEquals(carrier.psiExchanges.get(), r.psiExchanges());
+        assertTrue(r.downloadAllMs() >= 0);
+        assertFalse(r.ownByProbe());
+        assertEquals(0, carrier.byIdDownloads.get());
+
+        int closedPort;
+        try (ServerSocket socket = new ServerSocket(0)) {
+            closedPort = socket.getLocalPort();
+        }
+        VisitResult unreachable = client.visit(InetAddress.getLoopbackAddress(), closedPort, CARRIER, () -> true);
+        assertEquals("never listed", -1, unreachable.carrierBundleCount());
+        assertEquals(0, unreachable.psiExchanges());
+    }
+
     @Test
     public void readJarBundleIdRejectsNonJarsAndUncleanIds() throws Exception {
         assertEquals("abc-_=1", TransportVisitClient.readJarBundleId(

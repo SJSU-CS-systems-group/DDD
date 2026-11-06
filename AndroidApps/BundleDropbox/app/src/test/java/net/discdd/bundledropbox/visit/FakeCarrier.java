@@ -9,6 +9,7 @@ import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.bundlesecurity.BundleOwnershipPSI;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.grpc.BundleChunk;
+import net.discdd.grpc.BundleDownloadRequest;
 import net.discdd.grpc.BundleDownloadResponse;
 import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.GetRecencyBlobRequest;
@@ -66,6 +67,8 @@ final class FakeCarrier implements AutoCloseable {
     volatile IntConsumer afterDownload = i -> {};
     final AtomicInteger psiExchanges = new AtomicInteger();
     final AtomicInteger psiDownloads = new AtomicInteger();
+    /** {@code downloadBundle} (by-id) requests, found or not. */
+    final AtomicInteger byIdDownloads = new AtomicInteger();
     final AtomicInteger uploads = new AtomicInteger();
     /** Bundle ids of completed uploads, in completion order. */
     final List<String> uploadOrder = new java.util.concurrent.CopyOnWriteArrayList<>();
@@ -125,6 +128,12 @@ final class FakeCarrier implements AutoCloseable {
         protected void bundleCompletion(BundleExchangeName name, BundleSenderType senderType, Path path) {
             uploadOrder.add(name.encryptedBundleId());
             uploads.incrementAndGet();
+        }
+
+        @Override
+        public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> response) {
+            byIdDownloads.incrementAndGet();
+            super.downloadBundle(request, response); // the stock path: file by name, else NOT_FOUND
         }
 
         @Override

@@ -23,6 +23,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.IntSupplier;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -40,7 +41,9 @@ import static org.junit.Assert.assertTrue;
  *       relay store, while the carrier's blob is only checked ({@link VisitResult#carrierTrusted()}) and never
  *       offered to the recency store (09 Own Recency Blob Design);</li>
  *   <li>after a processed plan the regenerated own bundle (carrying the ack) is uploaded at the end;</li>
- *   <li>a failing control channel never breaks the relay.</li>
+ *   <li>a failing control channel never breaks the relay;</li>
+ *   <li>a carrier that synced with our server is first asked for the own bundle by id ({@link
+ *       ControlChannel#ownProbeIds()}), before any PSI; a miss leaves download-all as it was (Research/R11 RT8).</li>
  * </ul>
  */
 public class TransportVisitControlTest {
@@ -58,15 +61,27 @@ public class TransportVisitControlTest {
     private TransportVisitClient client;
     private Path fixtures;
 
-    /** Scripted control channel: queued own bundles, a fixed ownership table, recorded accepts. */
+    /**
+     * Scripted control channel: queued own bundles, an ownership table, recorded accepts, fixed probe ids. Like the
+     * real endpoint, an accepted bundle is {@code MINE_ALREADY_PROCESSED} afterwards.
+     */
     private static final class FakeControl implements ControlChannel {
         final Deque<OwnBundle> ownBundles = new ArrayDeque<>();
         OwnBundle lastOwn;
         final Map<String, Ownership> ownership = new HashMap<>();
         final List<String> acceptedIds = new ArrayList<>();
         final List<byte[]> acceptedBytes = new ArrayList<>();
+        final List<String> probeIds = new ArrayList<>();
+        /** The carrier's {@code psiExchange} count at each accept. */
+        final List<Integer> psiAtAccept = new ArrayList<>();
+        IntSupplier psiCount = () -> -1;
         int ownBundleCalls;
         boolean explode;
+
+        @Override
+        public synchronized List<String> ownProbeIds() {
+            return new ArrayList<>(probeIds);
+        }
 
         @Override
         public synchronized OwnBundle ownBundleForVisit() {
@@ -89,7 +104,10 @@ public class TransportVisitControlTest {
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
-            acceptedIds.add(TransportVisitClient.readJarBundleId(stagedJar));
+            String id = TransportVisitClient.readJarBundleId(stagedJar);
+            acceptedIds.add(id);
+            psiAtAccept.add(psiCount.getAsInt());
+            ownership.put(id, Ownership.MINE_ALREADY_PROCESSED);
             return true;
         }
     }
@@ -100,6 +118,7 @@ public class TransportVisitControlTest {
         store = new FakeRelayStore(tmp.newFolder("dropbox").toPath());
         ledger = new FakeLedgerAndRecency.Ledger();
         control = new FakeControl();
+        control.psiCount = carrier.psiExchanges::get;
         recency = new FakeLedgerAndRecency.Recency();
         fixtures = tmp.newFolder("fixtures").toPath();
         GrpcSecurityKey dropboxKey = new GrpcSecurityKey(tmp.newFolder("GrpcSecurity").toPath(), SecurityUtils.SERVER);
@@ -286,5 +305,84 @@ public class TransportVisitControlTest {
 
         assertFalse(r.carrierTrusted());
         assertEquals(List.of("mine1"), control.acceptedIds);
+    }
+
+    // ------------------------------------------------------------------ own bundle by id (Research/R11 RT8)
+
+    /** Five foreign bundles plus the own one: the own one is accepted by id before the first psiExchange. */
+    @Test(timeout = 60_000)
+    public void probeFindsOwnBundleBeforeAnyPsi() throws Exception {
+        for (int i = 0; i < 5; i++) BundleFixtures.bundleJar(carrier.toClient, "d" + i, "d" + i, 100);
+        BundleFixtures.bundleJar(carrier.toClient, "own-7", "own-7", 120);
+        control.ownership.put("own-7", ControlChannel.Ownership.MINE_NEW);
+        control.probeIds.addAll(List.of("own-9", "own-8", "own-7", "own-6"));
+
+        VisitResult r = visit();
+
+        assertTrue(r.toString(), r.ok());
+        assertEquals(List.of("own-7"), control.acceptedIds);
+        assertEquals("accepted before download-all started", List.of(0), control.psiAtAccept);
+        assertTrue(r.ownByProbe());
+        assertEquals("stops at the first hit", 3, carrier.byIdDownloads.get());
+        assertEquals(1, r.controlProcessed());
+        // Download-all is unchanged: every foreign bundle is relayed, the own one is seen again and dropped.
+        assertEquals(List.of("d0", "d1", "d2", "d3", "d4"), downstreamIds());
+        assertEquals(1, r.skipped());
+        assertEquals(6, r.carrierBundleCount());
+        assertEquals(carrier.psiExchanges.get(), r.psiExchanges());
+    }
+
+    /** No probed id is on the carrier: NOT_FOUND is no error and download-all still finds the own bundle. */
+    @Test(timeout = 60_000)
+    public void probeMissFallsBackToDownloadAll() throws Exception {
+        BundleFixtures.bundleJar(carrier.toClient, "d1", "d1", 100);
+        BundleFixtures.bundleJar(carrier.toClient, "mine1", "mine1", 120);
+        control.ownership.put("mine1", ControlChannel.Ownership.MINE_NEW);
+        control.probeIds.addAll(List.of("own-2", "own-1"));
+
+        VisitResult r = visit();
+
+        assertTrue(r.toString(), r.ok());
+        assertEquals(2, carrier.byIdDownloads.get());
+        assertFalse(r.ownByProbe());
+        assertEquals(List.of("mine1"), control.acceptedIds);
+        assertTrue("found by download-all", control.psiAtAccept.get(0) > 0);
+        assertEquals(List.of("d1"), downstreamIds());
+        assertEquals(1, r.controlProcessed());
+    }
+
+    /** Full box, own bundle already fetched by id: control-only mode has nothing to look for and ends at once. */
+    @Test(timeout = 60_000)
+    public void controlOnlyEndsAfterProbeHit() throws Exception {
+        for (int i = 0; i < 4; i++) BundleFixtures.bundleJar(carrier.toClient, "d" + i, "d" + i, 100);
+        BundleFixtures.bundleJar(carrier.toClient, "own-3", "own-3", 120);
+        control.ownership.put("own-3", ControlChannel.Ownership.MINE_NEW);
+        control.probeIds.add("own-3");
+        store.hasCapacity = false;
+
+        VisitResult r = visit();
+
+        assertEquals(List.of("own-3"), control.acceptedIds);
+        assertTrue(r.ownByProbe());
+        assertEquals("no control-only walk", 0, carrier.psiDownloads.get());
+        assertEquals(1, r.psiExchanges()); // the counting exchange only
+        assertEquals(List.of(), downstreamIds());
+        assertTrue(r.lastError(), r.lastError().contains("already found by id"));
+    }
+
+    /** A carrier that never synced with our server cannot hold our own bundle: no by-id requests. */
+    @Test(timeout = 60_000)
+    public void untrustedCarrierSkipsProbe() throws Exception {
+        carrier.recency = GetRecencyBlobResponse.getDefaultInstance();
+        BundleFixtures.bundleJar(carrier.toClient, "own-1", "own-1", 120);
+        control.ownership.put("own-1", ControlChannel.Ownership.MINE_NEW);
+        control.probeIds.add("own-1");
+
+        VisitResult r = visit();
+
+        assertFalse(r.carrierTrusted());
+        assertEquals(0, carrier.byIdDownloads.get());
+        assertFalse(r.ownByProbe());
+        assertEquals(List.of("own-1"), control.acceptedIds); // still found by download-all
     }
 }
