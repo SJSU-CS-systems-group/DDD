@@ -25,6 +25,7 @@ import net.discdd.server.applicationdatamanager.ServerApplicationDataManager;
 import net.discdd.server.bundlerouting.BundleRouting;
 import net.discdd.server.bundlerouting.RoutingSource;
 import net.discdd.server.bundletransmission.ServerBundleTransmission;
+import net.discdd.server.repository.BundleMetadataRepository;
 import net.discdd.server.repository.ClientDownstreamAckRepository;
 import net.discdd.server.repository.DropboxNodeRepository;
 import net.discdd.server.repository.DropboxRecencyGrantRepository;
@@ -37,6 +38,7 @@ import net.discdd.server.repository.entity.RoutingEdgeId;
 import net.discdd.server.service.GrpcExecutor;
 import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.utils.BundleUtils;
+import net.discdd.utils.Constants;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
@@ -147,6 +149,8 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
     BundleRouting bundleRouting;
     @Autowired
     InventorySightingRepository inventorySightingRepository;
+    @Autowired
+    BundleMetadataRepository bundleMetadataRepository;
 
     @BeforeAll
     static void setUpDropboxEndpoint() throws Exception {
@@ -505,7 +509,37 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
         assertFalse(routingEdgeRepository.existsById(uploaded("T3", clientId)), "T3 never carried the client");
     }
 
+    /**
+     * RT5 window bound: while no visit uploads the dropbox's bundle (so no ack arrives), the server issues no counter
+     * past the dropbox's window however much it queues; the real endpoint accepts the re-offered last bundle, and
+     * its ack lets the server resume.
+     */
+    @Test
+    void test14DropboxCounterBounded() throws Exception {
+        final int window = Constants.DEFAULT_WINDOW_SIZE;
+        long acked = clientDownstreamAckRepository.findById(dropboxId).orElseThrow().ackedCounter;
+        String last = null;
+        for (int i = 0; i < window + 5; i++) {
+            aduStores.getSendADUsStorage().addADU(dropboxId, TEST_APPID, ("queued" + i).getBytes(), -1);
+            last = generateBundleForClient(dropboxId);
+            long counter = counterOf(last);
+            assertTrue(counter <= acked + window, () -> "counter " + counter + " is past the dropbox's window");
+        }
+        assertEquals(acked + window, counterOf(last));
+
+        // the endpoint accepts the bound bundle (an out-of-window one would not be acked), and its next upload acks it
+        dropboxDownloadsBundle();
+        var node = dropboxNodeRepository.findById(dropboxId).orElseThrow();
+        dropboxUploadsInventory(report(node.lastReportSeq + 1, node.lastPlanSeq, List.of(), List.of(), List.of()));
+        assertEquals(acked + window, clientDownstreamAckRepository.findById(dropboxId).orElseThrow().ackedCounter);
+        assertEquals(acked + window + 1, counterOf(generateBundleForClient(dropboxId)));
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    private long counterOf(String bundleId) {
+        return bundleMetadataRepository.findById(bundleId).orElseThrow().bundleCounter;
+    }
 
     private static RoutingEdgeId uploaded(String peerId, String client) {
         return new RoutingEdgeId(peerId, client, RoutingSource.UPLOADED);

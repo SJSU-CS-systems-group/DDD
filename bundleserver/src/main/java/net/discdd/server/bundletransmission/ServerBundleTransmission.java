@@ -79,7 +79,6 @@ public class ServerBundleTransmission {
         Arrays.setAll(receiveLocks, ignored -> new ReentrantLock());
     }
     private final ExecutorService executorService = Executors.newCachedThreadPool();
-    public static final int WINDOW_LENGTH = 3;
     private final BundleServerConfig config;
     private final ServerBundleSecurity bundleSecurity;
     private final ServerApplicationDataManager applicationDataManager;
@@ -392,13 +391,6 @@ public class ServerBundleTransmission {
         }
     }
 
-    public String generateBundleId(String clientId) {
-        if (this.serverWindowService.generateNewBundleCounter(clientId) <= 0) {
-            logger.log(INFO, "Server's window is full for the client " + clientId);
-        }
-        return this.applicationDataManager.getBundleCountersForClient(clientId).lastSentBundleId;
-    }
-
     public String generateBundleForClient(String clientId) throws InvalidClientIDException, GeneralSecurityException,
             InvalidKeyException, IOException {
         logger.log(INFO, "[BundleTransmission] Processing bundle generation request for client " + clientId);
@@ -406,7 +398,8 @@ public class ServerBundleTransmission {
         applicationDataManager.beforeBundleGeneration(clientId);
 
         ClientBundleCounters bundleCountersForClient = this.applicationDataManager.getBundleCountersForClient(clientId);
-        if (this.serverWindowService.isWindowFull(clientId)) {
+        // a counter past the client's window would be rejected: queued ADUs, plans and grants wait for the next ack
+        if (this.serverWindowService.isWindowFull(clientId, bundleCountersForClient.lastSentBundleCounter)) {
             logger.log(INFO,
                        "Server's window is full for the client " + clientId + " returning last sent bundle ID " +
                                bundleCountersForClient.lastSentBundleId);
