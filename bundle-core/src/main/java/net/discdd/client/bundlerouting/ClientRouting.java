@@ -37,7 +37,14 @@ import static java.util.logging.Level.WARNING;
  *       receipt time and knows this is the timestamp format (a v1 file of sighting counts has no {@code @gen}).</li>
  *   <li>Loading is tolerant: keys that are not peer IDs, legacy counts (values below {@link #MIN_EPOCH_MS}) and
  *       corrupt JSON are dropped, values more than {@link #FUTURE_SKEW_MS} ahead are clamped to now, and the file is
- *       rewritten once if anything was dropped or clamped.</li>
+ *       rewritten once if anything was dropped or clamped. Stale temp files a killed write left behind are
+ *       removed.</li>
+ *   <li>Time can go backwards (a phone clock that was wrong ahead and then corrected): {@link #record} and
+ *       {@link #bundleMetaData} clamp in-memory values more than {@link #FUTURE_SKEW_MS} ahead to now, so such a peer
+ *       gets one refresh and then ages normally instead of looking freshly met in every bundle.</li>
+ *   <li>Two instances can share a root for a while (BundleClient's re-initialization keeps an in-flight exchange
+ *       on the old one), so a write first merges the file's entries (newest per peer wins) instead of overwriting
+ *       what the other instance recorded.</li>
  * </ul>
  * Never throws for routing reasons: a failed write is logged and routing simply carries less.
  */
@@ -54,6 +61,9 @@ public class ClientRouting {
     static final long FUTURE_SKEW_MS = 60L * 60 * 1000;
     /** anything smaller is not an epoch-ms timestamp (legacy files hold sighting counts) */
     static final long MIN_EPOCH_MS = 1_000_000_000_000L;
+    /** a temp file older than this is left from a killed write; a younger one may be another instance's write */
+    static final long STALE_TMP_MS = 60L * 1000;
+    private static final String TMP_SUFFIX = ".tmp";
 
     private static final ObjectMapper mapper = new ObjectMapper();
     /** newest first, then by key, so the cap is deterministic */
@@ -77,6 +87,7 @@ public class ClientRouting {
 
     /** @return true if the loaded map differs from the file (so it should be rewritten) */
     private boolean load(long nowMs) {
+        sweepStaleTempFiles();
         if (!metadataFile.exists()) return false;
         Map<String, Long> stored;
         try {
@@ -110,6 +121,32 @@ public class ClientRouting {
         return changed;
     }
 
+    /**
+     * best effort: deletes {@code routing.metadata*.tmp} siblings older than {@link #STALE_TMP_MS}, judged by the
+     * wall clock that stamped their mtime
+     */
+    private void sweepStaleTempFiles() {
+        long nowMs = System.currentTimeMillis();
+        File dir = metadataFile.getAbsoluteFile().getParentFile();
+        String prefix = metadataFile.getName();
+        File[] leftovers = dir == null ? null : dir.listFiles((d, name) -> name.startsWith(prefix) &&
+                name.endsWith(TMP_SUFFIX) && !name.equals(prefix));
+        if (leftovers == null) return;
+        for (File tmp : leftovers) {
+            if (nowMs - tmp.lastModified() < STALE_TMP_MS) continue;
+            try {
+                Files.deleteIfExists(tmp.toPath());
+            } catch (IOException | SecurityException e) {
+                logger.log(WARNING, "Could not delete stale " + tmp, e);
+            }
+        }
+    }
+
+    /** clamps in-memory values more than {@link #FUTURE_SKEW_MS} ahead of {@code nowMs} to {@code nowMs} */
+    private void clampFuture(long nowMs) {
+        peers.replaceAll((peer, lastMet) -> lastMet > nowMs + FUTURE_SKEW_MS ? nowMs : lastMet);
+    }
+
     static boolean isPeerId(String key) {
         return key != null && PEER_ID.matcher(key).matches();
     }
@@ -125,10 +162,12 @@ public class ClientRouting {
             logger.log(WARNING, "Not recording invalid peer ID " + peerId);
             return false;
         }
+        clampFuture(nowMs);
         Long old = peers.get(peerId);
         peers.put(peerId, old == null ? nowMs : Math.max(old, nowMs));
         Long stored = persisted.get(peerId);
-        boolean material = stored == null || nowMs - stored >= REFRESH_MS;
+        // a stored value from a clock that has since gone back is rewritten once with the clamped time
+        boolean material = stored == null || nowMs - stored >= REFRESH_MS || stored > nowMs + FUTURE_SKEW_MS;
         return material && persist(nowMs);
     }
 
@@ -148,6 +187,7 @@ public class ClientRouting {
      *         {@code {String: Long}} map, so servers that parse the old format read it.
      */
     public synchronized byte[] bundleMetaData(long nowMs) throws IOException {
+        clampFuture(nowMs);
         var out = new LinkedHashMap<String, Long>();
         peers.entrySet()
                 .stream()
@@ -160,20 +200,23 @@ public class ClientRouting {
     }
 
     /**
-     * Drops entries at least {@link #MAX_AGE_MS} older than {@code nowMs} from memory (they would never ride in a
-     * bundle again, so the map stays bounded), then writes the whole map to a temp file next to the routing file and
+     * Merges the file's valid entries into memory (newest per peer wins, future values clamped as in {@link #load}),
+     * so a write never drops a peer another instance on the same root recorded. Then drops entries at least
+     * {@link #MAX_AGE_MS} older than {@code nowMs} from memory (they would never ride in a bundle again, so the map
+     * stays bounded), and writes the whole map to a temp file next to the routing file and
      * moves it into place. On failure the file keeps its old content, so the next {@link #record} of a changed peer
      * tries again.
      *
      * @return true if the file was written
      */
     private boolean persist(long nowMs) {
+        mergeFile(nowMs);
         peers.values().removeIf(lastMet -> nowMs - lastMet >= MAX_AGE_MS);
         Path file = metadataFile.toPath().toAbsolutePath();
         Path tmp = null;
         try {
             Files.createDirectories(file.getParent());
-            tmp = Files.createTempFile(file.getParent(), file.getFileName().toString(), ".tmp");
+            tmp = Files.createTempFile(file.getParent(), file.getFileName().toString(), TMP_SUFFIX);
             mapper.writeValue(tmp.toFile(), new TreeMap<>(peers));
             try {
                 Files.move(tmp, file, ATOMIC_MOVE, REPLACE_EXISTING);
@@ -193,6 +236,23 @@ public class ClientRouting {
                     logger.log(WARNING, "Could not delete " + tmp, e);
                 }
             }
+        }
+    }
+
+    /** best effort: a missing, unreadable or corrupt file merges nothing */
+    private void mergeFile(long nowMs) {
+        if (!metadataFile.exists()) return;
+        Map<String, Long> stored;
+        try {
+            stored = mapper.readValue(metadataFile, new TypeReference<HashMap<String, Long>>() {});
+        } catch (IOException e) {
+            return;
+        }
+        if (stored == null) return;
+        for (var entry : stored.entrySet()) {
+            Long value = entry.getValue();
+            if (!isPeerId(entry.getKey()) || value == null || value < MIN_EPOCH_MS) continue;
+            peers.merge(entry.getKey(), value > nowMs + FUTURE_SKEW_MS ? nowMs : value, Math::max);
         }
     }
 }

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,7 +82,8 @@ class ClientRoutingTest {
         assertFalse(routing.changedSince(mtime));
         assertEquals(NOW + DAY - 1, parse(routing.bundleMetaData(NOW + DAY)).get(P1), "but it is kept in memory");
 
-        assertFalse(routing.record(P1, NOW - HOUR), "a backwards clock is not material");
+        // a backwards step within FUTURE_SKEW_MS (a larger one is a clock correction; see the clamp tests)
+        assertFalse(routing.record(P1, NOW + DAY - HOUR / 2), "a backwards clock is not material");
         assertEquals(NOW + DAY - 1, parse(routing.bundleMetaData(NOW + DAY)).get(P1), "and never lowers the value");
 
         assertTrue(routing.record(P1, NOW + DAY), "24 h after the stored value it is material again");
@@ -190,12 +192,12 @@ class ClientRoutingTest {
         var paths = paths(root);
         writeFile(paths, "{\"" + P1 + "\":" + NOW + "}");
         var routing = new ClientRouting(paths, NOW);
-        // an outside write after load is replaced, not merged: the file is always the whole in-memory map
+        // an outside write after load (another instance on the same root) is merged, not overwritten
         String outsider = peer(9);
-        writeFile(paths, "{\"" + outsider + "\":" + NOW + "}");
+        writeFile(paths, "{\"" + outsider + "\":" + NOW + ",\"" + P1 + "\":" + (NOW - HOUR) + "}");
 
         assertTrue(routing.record(P2, NOW + 1));
-        assertEquals(Map.of(P1, NOW, P2, NOW + 1), fileOf(paths));
+        assertEquals(Map.of(P1, NOW, P2, NOW + 1, outsider, NOW), fileOf(paths), "newest per peer wins");
         try (var files = Files.list(paths.metadataFile.toPath().getParent())) {
             List<String> names = files.map(p -> p.getFileName().toString()).toList();
             assertEquals(List.of(paths.metadataFile.getName()), names, "no temp file is left behind");
@@ -229,5 +231,61 @@ class ClientRoutingTest {
         assertEquals(Map.of(P1, NOW, P2, NOW, GEN_KEY, NOW), parse(b.bundleMetaData(NOW)));
         assertEquals(Map.of(P1, NOW), fileOf(pathsA));
         assertEquals(Map.of(P1, NOW, P2, NOW), fileOf(pathsB));
+    }
+
+    /** two instances on one root (BundleClient re-initialization): neither write drops the other's peer */
+    @Test
+    void secondInstanceOnSameRootDoesNotDropPeers() throws Exception {
+        var paths = paths(root);
+        var a = new ClientRouting(paths, NOW);
+        var b = new ClientRouting(paths, NOW);
+        assertTrue(a.record(P1, NOW));
+        assertTrue(b.record(P2, NOW + 1));
+        assertEquals(Map.of(P1, NOW, P2, NOW + 1), fileOf(paths), "B's write kept A's peer");
+        assertEquals(Map.of(P1, NOW, P2, NOW + 1, GEN_KEY, NOW + 2), parse(b.bundleMetaData(NOW + 2)));
+    }
+
+    /** a clock that was wrong ahead and then corrected back: the peer is clamped once, then ages normally */
+    @Test
+    void clockGoingBackClampsInMemoryFutureValues() throws Exception {
+        var paths = paths(root);
+        long ahead = NOW + 100 * DAY;
+        var routing = new ClientRouting(paths, ahead);
+        assertTrue(routing.record(P1, ahead));
+
+        // clock corrected to NOW: P1 is no longer reported as met in the future
+        assertEquals(Map.of(P1, NOW, GEN_KEY, NOW), parse(routing.bundleMetaData(NOW)));
+        assertEquals(Map.of(GEN_KEY, NOW + 31 * DAY), parse(routing.bundleMetaData(NOW + 31 * DAY)),
+                     "the clamped value ages out like any other");
+    }
+
+    /** meeting a future-dated peer again rewrites its stored value even within REFRESH_MS of the clamp */
+    @Test
+    void futureStoredValueIsMaterial() throws Exception {
+        var paths = paths(root);
+        long ahead = NOW + 100 * DAY;
+        var routing = new ClientRouting(paths, ahead);
+        assertTrue(routing.record(P1, ahead));
+        assertTrue(routing.record(P1, NOW), "the stored future value is rewritten");
+        assertEquals(Map.of(P1, NOW), fileOf(paths));
+        assertFalse(routing.record(P1, NOW + HOUR), "then refreshes follow the normal 24 h rule");
+    }
+
+    @Test
+    void staleTempFilesSweptOnLoad() throws Exception {
+        var paths = paths(root);
+        Path dir = paths.metadataFile.toPath().toAbsolutePath().getParent();
+        Files.createDirectories(dir);
+        String name = paths.metadataFile.getName();
+        Path stale = Files.writeString(dir.resolve(name + "123.tmp"), "{}");
+        Path fresh = Files.writeString(dir.resolve(name + "456.tmp"), "{}");
+        Path other = Files.writeString(dir.resolve("unrelated.tmp"), "x");
+        long now = System.currentTimeMillis();
+        Files.setLastModifiedTime(stale, FileTime.fromMillis(now - 2 * ClientRouting.STALE_TMP_MS));
+
+        new ClientRouting(paths, now);
+        assertFalse(Files.exists(stale), "a leftover from a killed write is removed");
+        assertTrue(Files.exists(fresh), "a recent one may be another instance's write in flight");
+        assertTrue(Files.exists(other), "only routing.metadata temp files are touched");
     }
 }

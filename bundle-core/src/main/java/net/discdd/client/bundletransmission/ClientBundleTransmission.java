@@ -180,10 +180,6 @@ public class ClientBundleTransmission {
         deleteSentBundle(bundle);
     }
 
-    public static String bundleSenderToString(String senderId) {
-        return senderId;
-    }
-
     private Bundle generateNewBundle(String bundleId) throws IOException, NoSuchAlgorithmException,
             InvalidKeyException {
         Acknowledgement ackRecord = AckRecordUtils.readAckRecordFromFile(clientPaths.ackRecordPath);
