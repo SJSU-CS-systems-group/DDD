@@ -8,9 +8,10 @@ import java.util.Objects;
  *
  * <p>Consumers:
  * <ul>
- *   <li>{@code wifi/WifiDirectRadioDriver} reports the service's verdict ({@code service/VisitCoordinator}, based
- *       on {@link #ok()}) to the role cycle as {@code VisitCallback.visitFinished(gen, ok)}; with "return after
- *       visit" ON a successful visit ends VISIT mode early.</li>
+ *   <li>{@code wifi/DropboxWifiJoiner} records and logs {@link #ok()} as the visit verdict, and reports the
+ *       service's early-return flag ({@code service/VisitCoordinator}: {@link #ok()} and the own recency blob
+ *       held) to the role cycle as {@code VisitCallback.visitFinished(gen, returnEarly)}; with "return after
+ *       visit" ON that ends VISIT mode early.</li>
  *   <li>The UI shows it as {@code DropboxStatus.LastVisit}.</li>
  * </ul>
  *

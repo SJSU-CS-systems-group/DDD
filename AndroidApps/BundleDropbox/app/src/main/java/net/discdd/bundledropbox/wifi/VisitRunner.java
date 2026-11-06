@@ -10,8 +10,8 @@ import java.util.function.BooleanSupplier;
  * (getRecencyBlob, the dropbox's own control bundle, upload of unforwarded upstream bundles, download-all via PSI;
  * Research/R2 §4.3, §8) is {@code visit/TransportVisitClient}. {@code service/VisitCoordinator} implements this
  * interface: it holds one {@code ActivityGate} "visit" token from the start of the join to the end of the
- * exchange, and returns {@code ok()} of the visit result, but only once the dropbox holds its own recency blob
- * (bootstrap rule).
+ * exchange, and returns an {@link Outcome}: whether the exchange succeeded, and separately whether VISIT may
+ * end early, which also needs the dropbox's own recency blob (bootstrap rule).
  *
  * <p>Join hooks (audit m1, {@code join-not-protected-by-gate}): the joiner calls {@link #beginJoin} right
  * before it issues {@code connect} and {@link #endJoin} when an attempt ends, so a dwell that expires
@@ -31,6 +31,44 @@ import java.util.function.BooleanSupplier;
  */
 @FunctionalInterface
 public interface VisitRunner {
+    /**
+     * What one carrier exchange reports to the joiner. The two flags differ during bootstrap: a complete
+     * exchange is {@link #ok()} although the dropbox may not end VISIT early yet (audit CYC-2). Plain final
+     * class rather than a Java record (project rule).
+     */
+    final class Outcome {
+        /** No exchange ran, or it failed or threw. */
+        public static final Outcome FAILED = new Outcome(false, false);
+
+        private final boolean ok;
+        private final boolean returnEarly;
+
+        /**
+         * @param ok          the exchange completed (transfers finished); the joiner logs and records this
+         * @param returnEarly the controller may end VISIT early; reported as
+         *                    {@code VisitCallback.visitFinished(gen, returnEarly)}
+         */
+        public Outcome(boolean ok, boolean returnEarly) {
+            this.ok = ok;
+            this.returnEarly = returnEarly;
+        }
+
+        /** @return true if the exchange completed; the visit verdict in the carrier history and user log. */
+        public boolean ok() {
+            return ok;
+        }
+
+        /** @return true if the controller may end VISIT early ({@code VisitCallback.visitFinished}). */
+        public boolean returnEarly() {
+            return returnEarly;
+        }
+
+        @Override
+        public String toString() {
+            return "Outcome{ok=" + ok + ", returnEarly=" + returnEarly + "}";
+        }
+    }
+
     /**
      * Called on the main thread right before the joiner issues {@code connect} to a carrier. The runner may
      * reserve whatever must outlive the join (the service takes the visit gate token here).
@@ -60,9 +98,8 @@ public interface VisitRunner {
      *                       normally 192.168.49.1); the carrier's gRPC server is on port 7777
      * @param carrierId      the carrier's TXT {@code transportId} (key for {@code ForwardLedger})
      * @param stopRequested  becomes true when the visit must end
-     * @return true if the exchange completed (transfers finished) and the dropbox may host; reported to the
-     *         controller as {@code VisitCallback.visitFinished(gen, success)}
-     * @throws Exception any failure; treated as {@code false}
+     * @return the exchange's {@link Outcome}; {@code null} is treated as {@link Outcome#FAILED}
+     * @throws Exception any failure; treated as {@link Outcome#FAILED}
      */
-    boolean runVisit(InetAddress carrierAddress, String carrierId, BooleanSupplier stopRequested) throws Exception;
+    Outcome runVisit(InetAddress carrierAddress, String carrierId, BooleanSupplier stopRequested) throws Exception;
 }

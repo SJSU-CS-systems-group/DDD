@@ -28,8 +28,8 @@ import java.util.logging.Logger;
  * is locked out until the dropbox's next server-issued blob arrives (one carrier round trip). The cycle
  * therefore minimizes refusals: it withdraws the DNS-SD record as soon as a
  * HOST drain begins ({@code RadioDriver.withdrawHostAdvertisement}), and admitted clients are never reaped
- * while draining ({@link ClientSessionTracker}). A draining dropbox never refuses an already admitted
- * client, so an exchange is only cut in half by the drain cap.
+ * once a drain has begun, joined-client grace included ({@link ClientSessionTracker}). A draining dropbox
+ * never refuses an already admitted client, so an exchange is only cut in half by the drain cap.
  *
  * <p>Stateless apart from the tracker; thread-safe.
  */

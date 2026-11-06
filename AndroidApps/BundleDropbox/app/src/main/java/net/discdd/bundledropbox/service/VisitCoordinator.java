@@ -31,9 +31,16 @@ import java.util.function.Supplier;
  * gets the drain grace (bounded by the drain cap) to finish cleanly instead of being torn down mid-join. If no
  * {@code beginJoin} preceded the exchange, {@link #runVisit} takes the token itself.
  *
+ * <h2>Status (audit SW-2)</h2>
+ * The join token is not an exchange: {@link #activeSessionsForStatus} counts the "visit" key only while
+ * {@link #runVisit} is exchanging, so the Status tab does not show "Exchanging with transport" while the dropbox
+ * is still connecting. {@link #endJoin} reports a released join token as {@link Events#visitSkipped}, so status
+ * is republished after a failed or timed-out join.
+ *
  * <h2>Early return</h2>
- * {@link #returnEarly} decides the {@code success} flag reported to the controller (which ends VISIT early
- * when {@code return_after_visit} is on). See that method for the bootstrap rule (Review #9).
+ * {@link #runVisit} returns the visit verdict ({@link VisitResult#ok()}) and, separately, {@link #returnEarly},
+ * the flag reported to the controller (which ends VISIT early when {@code return_after_visit} is on). See that
+ * method for the bootstrap rule (Review #9); a complete bootstrap visit is ok but not an early return (CYC-2).
  *
  * <p>Thread-safety: {@link #beginJoin}/{@link #endJoin} run on the main thread, {@link #runVisit} on a driver
  * worker; the pending join token is guarded by {@code this}. Gate tokens are closed outside that lock because
@@ -53,7 +60,10 @@ public final class VisitCoordinator implements VisitRunner {
         void cancel();
     }
 
-    /** Service-side reactions (status, logs). Called on the worker thread; must not block for long. */
+    /**
+     * Service-side reactions (status, logs). Called on the worker thread ({@link #endJoin}'s
+     * {@code visitSkipped}: on the main thread); must not block for long.
+     */
     public interface Events {
         /** The exchange is about to start (the token is held). */
         void exchangeStarting(String carrierId);
@@ -64,7 +74,7 @@ public final class VisitCoordinator implements VisitRunner {
         /** The exchange's token was released (always paired with {@link #exchangeStarting}). */
         void exchangeEnded();
 
-        /** No exchange was attempted with this joined carrier, e.g. the dwell ended first. */
+        /** No exchange was attempted with this carrier, e.g. the dwell ended first or the join failed. */
         void visitSkipped(String carrierId, String why);
     }
 
@@ -75,6 +85,7 @@ public final class VisitCoordinator implements VisitRunner {
 
     private ActivityGate.Token joinToken; // guarded by this
     private String joinCarrierId; // guarded by this
+    private boolean exchanging; // guarded by this; true from exchangeStarting until the token is released
 
     /**
      * @param gate       the cycle's gate; read lazily because the driver (which holds this runner) is built
@@ -137,16 +148,33 @@ public final class VisitCoordinator implements VisitRunner {
     /**
      * Joiner hook: the attempt that called {@link #beginJoin} ended without {@link #runVisit} (connect failed,
      * timed out, wrong group, P2P disabled). Releases its token, which may complete a pending drain at once.
-     * A no-op if {@link #runVisit} already took the token, so it is safe to call on every attempt end.
+     * A no-op if {@link #runVisit} already took the token, so it is safe to call on every attempt end. A
+     * released token is reported as {@link Events#visitSkipped}, which republishes status (SW-2).
      */
     @Override
     public void endJoin(String carrierId) {
         ActivityGate.Token t = takeJoinToken(carrierId);
-        if (t != null) t.close();
+        if (t == null) return;
+        t.close();
+        events.visitSkipped(carrierId, "join ended without an exchange");
+    }
+
+    /**
+     * Gate keys to publish as active sessions: {@link ActivityGate#activeKeyCount()}, but the "visit" key counts
+     * only while an exchange runs, not while a join token is pending (SW-2). {@code StatusFormat} reads a
+     * non-zero count in VISITING as "Exchanging with transport".
+     */
+    public int activeSessionsForStatus(ActivityGate g) {
+        boolean exchangingNow;
+        synchronized (this) {
+            exchangingNow = exchanging;
+        }
+        int keys = g.activeKeyCount();
+        return !exchangingNow && g.isAdmitted(VISIT_GATE_KEY) ? Math.max(0, keys - 1) : keys;
     }
 
     @Override
-    public boolean runVisit(InetAddress carrierAddress, String carrierId, BooleanSupplier stopRequested) {
+    public Outcome runVisit(InetAddress carrierAddress, String carrierId, BooleanSupplier stopRequested) {
         ActivityGate g = gate.get();
         Exchange ex = exchange.get();
         // The joiner runs one attempt at a time, so a pending join token belongs to this exchange (same key).
@@ -154,20 +182,21 @@ public final class VisitCoordinator implements VisitRunner {
         if (g == null || ex == null) {
             if (token != null) token.close();
             events.visitSkipped(carrierId, "dropbox not initialized");
-            return false;
+            return Outcome.FAILED;
         }
         if (token == null) token = g.tryAdmit(VISIT_GATE_KEY);
         if (token == null) {
             events.visitSkipped(carrierId, "the transport period ended before the exchange");
-            return false;
+            return Outcome.FAILED;
         }
         if (!token.isValid()) {
             // Force-released during the join (drain cap, pause, stop): the controller is stopping the visit.
             events.visitSkipped(carrierId, "cancelled while joining");
-            return false;
+            return Outcome.FAILED;
         }
         token.setCancelHook(ex::cancel);
         try {
+            setExchanging(true);
             events.exchangeStarting(carrierId);
             // token::isCancelled: a drain-cap force release that lands before visit() starts must not be lost
             // (the hook's cancel() alone would be reset when the visit begins).
@@ -177,8 +206,9 @@ public final class VisitCoordinator implements VisitRunner {
                                      () -> !stopRequested.getAsBoolean() && !g.isClosing(),
                                      token::isCancelled);
             events.visitResult(r);
-            return returnEarly(r, ownBlobHeld.getAsBoolean());
+            return new Outcome(r.ok(), returnEarly(r, ownBlobHeld.getAsBoolean()));
         } finally {
+            setExchanging(false);
             token.close(); // may fire the drain listener: VISIT_DRAINING ends now
             events.exchangeEnded();
         }
@@ -202,6 +232,10 @@ public final class VisitCoordinator implements VisitRunner {
     /** @return true while a join token taken by {@link #beginJoin} is pending (tests). */
     synchronized boolean hasPendingJoin() {
         return joinToken != null;
+    }
+
+    private synchronized void setExchanging(boolean on) {
+        exchanging = on;
     }
 
     /** @param carrierId only take the token of this carrier, or {@code null} for any pending token */

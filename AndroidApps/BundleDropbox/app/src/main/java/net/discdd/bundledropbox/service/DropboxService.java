@@ -155,7 +155,9 @@ public class DropboxService extends Service implements DropboxControls {
     private final StatusErrors errors = new StatusErrors();
     /**
      * Current notification text (main thread). Every start command must call {@code startForeground}, which
-     * re-posts the notification; reusing this keeps the role or failure text instead of resetting it (m13).
+     * re-posts the notification; reusing this keeps the role or failure text instead of resetting it (m13),
+     * except after an operator Stop, when it is the stale pre-Stop role ({@link RelayPolicy#startNotificationText},
+     * SW-3).
      */
     private String notificationText;
 
@@ -205,7 +207,9 @@ public class DropboxService extends Service implements DropboxControls {
         super.onStartCommand(intent, flags, startId);
         // startForegroundService() requires startForeground() promptly on every start command, even one that
         // is refused below, so this runs synchronously each time; it is cheap and idempotent.
-        if (notificationText == null) notificationText = getString(R.string.dropbox_notification_text);
+        notificationText = RelayPolicy.startNotificationText(notificationText,
+                                                             getString(R.string.dropbox_notification_text),
+                                                             relayStopped);
         startInForeground();
         SharedPreferences p = DropboxPrefs.get(this);
         if (intent != null && ACTION_START.equals(intent.getAction())) {
@@ -626,10 +630,10 @@ public class DropboxService extends Service implements DropboxControls {
             if (current == CycleMode.HOSTING || current == CycleMode.VISITING || current == CycleMode.STOPPED ||
                     current == CycleMode.UNAVAILABLE) {
                 logUi(UserLogType.WIFI, current == CycleMode.UNAVAILABLE ? Level.WARNING : Level.INFO,
-                      "Role: " + describe(current));
+                      "Role: " + RelayPolicy.describe(current));
                 getMainExecutor().execute(() -> {
                     // After Stop the notification is removed; a late role update must not post it again.
-                    if (!destroyed && !relayStopped) updateNotification("Currently " + describe(current));
+                    if (!destroyed && !relayStopped) updateNotification(RelayPolicy.roleNotificationText(current));
                 });
             }
         }
@@ -698,7 +702,7 @@ public class DropboxService extends Service implements DropboxControls {
             FileRecencyBlobStore r = recency;
             if (r != null) b.recencyBlobTimestamp(r.currentTimestamp());
             ActivityGate g = gate;
-            if (g != null) b.activeSessions(g.activeKeyCount());
+            if (g != null) b.activeSessions(visits.activeSessionsForStatus(g)); // a pending join is not a session
             FileRelayStore st = store;
             if (st != null) b.storeStats(st.stats());
             DropboxControlManager ctl = control;
@@ -1063,16 +1067,6 @@ public class DropboxService extends Service implements DropboxControls {
                 .setOnlyAlertOnce(true)
                 .setOngoing(true)
                 .build();
-    }
-
-    /** Operator-facing words for a mode (notification and Logs; the Status tab has its own labels). */
-    private static String describe(CycleMode mode) {
-        return switch (mode) {
-            case HOST_STARTING, HOSTING, HOST_DRAINING, HOST_STOPPING -> "serving clients";
-            case VISIT_STARTING, VISITING, VISIT_DRAINING, VISIT_STOPPING -> "visiting transports";
-            case UNAVAILABLE -> "radio unavailable, retrying";
-            case STOPPED -> "stopped";
-        };
     }
 
     private static String shortId(String id) {

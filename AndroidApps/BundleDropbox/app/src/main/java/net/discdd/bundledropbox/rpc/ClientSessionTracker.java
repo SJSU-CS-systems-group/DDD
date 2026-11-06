@@ -24,14 +24,16 @@ import java.util.logging.Logger;
  *       {@code lastExchange} for our advertised transportId even though the exchange failed, and then skips
  *       us until a newer recency blob is advertised (R3 §7). That is why the
  *       cycle withdraws the DNS-SD record as soon as a HOST drain begins, and why sessions are never reaped
- *       while draining (below).</li>
+ *       once a drain has begun (below).</li>
  *   <li>Later RPCs from an admitted IP reuse the session's token, so they pass even while draining:
  *       a client that already fetched the recency blob must be allowed to finish PSI and its upload.</li>
  *   <li>The session ends (token closed) when {@code uploadBundle} finishes, because upload is the last RPC
  *       of a stock client exchange (Research/R1 §3: getRecencyBlob, psiExchange, psiDownloadBundle,
  *       uploadBundle), or after {@link #DEFAULT_IDLE_TIMEOUT_MS} with no RPC in flight (client crashed,
  *       aborted after a RecencyException, or had nothing to upload).</li>
- *   <li>Idle sessions are reaped only while admissions are OPEN. Between {@code psiDownloadBundle} and
+ *   <li>Idle sessions are reaped only while {@link ActivityGate#isReapable()}: admissions open and no drain
+ *       begun, so not during the HOST_DRAINING joined-client grace either, although admissions are still
+ *       open then. Between {@code psiDownloadBundle} and
  *       {@code uploadBundle} the stock client does long local work with nothing in flight
  *       ({@code clientFindMatches}, {@code processReceivedBundle}, {@code generateBundleForTransmission});
  *       reaping it during a drain would make its upload a "new" client and get it refused, losing the most
@@ -123,16 +125,19 @@ public final class ClientSessionTracker {
 
     /**
      * Ends idle sessions: those with no RPC in flight whose last activity is at least the idle timeout
-     * ago. Called periodically (about once a second) by {@link DropboxRpcServer}. Does nothing while
-     * admissions are closed (see class docs: a reaped client could not be re-admitted during the drain).
+     * ago. Called periodically (about once a second) by {@link DropboxRpcServer}. Does nothing once a drain
+     * has begun, grace included (see class docs: a reaped client could not be re-admitted during the drain).
+     * The gate is read under this tracker's lock (tracker-then-gate, as in {@link #beginRpc}), so a drain
+     * that begins concurrently cannot slip between the check and the reap.
      *
      * @return the number of sessions ended
      */
     public int reapIdle() {
         List<Session> ended = new ArrayList<>();
         int count;
-        if (!gate.isOpen()) return 0; // draining: the drain cap, not the idle timer, bounds dead sessions
         synchronized (this) {
+            // Draining: the drain cap, not the idle timer, bounds dead sessions.
+            if (!gate.isReapable()) return 0;
             long now = clock.nowMillis();
             for (Session s : new ArrayList<>(sessions.values())) {
                 if (s.inFlight == 0 && now - s.lastActivityMs >= idleTimeoutMs) {

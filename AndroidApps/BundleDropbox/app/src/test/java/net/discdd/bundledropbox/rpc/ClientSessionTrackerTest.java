@@ -113,6 +113,19 @@ public class ClientSessionTrackerTest {
     }
 
     @Test
+    public void idleSessionsAreNotReapedOnceADrainBeganWithAdmissionsOpen() {
+        // CYC-1: the joined-client grace keeps admissions open while HOST_DRAINING.
+        tracker.beginRpc(A).end(false);
+        gate.beginDrain();
+        clock.advance(60_000);
+        assertTrue(gate.isOpen());
+        assertEquals("no reaping during the grace", 0, tracker.reapIdle());
+        assertTrue(tracker.hasSession(A));
+        gate.openAdmissions(); // next role period: reaping resumes
+        assertEquals(1, tracker.reapIdle());
+    }
+
+    @Test
     public void ticketEndIsIdempotent() {
         ClientSessionTracker.RpcTicket a1 = tracker.beginRpc(A);
         ClientSessionTracker.RpcTicket a2 = tracker.beginRpc(A);

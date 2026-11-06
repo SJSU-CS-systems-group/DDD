@@ -22,8 +22,8 @@ import java.util.logging.Logger;
  *       otherwise a client that already uploaded its first chunk would be cut off mid-exchange. That is
  *       why {@link #tryAdmit(String)} still succeeds for a key that has a live token while the gate is
  *       closed. The tracker holds one session token per IP until {@code uploadBundle} completes or the
- *       session is reaped idle (10 s, only while admissions are open); in-flight RPCs are counted in the
- *       tracker, not as extra tokens.</li>
+ *       session is reaped idle (10 s, only while {@link #isReapable()}: admissions open and no drain begun);
+ *       in-flight RPCs are counted in the tracker, not as extra tokens.</li>
  *   <li><b>VISIT side</b> ({@code service/VisitCoordinator}, the joiner's visit runner): one token, taken
  *       when the carrier connect starts ({@code beginJoin}, audit m1), covers the join and the whole carrier
  *       exchange. {@code TransportVisitClient} gets {@code !isClosing()} as its
@@ -34,7 +34,9 @@ import java.util.logging.Logger;
  *
  * <p>Admissions are normally closed at dwell expiry. The one exception is the controller's joined-client
  * grace in HOST_DRAINING (see {@code RoleCycleController}): admissions stay open for a few seconds so a
- * client that joined our group but has not sent its first RPC yet is admitted rather than refused.
+ * client that joined our group but has not sent its first RPC yet is admitted rather than refused. The
+ * controller marks the drain with {@link #beginDrain()} first, so idle reaping stays off for the whole
+ * drain, grace included: an admitted session must not be reaped and then refused as a "new" client.
  *
  * <p>The gate is role-agnostic: every START (HOST or VISIT) opens it. The client-facing gRPC server
  * listens for the whole service lifetime ({@code rpc/DropboxRpcServer}), so admission, not the socket, is
@@ -116,6 +118,7 @@ public final class ActivityGate {
     private final Map<String, Set<Token>> live = new HashMap<>();
     private int activeCount;
     private boolean open;
+    private boolean draining;
     private Runnable drainListener;
     private Runnable admissionListener;
 
@@ -163,9 +166,27 @@ public final class ActivityGate {
         open = false;
     }
 
-    /** Admit new keys again (a new role period started). */
+    /** Admit new keys again (a new role period started). Clears the {@link #beginDrain()} mark. */
     public synchronized void openAdmissions() {
         open = true;
+        draining = false;
+    }
+
+    /**
+     * Mark that the role period's drain has begun (dwell expired or role ending), whether or not
+     * admissions close now: the joined-client grace keeps them open in HOST_DRAINING. Stops idle reaping
+     * (see {@link #isReapable()}) until the next {@link #openAdmissions()}; admission is unchanged.
+     */
+    public synchronized void beginDrain() {
+        draining = true;
+    }
+
+    /**
+     * @return true if idle client sessions may be reaped: admissions are open and no drain has begun. Once
+     *         a drain begins, the drain cap, not the idle timer, bounds a dead session.
+     */
+    public synchronized boolean isReapable() {
+        return open && !draining;
     }
 
     /** @return true if admissions are open. */

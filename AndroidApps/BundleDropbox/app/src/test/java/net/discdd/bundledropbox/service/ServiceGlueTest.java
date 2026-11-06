@@ -1,5 +1,6 @@
 package net.discdd.bundledropbox.service;
 
+import net.discdd.bundledropbox.cycle.CycleMode;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -13,7 +14,7 @@ import static org.junit.Assert.fail;
 
 /**
  * JVM tests for the small service rules: {@link CycleEnvironmentBridge} (Review #10), {@link StatusErrors}
- * (audit m12) and {@link RelayPolicy} (audit m14, M1-M3, m15).
+ * (audit m12) and {@link RelayPolicy} (audit m14, M1-M3, m15, SW-3).
  */
 public class ServiceGlueTest {
     @Test
@@ -80,5 +81,16 @@ public class ServiceGlueTest {
         assertFalse("paused: no timers run", RelayPolicy.wantsWakeLock(true, true, false, false));
         assertFalse("stopped", RelayPolicy.wantsWakeLock(true, false, true, false));
         assertFalse("destroyed", RelayPolicy.wantsWakeLock(true, false, false, true));
+    }
+
+    /** SW-3: Start after Stop must not re-post the role from before the Stop. */
+    @Test
+    public void startAfterStopPostsTheStoppedTextNotTheStaleRole() {
+        String hosting = RelayPolicy.roleNotificationText(CycleMode.HOSTING);
+        assertEquals("Currently serving clients", hosting);
+        assertEquals("Currently stopped", RelayPolicy.startNotificationText(hosting, "initial", true));
+        assertEquals("a re-delivered start keeps the text (m13)", hosting,
+                     RelayPolicy.startNotificationText(hosting, "initial", false));
+        assertEquals("initial", RelayPolicy.startNotificationText(null, "initial", false));
     }
 }

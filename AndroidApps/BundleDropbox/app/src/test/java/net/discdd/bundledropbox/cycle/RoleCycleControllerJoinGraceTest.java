@@ -1,5 +1,7 @@
 package net.discdd.bundledropbox.cycle;
 
+import net.discdd.bundledropbox.rpc.ClientSessionTracker;
+import net.discdd.bundledropbox.rpc.RpcEventListener;
 import org.junit.Test;
 
 import static net.discdd.bundledropbox.cycle.CycleHarness.CAP;
@@ -47,6 +49,39 @@ public class RoleCycleControllerJoinGraceTest {
         h.s.runReady();
         assertEquals(CycleMode.HOST_STOPPING, h.c.mode());
         assertFalse(session.isCancelled());
+    }
+
+    /**
+     * CYC-1 / SW-1: the grace keeps admissions open, but the drain has begun, so the idle reaper must not end
+     * an admitted client doing its local work; otherwise its upload after the grace is refused.
+     */
+    @Test
+    public void graceDoesNotReapAnAdmittedIdleClient() {
+        CycleHarness h = new CycleHarness();
+        ClientSessionTracker tracker = new ClientSessionTracker(h.gate, h.s,
+                                                                ClientSessionTracker.DEFAULT_IDLE_TIMEOUT_MS,
+                                                                RpcEventListener.NO_OP);
+        String a = "192.168.49.10";
+        h.startToHosting();
+        h.s.advance(CLIENT - 6_000);
+        tracker.beginRpc(a).end(false); // psiDownloadBundle ends 6 s before expiry; local work follows
+        h.radio.hostedClients = 2; // a second client is still joined: the grace starts at expiry
+        h.s.advance(6_000);
+        assertEquals(CycleMode.HOST_DRAINING, h.c.mode());
+        assertTrue(h.gate.isOpen());
+
+        h.s.advance(4_000); // A idle 10 s, inside the grace
+        assertEquals("no reaping once the drain began", 0, tracker.reapIdle());
+        assertTrue(tracker.hasSession(a));
+
+        h.s.advance(GRACE); // grace over: admissions close, A still holds its token
+        assertTrue(h.gate.isClosing());
+        assertEquals("no STOP_HOST while A is admitted", CycleMode.HOST_DRAINING, h.c.mode());
+        ClientSessionTracker.RpcTicket upload = tracker.beginRpc(a);
+        assertNotNull("A's late upload is still admitted", upload);
+        upload.end(true);
+        h.s.runReady();
+        assertEquals(CycleMode.HOST_STOPPING, h.c.mode());
     }
 
     @Test

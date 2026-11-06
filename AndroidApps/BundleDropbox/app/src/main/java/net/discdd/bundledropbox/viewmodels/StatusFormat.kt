@@ -78,7 +78,8 @@ object StatusFormat {
             CycleMode.VISIT_STARTING ->
                 if (bootstrap) OperatorState.WAITING_FOR_RECENCY_BLOB else OperatorState.SEARCHING_FOR_TRANSPORT
             // One activity-gate token covers a whole carrier exchange (03 Architecture "Visit-side
-            // keying"), so activeSessions > 0 while VISITING means a carrier exchange is in progress.
+            // keying"), and the service does not count it while only joining (VisitCoordinator,
+            // SW-2), so activeSessions > 0 while VISITING means a carrier exchange is in progress.
             CycleMode.VISITING -> when {
                 status.activeSessions() > 0 -> OperatorState.EXCHANGING_WITH_TRANSPORT
                 bootstrap -> OperatorState.WAITING_FOR_RECENCY_BLOB

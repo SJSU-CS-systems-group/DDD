@@ -45,7 +45,8 @@ import static java.util.logging.Level.WARNING;
  *       <em>not</em> GO, and the GO is the carrier we asked for (the client's {@code sameAddressAs} check).</li>
  *   <li>Run the {@link VisitRunner} ({@code service/VisitCoordinator}, wrapping {@code TransportVisitClient})
  *       on a worker thread with (GO address, carrier id).</li>
- *   <li>Report {@code visitFinished(gen, success)}, leave the carrier's group, and resume discovery for
+ *   <li>Record and log the visit by {@link VisitRunner.Outcome#ok()}, report
+ *       {@code visitFinished(gen, outcome.returnEarly())}, leave the carrier's group, and resume discovery for
  *       other carriers (each carrier is tried at most once per period).</li>
  * </ol>
  * A failed attempt (connect error/timeout, became GO, wrong group) just leaves that carrier's group and
@@ -335,10 +336,12 @@ final class DropboxWifiJoiner {
         String carrierId = a.carrier.carrierId();
         try {
             a.runner = link.worker().submit(() -> {
-                boolean ok = false;
+                VisitRunner.Outcome outcome = VisitRunner.Outcome.FAILED;
                 String error = null;
                 try {
-                    ok = runner.runVisit(goAddress, carrierId, () -> s.stopFlag.get() || a.cancelled.get());
+                    VisitRunner.Outcome o =
+                            runner.runVisit(goAddress, carrierId, () -> s.stopFlag.get() || a.cancelled.get());
+                    if (o != null) outcome = o;
                 } catch (Throwable t) {
                     error = t.toString();
                     logger.log(WARNING, "visit to " + carrierId + " threw", t);
@@ -346,24 +349,28 @@ final class DropboxWifiJoiner {
                 // Set before posting: stopVisit may be waiting for it (Future.isDone() is already true
                 // after cancel(true), so it cannot tell whether the thread really returned).
                 a.runnerExited.set(true);
-                boolean success = ok;
+                VisitRunner.Outcome done = outcome;
                 String err = error;
-                link.main.post(() -> onExchangeDone(a, success, err));
+                link.main.post(() -> onExchangeDone(a, done, err));
             });
         } catch (RuntimeException e) { // RejectedExecutionException after shutdown
-            onExchangeDone(a, false, "cannot start exchange: " + e);
+            onExchangeDone(a, VisitRunner.Outcome.FAILED, "cannot start exchange: " + e);
         }
     }
 
-    /** Step 6: report, leave the carrier, keep looking. */
-    private void onExchangeDone(Attempt a, boolean success, String error) {
+    /**
+     * Step 6: report, leave the carrier, keep looking. The carrier history and user log get the visit verdict
+     * ({@code ok}); the controller gets the early-return flag, which is false for every bootstrap visit.
+     */
+    private void onExchangeDone(Attempt a, VisitRunner.Outcome outcome, String error) {
         // Not live: stopVisit already took over (it waits for the runner itself).
         if (!a.live() || !a.lifecycle.exchangeDone()) return;
         Session s = a.session;
+        boolean success = outcome.ok();
         selector.recordVisit(a.carrier.carrierId(), P2pLink.now(), success);
-        String outcome = success ? " finished" : " failed" + (error == null ? "" : ": " + error);
-        link.ui(UserLogRepository.UserLogType.EXCHANGE, success ? INFO : WARNING, "Visit to " + a.carrier.label() + outcome);
-        s.cb.visitFinished(s.gen, success);
+        String verdict = success ? " finished" : " failed" + (error == null ? "" : ": " + error);
+        link.ui(UserLogRepository.UserLogType.EXCHANGE, success ? INFO : WARNING, "Visit to " + a.carrier.label() + verdict);
+        s.cb.visitFinished(s.gen, outcome.returnEarly());
         leaveCarrier(a);
     }
 

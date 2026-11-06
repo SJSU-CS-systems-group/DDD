@@ -2,6 +2,7 @@ package net.discdd.bundledropbox.service;
 
 import net.discdd.bundledropbox.cycle.ActivityGate;
 import net.discdd.bundledropbox.visit.VisitResult;
+import net.discdd.bundledropbox.wifi.VisitRunner;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -97,7 +98,7 @@ public class VisitCoordinatorTest {
     @Test
     public void oneTokenCoversTheWholeExchange() throws Exception {
         gate.openAdmissions();
-        assertTrue(visits.runVisit(GO, "T1", () -> false));
+        assertTrue(visits.runVisit(GO, "T1", () -> false).returnEarly());
         assertEquals("token held while visiting", 1, exchange.activeDuring);
         assertTrue("keepGoing while admissions are open", exchange.keepGoingAtStart);
         assertEquals(0, gate.activeCount());
@@ -109,21 +110,38 @@ public class VisitCoordinatorTest {
         gate.openAdmissions();
         // 09 Own Recency Blob Design: whether the carrier had a blob of our server does not matter.
         exchange.result = ok(false);
-        assertTrue(visits.runVisit(GO, "T1", () -> false));
+        assertTrue(visits.runVisit(GO, "T1", () -> false).returnEarly());
         exchange.result = ok(true);
-        assertTrue(visits.runVisit(GO, "T1", () -> false));
+        assertTrue(visits.runVisit(GO, "T1", () -> false).returnEarly());
         // Bootstrap (Review #9, audit i2): without the own blob HOST is skipped, so no early return.
         ownBlobHeld = false;
-        assertFalse(visits.runVisit(GO, "T1", () -> false));
+        assertFalse(visits.runVisit(GO, "T1", () -> false).returnEarly());
         // Incomplete exchange.
         ownBlobHeld = true;
         exchange.result = new VisitResult("T1", true, true, 0, 0, 0, 1, false, "upload failed");
-        assertFalse(visits.runVisit(GO, "T1", () -> false));
+        assertFalse(visits.runVisit(GO, "T1", () -> false).returnEarly());
+    }
+
+    /** CYC-2: a complete bootstrap visit is a success for the joiner's log and history, just not an early return. */
+    @Test
+    public void bootstrapVisitIsOkButNotAnEarlyReturn() throws Exception {
+        gate.openAdmissions();
+        ownBlobHeld = false;
+        VisitRunner.Outcome bootstrap = visits.runVisit(GO, "T1", () -> false);
+        assertTrue("the exchange completed", bootstrap.ok());
+        assertFalse("no early return without the own blob", bootstrap.returnEarly());
+
+        exchange.result = new VisitResult("T1", true, true, 0, 0, 0, 1, false, "upload failed");
+        assertFalse(visits.runVisit(GO, "T1", () -> false).ok());
+        gate.closeAdmissions();
+        VisitRunner.Outcome skipped = visits.runVisit(GO, "T1", () -> false);
+        assertFalse(skipped.ok());
+        assertFalse(skipped.returnEarly());
     }
 
     @Test
     public void closedGateWithoutJoinTokenSkipsTheExchange() throws Exception {
-        assertFalse(visits.runVisit(GO, "T1", () -> false));
+        assertFalse(visits.runVisit(GO, "T1", () -> false).returnEarly());
         assertEquals(0, exchange.calls);
         assertEquals(List.of("skip T1"), events);
     }
@@ -140,7 +158,7 @@ public class VisitCoordinatorTest {
         // The join completes: the exchange reuses the join token although admissions are closed, asks the
         // carrier for its recency blob and stops before the first bundle (keepGoing is false).
         exchange.result = new VisitResult("T1", true, true, 0, 0, 0, 0, true, null);
-        assertFalse("stopped early: not a success", visits.runVisit(GO, "T1", () -> false));
+        assertFalse("stopped early: not a success", visits.runVisit(GO, "T1", () -> false).returnEarly());
         assertEquals(1, exchange.calls);
         assertEquals("same single token", 1, exchange.activeDuring);
         assertFalse("dwell over: finish after the recency probe", exchange.keepGoingAtStart);
@@ -166,6 +184,27 @@ public class VisitCoordinatorTest {
         assertEquals(1, drains.get());
         visits.endJoin("T1"); // idempotent
         assertEquals(1, drains.get());
+    }
+
+    /** SW-2: a pending join is not an exchange in status, and releasing it republishes status. */
+    @Test
+    public void joinTokenIsNotAnActiveSessionAndItsReleaseRefreshesStatus() throws Exception {
+        gate.openAdmissions();
+        assertTrue(visits.beginJoin("T1"));
+        assertEquals("joining is not exchanging", 0, visits.activeSessionsForStatus(gate));
+        visits.endJoin("T1");
+        assertEquals("released join refreshes status", List.of("skip T1"), events);
+        visits.endJoin("T1");
+        assertEquals("nothing released: no event", List.of("skip T1"), events);
+
+        assertTrue(visits.beginJoin("T1"));
+        AtomicInteger during = new AtomicInteger(-1);
+        exchange.during = () -> during.set(visits.activeSessionsForStatus(gate));
+        visits.runVisit(GO, "T1", () -> false);
+        assertEquals("the exchange counts", 1, during.get());
+        assertEquals(0, visits.activeSessionsForStatus(gate));
+        gate.tryAdmit("192.168.49.10"); // other keys always count
+        assertEquals(1, visits.activeSessionsForStatus(gate));
     }
 
     @Test
@@ -194,7 +233,7 @@ public class VisitCoordinatorTest {
         assertTrue(visits.beginJoin("T1"));
         gate.closeAdmissions();
         gate.forceReleaseAll("drain cap");
-        assertFalse(visits.runVisit(GO, "T1", () -> false));
+        assertFalse(visits.runVisit(GO, "T1", () -> false).returnEarly());
         assertEquals(0, exchange.calls);
     }
 
@@ -208,7 +247,7 @@ public class VisitCoordinatorTest {
             cancelledSeen.set(exchange.cancelled.getAsBoolean());
         };
         exchange.result = new VisitResult("T1", true, true, 0, 0, 0, 1, true, "cancelled");
-        assertFalse(visits.runVisit(GO, "T1", () -> false));
+        assertFalse(visits.runVisit(GO, "T1", () -> false).returnEarly());
         assertEquals("cancel hook hard-cancels the gRPC channel", 1, exchange.cancels);
         assertTrue("the visit sees the cancellation", cancelledSeen.get());
         assertEquals(0, gate.activeCount());
@@ -240,7 +279,7 @@ public class VisitCoordinatorTest {
         gate.openAdmissions();
         assertTrue(visits.beginJoin("T1"));
         exchange = null; // visit client not built (init failed)
-        assertFalse(visits.runVisit(GO, "T1", () -> false));
+        assertFalse(visits.runVisit(GO, "T1", () -> false).returnEarly());
         assertEquals(0, gate.activeCount());
     }
 }

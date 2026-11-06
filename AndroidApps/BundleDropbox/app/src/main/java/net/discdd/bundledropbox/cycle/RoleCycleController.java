@@ -33,7 +33,8 @@ import java.util.logging.Logger;
  *       {@link #JOINED_CLIENT_GRACE_MS} (never past the drain cap) so that client's first RPC is
  *       admitted instead of refused; a refused stock client would stamp {@code lastExchange} and skip us
  *       until a newer recency blob is advertised (R3 §7). The DNS-SD record is withdrawn for the whole drain, so
- *       new clients do not discover us during the grace.</li>
+ *       new clients do not discover us during the grace, and {@link ActivityGate#beginDrain()} keeps idle
+ *       reaping off during it, so an admitted client doing local work is not reaped and then refused.</li>
  *   <li>Early return: with {@link CycleConfig#returnAfterVisit()}, a successful
  *       {@link VisitCallback#visitFinished} ends the VISIT dwell immediately (same drain rules).</li>
  *   <li>Bootstrap: a fresh dropbox has no server-signed recency blob and the stock client aborts its
@@ -633,6 +634,7 @@ public final class RoleCycleController {
                                 "measured from detection");
         }
         long capAt = drainStart + activeConfig.drainCapMs();
+        gate.beginDrain(); // no idle reaping for the whole drain, joined-client grace included (CYC-1)
         int unadmitted = role == Role.HOST ? unadmittedJoinedClients() : 0;
         boolean grace = unadmitted > 0 && capAt > now;
         if (!grace) {

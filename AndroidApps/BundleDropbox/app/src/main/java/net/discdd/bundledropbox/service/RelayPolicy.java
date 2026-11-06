@@ -1,5 +1,7 @@
 package net.discdd.bundledropbox.service;
 
+import net.discdd.bundledropbox.cycle.CycleMode;
+
 /**
  * Pure decisions of the service and the auto-start receiver, kept free of Android types for JVM tests.
  */
@@ -40,5 +42,35 @@ public final class RelayPolicy {
     public static boolean wantsWakeLock(boolean keepAwakeSetting, boolean paused, boolean operatorStopped,
                                         boolean destroyed) {
         return keepAwakeSetting && !paused && !operatorStopped && !destroyed;
+    }
+
+    /** Operator-facing words for a mode (notification and Logs; the Status tab has its own labels). */
+    public static String describe(CycleMode mode) {
+        return switch (mode) {
+            case HOST_STARTING, HOSTING, HOST_DRAINING, HOST_STOPPING -> "serving clients";
+            case VISIT_STARTING, VISITING, VISIT_DRAINING, VISIT_STOPPING -> "visiting transports";
+            case UNAVAILABLE -> "radio unavailable, retrying";
+            case STOPPED -> "stopped";
+        };
+    }
+
+    /** @return the notification text for a role-cycle mode. */
+    public static String roleNotificationText(CycleMode mode) {
+        return "Currently " + describe(mode);
+    }
+
+    /**
+     * The text a start command posts with {@code startForeground} (audit SW-3). Normally the last text, so a
+     * re-delivered start keeps the role or failure text (m13). After an operator Stop the role updates were
+     * suppressed, so the last text is the role from before the Stop; it is replaced by the STOPPED text, which
+     * stays right while a persisted pause keeps the radio idle and until the next role update.
+     *
+     * @param last            the current notification text, or {@code null} for a new instance
+     * @param initial         the text for a new instance (the default notification string)
+     * @param operatorStopped true if this instance was stopped by the operator (role updates suppressed)
+     */
+    public static String startNotificationText(String last, String initial, boolean operatorStopped) {
+        if (operatorStopped) return roleNotificationText(CycleMode.STOPPED);
+        return last != null ? last : initial;
     }
 }
