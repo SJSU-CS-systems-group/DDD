@@ -1,5 +1,7 @@
 package net.discdd.bundlesecurity;
 
+import net.discdd.dropbox.control.RecencyRequestSigner;
+import net.discdd.tls.DDDTLSUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,8 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.PublicKey;
+import java.util.Base64;
 
 public class SecurityUtilsTest {
     private SessionCipher aliceCipher;
@@ -117,5 +121,33 @@ public class SecurityUtilsTest {
         bobCipher.decrypt(tempPathIn, tempPathOut);
         String decrypted = Files.readString(tempPathOut, StandardCharsets.UTF_8);
         Assertions.assertEquals(message, decrypted);
+    }
+
+    /** the routing peer ID is the SHA-1 based ID of the TLS key's X.509 DER */
+    @Test
+    public void peerIdForTlsKeyIsGenerateIdOfDer() throws Exception {
+        PublicKey key = DDDTLSUtil.generateKeyPair().getPublic();
+        String peerId = SecurityUtils.peerIdForTlsKey(key);
+        Assertions.assertEquals(SecurityUtils.generateID(key.getEncoded()), peerId);
+        Assertions.assertEquals(peerId, SecurityUtils.peerIdForTlsKey(key.getEncoded()));
+        Assertions.assertEquals(28, peerId.length());
+    }
+
+    /** the legacy importer relies on this: a {@code publicKeyToName} row converts offline to the peer ID */
+    @Test
+    public void legacyTlsNameConvertsToPeerId() throws Exception {
+        for (int i = 0; i < 50; i++) {
+            PublicKey key = DDDTLSUtil.generateKeyPair().getPublic();
+            String legacyName = DDDTLSUtil.publicKeyToName(key);
+            Assertions.assertEquals(SecurityUtils.peerIdForTlsKey(key), SecurityUtils.generateID(legacyName));
+        }
+    }
+
+    /** a dropbox's own recency blob names the same peer ID the server routes by */
+    @Test
+    public void recencySignerSenderIdEqualsPeerId() throws Exception {
+        PublicKey key = DDDTLSUtil.generateKeyPair().getPublic();
+        Assertions.assertEquals(SecurityUtils.peerIdForTlsKey(key),
+                                RecencyRequestSigner.senderIdFor(Base64.getEncoder().encodeToString(key.getEncoded())));
     }
 }

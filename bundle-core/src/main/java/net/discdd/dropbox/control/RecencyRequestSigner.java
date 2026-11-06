@@ -98,9 +98,9 @@ public final class RecencyRequestSigner {
     }
 
     /**
-     * The sender ID a blob for this key is minted for: {@code SecurityUtils.generateID} of the X.509 DER, which is the
-     * formula the server's gRPC {@code getRecencyBlob} applies to a TLS peer certificate's
-     * {@code getPublicKey().getEncoded()}. The dropbox presents that same certificate to clients.
+     * The sender ID a blob for this key is minted for: {@link SecurityUtils#peerIdForTlsKey} of the X.509 DER, the
+     * same ID the server's gRPC {@code getRecencyBlob} and its routing give a TLS peer certificate. The dropbox
+     * presents that same certificate to clients.
      *
      * @param tlsPublicKey standard Base64 of the X.509 DER (a request's {@code tlsPublicKey} field)
      * @return the sender ID
@@ -108,7 +108,7 @@ public final class RecencyRequestSigner {
      */
     public static String senderIdFor(String tlsPublicKey) {
         if (tlsPublicKey == null) throw new IllegalArgumentException("tlsPublicKey is null");
-        return SecurityUtils.generateID(Base64.getDecoder().decode(tlsPublicKey));
+        return SecurityUtils.peerIdForTlsKey(Base64.getDecoder().decode(tlsPublicKey));
     }
 
     private static void requireField(String value, String field) {

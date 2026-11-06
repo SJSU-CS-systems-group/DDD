@@ -22,12 +22,16 @@ import net.discdd.model.Bundle;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.server.applicationdatamanager.AduStores;
 import net.discdd.server.applicationdatamanager.ServerApplicationDataManager;
+import net.discdd.server.bundlerouting.BundleRouting;
+import net.discdd.server.bundlerouting.RoutingSource;
 import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import net.discdd.server.repository.ClientDownstreamAckRepository;
 import net.discdd.server.repository.DropboxNodeRepository;
 import net.discdd.server.repository.DropboxRecencyGrantRepository;
 import net.discdd.server.repository.ReceivedBundleRepository;
+import net.discdd.server.repository.RoutingEdgeRepository;
 import net.discdd.server.repository.SentAduDetailsRepository;
+import net.discdd.server.repository.entity.RoutingEdgeId;
 import net.discdd.server.service.GrpcExecutor;
 import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.utils.BundleUtils;
@@ -50,6 +54,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -112,6 +117,7 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
     static String upstream2;
     static String downstream1;
     static String downstream2;
+    static Path upstream4Jar;
 
     @Autowired
     ServerBundleTransmission serverBundleTransmission;
@@ -131,6 +137,10 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
     SentAduDetailsRepository sentAduDetailsRepository;
     @Autowired
     GrpcExecutor.GrpcTransactionalRunner transactionalRunner;
+    @Autowired
+    RoutingEdgeRepository routingEdgeRepository;
+    @Autowired
+    BundleRouting bundleRouting;
 
     @BeforeAll
     static void setUpDropboxEndpoint() throws Exception {
@@ -368,7 +378,54 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
         assertTrue(serverApplicationDataManager.getRegisteredAppIds(dropboxId).contains(DropboxControl.APP_ID));
     }
 
+    /** a carrier that uploads a bundle the server already has (a duplicate) becomes a route to its client too */
+    @Test
+    void test7SecondCarrierReUploadGetsRoute() throws Exception {
+        upstream4Jar = stockClientBundle(4, null);
+        deliverToServer(upstream4Jar, "T1");
+        assertTrue(routingEdgeRepository.existsById(uploaded("T1", clientId)));
+        assertFalse(routingEdgeRepository.existsById(uploaded("T2", clientId)));
+
+        deliverToServer(upstream4Jar, "T2");
+        assertTrue(routingEdgeRepository.existsById(uploaded("T2", clientId)), "the duplicate wrote an edge");
+        var toT2 = inRpcTransaction(() -> serverBundleTransmission.inventoryBundlesForTransmission(
+                BundleSenderType.TRANSPORT, "T2", Set.of()));
+        // nothing new since the inventory built it, so this re-offers the same bundle
+        String current = generateBundleForClient(clientId);
+        assertEquals(List.of(current), toT2.bundlesToDownload());
+    }
+
+    /** a client uploading its own bundle is not a carrier: neither a new bundle nor a duplicate records an edge */
+    @Test
+    void test8ClientSenderWritesNoEdge() throws Exception {
+        Path jar5 = stockClientBundle(5, null);
+        deliverToServer(jar5, BundleSenderType.CLIENT, "clientSelf");
+        assertTrue(receivedBundleRepository.existsById(BundleJarInfo.read(jar5).getBundleId()), "it was processed");
+        deliverToServer(jar5, BundleSenderType.CLIENT, "clientSelf");
+        assertFalse(routingEdgeRepository.existsById(uploaded("clientSelf", clientId)));
+        assertTrue(bundleRouting.clientsForCarrier("clientSelf", System.currentTimeMillis()).isEmpty());
+    }
+
+    /** replay guard: re-uploading a bundle first received longer ago than the TTL refreshes no route */
+    @Test
+    void test9DuplicateOlderThanTtlDoesNotRefresh() throws Exception {
+        long t1Before = routingEdgeRepository.findById(uploaded("T1", clientId)).orElseThrow().lastSeenMs;
+        var received = receivedBundleRepository.findById(BundleJarInfo.read(upstream4Jar).getBundleId()).orElseThrow();
+        received.receivedAtMs = System.currentTimeMillis() - bundleRouting.ttlMs() - 60_000;
+        receivedBundleRepository.save(received);
+
+        Thread.sleep(5);
+        deliverToServer(upstream4Jar, "T1");
+        deliverToServer(upstream4Jar, "T9");
+        assertEquals(t1Before, routingEdgeRepository.findById(uploaded("T1", clientId)).orElseThrow().lastSeenMs);
+        assertFalse(routingEdgeRepository.existsById(uploaded("T9", clientId)));
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    private static RoutingEdgeId uploaded(String peerId, String client) {
+        return new RoutingEdgeId(peerId, client, RoutingSource.UPLOADED);
+    }
 
     private static GrpcSecurityKey dropboxTls() {
         return dropbox.getBundleSecurity().getClientGrpcSecurityKey();
@@ -412,12 +469,21 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
         deliverToServer(bundle.getSource().toPath());
     }
 
-    /** A carrier uploads a bundle; the server deletes the file it processes, so it gets a copy. */
+    /** {@link #deliverToServer(Path, String)} by the default test carrier */
     private void deliverToServer(Path jar) throws Exception {
+        deliverToServer(jar, TRANSPORT_ID);
+    }
+
+    /** Carrier {@code carrierId} uploads a bundle; the server deletes the file it processes, so it gets a copy. */
+    private void deliverToServer(Path jar, String carrierId) throws Exception {
+        deliverToServer(jar, BundleSenderType.TRANSPORT, carrierId);
+    }
+
+    private void deliverToServer(Path jar, BundleSenderType senderType, String senderId) throws Exception {
         Path copy = workDir.resolve("upload-" + fileCounter++);
         Files.copy(jar, copy);
         inRpcTransaction(() -> {
-            serverBundleTransmission.processBundleFile(copy.toFile(), BundleSenderType.TRANSPORT, TRANSPORT_ID);
+            serverBundleTransmission.processBundleFile(copy.toFile(), senderType, senderId);
             return null;
         });
     }

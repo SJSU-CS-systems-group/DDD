@@ -2,6 +2,7 @@ package net.discdd.server.service;
 
 import io.grpc.Context;
 import io.grpc.stub.StreamObserver;
+import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.grpc.BundleInventoryRequest;
 import net.discdd.grpc.BundleInventoryResponse;
 import net.discdd.grpc.BundleServerServiceGrpc;
@@ -80,7 +81,8 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
         var downloadList = new ArrayList<EncryptedBundleId>();
 
         X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
-        String senderId = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
+        // the routing peer ID; checkMessages and crash reports keep the TLS name operators type in
+        String senderId = SecurityUtils.peerIdForTlsKey(clientCert.getPublicKey());
         try {
             var bundlesToExchange = bundleTransmission.inventoryBundlesForTransmission(request.getSenderType(),
                                                                                        senderId,

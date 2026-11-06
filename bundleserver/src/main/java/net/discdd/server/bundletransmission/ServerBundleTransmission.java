@@ -1,6 +1,5 @@
 package net.discdd.server.bundletransmission;
 
-import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.DDDPEMEncoder;
 import net.discdd.bundlesecurity.InvalidClientIDException;
@@ -47,10 +46,8 @@ import java.nio.file.StandardOpenOption;
 import java.security.DigestInputStream;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
@@ -171,6 +168,13 @@ public class ServerBundleTransmission {
                 }
                 var counters = this.applicationDataManager.getBundleCountersForClient(clientId);
                 if (receivedBundleCounter <= counters.lastReceivedBundleCounter) {
+                    // another carrier with the same bundle is a route too; checked before the receipt row is written
+                    if (senderType != CLIENT) {
+                        bundleRouting.recordUploadedDuplicate(senderId,
+                                                              clientId,
+                                                              uncompressedBundle.getBundleId(),
+                                                              System.currentTimeMillis());
+                    }
                     // The counter advances only after every ADU was stored.
                     recordReceivedBundle(uncompressedBundle, clientId, receivedBundleCounter, senderId);
                     deleteStagedPayloadAfterCommit(stagedPayload);
@@ -215,11 +219,9 @@ public class ServerBundleTransmission {
                     this.serverWindowService.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
                 }
 
-                try {
-                    this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().toPath(), senderId, clientId);
-                } catch (ClientMetaDataFileException | SQLException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                // the carrier that uploaded an authenticated bundle can reach the client (never throws)
+                if (senderType != CLIENT) {
+                    bundleRouting.recordUploaded(senderId, clientId, System.currentTimeMillis());
                 }
 
                 this.applicationDataManager.processAcknowledgement(clientId,
@@ -499,12 +501,15 @@ public class ServerBundleTransmission {
         return config.getBundleTransmission().getBundleReceivedLocation();
     }
 
+    /**
+     * The bundles carrier {@code senderId} ({@code SecurityUtils.peerIdForTlsKey} of its TLS key) should download
+     * and delete: the current downstream bundle of every client {@link BundleRouting#clientsForCarrier} routes to it,
+     * whatever {@code senderType} the inventory claims (transports leave it unset).
+     */
     public BundlesToExchange inventoryBundlesForTransmission(BundleSenderType senderType,
                                                              String senderId,
                                                              Set<String> bundleIdsPresent) {
-        List<String> clientIds = CLIENT == senderType ?
-                                 Collections.singletonList(senderId) :
-                                 this.bundleRouting.getClientsForTransportId(senderId);
+        List<String> clientIds = this.bundleRouting.clientsForCarrier(senderId, System.currentTimeMillis());
 
         logger.log(INFO,
                    "[BundleTransmission] Found " + clientIds.size() + " reachable from the sender: " +

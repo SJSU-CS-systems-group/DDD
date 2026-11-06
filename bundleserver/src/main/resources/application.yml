@@ -30,6 +30,14 @@ dropbox:
     # downstream bundle this server never issued) is kept this long after its first sighting, then expired
     unknown-ttl: 14d
 
+routing:
+  # a carrier is a route to a client for this long after the newest evidence (an upload of one of the client's
+  # bundles, or a report); edges older than twice this are deleted every sweep-interval
+  ttl: 14d
+  # at most this many clients reached one hop through a dropbox are added to a carrier's inventory
+  max-relayed-clients-per-carrier: 64
+  sweep-interval: 6h
+
 ssl-grpc:
   server:
     port: 7778

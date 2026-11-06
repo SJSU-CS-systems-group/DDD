@@ -5,6 +5,9 @@ import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.server.bundlerouting.RoutingSource;
+import net.discdd.server.repository.RoutingEdgeRepository;
+import net.discdd.server.repository.entity.RoutingEdge;
 import net.discdd.tls.DDDNettyTLS;
 import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.transport.TransportToBundleServerManager;
@@ -14,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
@@ -28,6 +32,7 @@ import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.StreamSupport;
 import java.util.logging.Logger;
 
 import static net.discdd.transport.TransportToBundleServerManager.RECENCY_BLOB_BIN;
@@ -46,6 +51,9 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
     private static ManagedChannel channel;
     private Path toClientPath;
     private Path toServerPath;
+    private GrpcSecurityKey transportKey;
+    @Autowired
+    RoutingEdgeRepository routingEdgeRepository;
 
     @BeforeEach
     void setUpEach() throws IOException, InvalidAlgorithmParameterException, CertificateException,
@@ -55,6 +63,7 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         toClientPath = transportPaths.toClientPath;
         toServerPath = transportPaths.toServerPath;
         var grpcSecurity = new GrpcSecurityKey(transportPaths.grpcSecurityPath, SecurityUtils.TRANSPORT);
+        transportKey = grpcSecurity;
         channel = DDDNettyTLS.createGrpcChannel(grpcSecurity.grpcKeyPair,
                                                 grpcSecurity.grpcCert,
                                                 "localhost",
@@ -330,6 +339,33 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
 
         // Verify that no files were downloaded
         assertEquals(0, Files.list(toClientPath).count(), "No files should have been downloaded.");
+    }
+
+    /**
+     * A real transport upload records the route under {@code SecurityUtils.peerIdForTlsKey} of the transport's TLS
+     * key, and the transport's next inventory, keyed the same way, gets the client's downstream bundle.
+     */
+    @Test
+    void uploadAndInventoryUsePeerIdForm() throws Exception {
+        createBundleForAdus(List.of(), clientId, 1, toServerPath);
+        manager.doExchange();
+
+        // the transport does not wait for the server to process an upload
+        RoutingEdge edge = null;
+        for (int tries = 0; edge == null && tries < 40; tries++) {
+            edge = StreamSupport.stream(routingEdgeRepository.findAll().spliterator(), false)
+                    .filter(e -> e.id.clientId.equals(clientId))
+                    .findFirst()
+                    .orElse(null);
+            if (edge == null) Thread.sleep(250);
+        }
+        assertNotNull(edge, "the upload wrote a routing edge");
+        assertEquals(SecurityUtils.peerIdForTlsKey(transportKey.grpcCert.getPublicKey()), edge.id.peerId);
+        assertEquals(RoutingSource.UPLOADED, edge.id.source);
+
+        // only the inventory is checked: the download can race the inventory RPC's commit of the new bundle
+        var result = manager.doExchange();
+        assertEquals(1, result.toDownloadCount, "the inventory found the client through the same peer ID");
     }
 
 }

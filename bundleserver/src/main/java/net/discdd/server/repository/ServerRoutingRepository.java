@@ -1,18 +1,16 @@
 package net.discdd.server.repository;
 
-import net.discdd.server.repository.entity.ServerRouting;
 import net.discdd.server.repository.compositeId.ServerRoutingId;
-import org.springframework.data.repository.CrudRepository;
-import org.springframework.stereotype.Repository;
+import net.discdd.server.repository.entity.ServerRouting;
+import org.springframework.data.repository.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
-@Repository
-public interface ServerRoutingRepository extends CrudRepository<ServerRouting, ServerRoutingId> {
-    List<ServerRouting> findByServerRoutingIdTransportID(String transportID);
-
-    Optional<ServerRouting> findByServerRoutingIdClientID(String clientID);
-
-    ServerRouting findByServerRoutingIdClientIDAndServerRoutingIdTransportID(String clientID, String transportID);
+/**
+ * The legacy {@code serverroutingtable}, now read-only: routing lives in {@code routing_edge}, and
+ * {@code LegacyRoutingImporter} reads this table once. It is kept untouched so the previous server can still run on it.
+ */
+@org.springframework.stereotype.Repository
+public interface ServerRoutingRepository extends Repository<ServerRouting, ServerRoutingId> {
+    List<ServerRouting> findAll();
 }

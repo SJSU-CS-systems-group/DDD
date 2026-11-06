@@ -48,7 +48,11 @@ public class ReceivedBundle {
     /** when the server first received this bundle, in epoch milliseconds */
     public long receivedAtMs;
 
-    /** the TLS name of the uploader (a transport, or the client itself), never the dropbox that relayed it */
+    /**
+     * the uploader (a transport, or the client itself), never the dropbox that relayed it:
+     * {@code SecurityUtils.peerIdForTlsKey} of its TLS key, or its {@code DDDTLSUtil.publicKeyToName} TLS name for
+     * rows written before the routing redesign (convert with {@code SecurityUtils.generateID(String)})
+     */
     @Column(length = 255)
     public String uploaderId;
 }

@@ -43,7 +43,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
         logger.log(INFO, "Downloaded " + bundleExchangeName.encryptedBundleId());
         bundleTransmission.processBundleFile(path.toFile(),
                                              senderType,
-                                             DDDTLSUtil.publicKeyToName(clientCert.getPublicKey()));
+                                             SecurityUtils.peerIdForTlsKey(clientCert.getPublicKey()));
     }
 
     @Override
@@ -123,7 +123,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     public void getRecencyBlob(GetRecencyBlobRequest request, StreamObserver<GetRecencyBlobResponse> responseObserver) {
         GetRecencyBlobResponse recencyBlob = null;
         X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
-        String senderId = SecurityUtils.generateID(clientCert.getPublicKey().getEncoded());
+        String senderId = SecurityUtils.peerIdForTlsKey(clientCert.getPublicKey());
 
         try {
             recencyBlob = bundleTransmission.getRecencyBlob(senderId);

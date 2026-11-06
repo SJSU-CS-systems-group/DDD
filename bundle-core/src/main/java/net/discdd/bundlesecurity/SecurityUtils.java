@@ -32,6 +32,7 @@ import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
@@ -128,6 +129,21 @@ public class SecurityUtils {
     public static String generateID(String publicKeyBase64) {
         byte[] publicKeyBytes = Base64.getUrlDecoder().decode(publicKeyBase64);
         return generateID(publicKeyBytes);
+    }
+
+    /**
+     * The one routing ID for a TLS peer (a transport, a dropbox, or a client talking TLS): {@link #generateID(byte[])}
+     * of the key's X.509 DER. It is the {@code senderId} of the peer's recency blob and the peer the server records
+     * routes for. The legacy {@code DDDTLSUtil.publicKeyToName} form converts to it with {@link #generateID(String)},
+     * since that name is the unpadded Base64url of the same DER.
+     */
+    public static String peerIdForTlsKey(PublicKey tlsPublicKey) {
+        return peerIdForTlsKey(tlsPublicKey.getEncoded());
+    }
+
+    /** {@link #peerIdForTlsKey(PublicKey)} for a key already in X.509 DER form */
+    public static String peerIdForTlsKey(byte[] x509Der) {
+        return generateID(x509Der);
     }
 
     public static InMemorySignalProtocolStore createInMemorySignalProtocolStore() {
