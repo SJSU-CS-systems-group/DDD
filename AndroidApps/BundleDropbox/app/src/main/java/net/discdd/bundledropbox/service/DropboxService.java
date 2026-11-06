@@ -468,7 +468,8 @@ public class DropboxService extends Service implements DropboxControls {
      * <p>
      * The wait first lets the owner thread run its halt (the returned future), so a dirty role's best-effort
      * stop is already issued, and posted to the driver ahead of {@code awaitIdle}'s check, when the mode is read.
-     * The client server is stopped before the long wait, so port 7777 is free for a new instance at once (a
+     * The client server is stopped after the cycle wait (at most {@code SHUTDOWN_TIMEOUT_MS}) but before the long
+     * driver wait, so port 7777 is free for a new instance without waiting out a slow radio stop (a
      * HOST stop only ends sessions, which is safe on a stopped server), and again after it in case a superseded
      * HOST start re-bound it. The global status and roles are cleared only if no newer instance exists.
      */
