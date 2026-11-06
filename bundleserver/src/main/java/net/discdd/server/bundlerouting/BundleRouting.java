@@ -35,13 +35,15 @@ import static java.util.logging.Level.WARNING;
  * <p>
  * Writes run inside the RPC's transaction, where a repository exception would mark the whole transaction
  * rollback-only and lose the bundle. So they never throw: inputs are validated first, and a row is upserted with a
- * conditional touch followed, only if no row exists, by an insert. A client's UPLOADED rows are written only under
- * that client's receive lock in {@code ServerBundleTransmission}, so two inserts of the same key cannot race. No
- * deletes run here; {@link RoutingSweeper} removes old rows.
+ * conditional touch followed, only if no row exists, by an insert. A client's UPLOADED and REPORTED rows are written
+ * only under that client's receive lock in {@code ServerBundleTransmission}, and DEPOSITED rows only under the
+ * dropbox control handler's monitor, so two inserts of the same key cannot race. No deletes run here;
+ * {@link RoutingSweeper} removes old rows.
  * <p>
- * Edges come from carriers uploading a client's bundles (UPLOADED) and from the peers a client lists in its
- * {@code routing.metadata} (REPORTED, {@link #recordReported}). A carrier gets the clients it reaches directly plus,
- * one hop only, the clients reported meeting a dropbox it reaches ({@link #clientsForCarrier}).
+ * Edges come from carriers uploading a client's bundles (UPLOADED), from the peers a client lists in its
+ * {@code routing.metadata} (REPORTED, {@link #recordReported}), and from the client bundles a dropbox's inventory
+ * lists (DEPOSITED, {@link #recordDeposited}). A carrier gets the clients it reaches directly plus, one hop only, the
+ * clients known to have met a dropbox it reaches ({@link #clientsForCarrier}).
  * <p>
  * Times are parameters ({@code nowMs}) so callers and tests control the clock.
  */
@@ -158,6 +160,18 @@ public class BundleRouting {
                                      clientId,
                                      RoutingSource.REPORTED,
                                      reportedLastSeen(receiptMs, gen, e.getValue())));
+    }
+
+    /**
+     * Dropbox {@code dropboxId}'s accepted inventory lists a bundle of {@code clientId} that it first listed at
+     * {@code firstSeenMs} (the {@code InventorySighting}, server clock): the client visited the dropbox then. This
+     * DEPOSITED edge makes the client a via member of the dropbox even if it never reports its peers (an old client).
+     * A sighting already older than the TTL at {@code nowMs}, and the dropbox's own ID, are ignored. Call it only from
+     * the dropbox control handler, whose monitor serializes these writes. Never throws.
+     */
+    public void recordDeposited(String dropboxId, String clientId, long firstSeenMs, long nowMs) {
+        if (firstSeenMs < nowMs - ttlMs || clientId == null || clientId.equals(dropboxId)) return;
+        upsert(dropboxId, clientId, RoutingSource.DEPOSITED, firstSeenMs);
     }
 
     /** {@code receiptMs - max(0, gen - value)}; {@code value} is positive, so the subtraction cannot overflow */

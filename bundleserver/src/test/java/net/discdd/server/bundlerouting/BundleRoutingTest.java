@@ -367,4 +367,44 @@ class BundleRoutingTest {
         assertEquals(List.of(D, "m-c", "m-a", "m-b", "m-e", "m-d"), routing.clientsForCarrier(T, NOW));
         assertEquals(List.of(D), routingWithCap(0).clientsForCarrier(T, NOW), "a cap of 0 turns via off");
     }
+
+    // ---------------------------------------------------------------- DEPOSITED
+
+    private Map<String, Long> deposited(String dropboxId) {
+        entityManager.flush();
+        entityManager.clear();
+        var result = new HashMap<String, Long>();
+        for (var edge : routingEdgeRepository.findAll()) {
+            if (edge.id.source == RoutingSource.DEPOSITED && edge.id.peerId.equals(dropboxId)) {
+                result.put(edge.id.clientId, edge.lastSeenMs);
+            }
+        }
+        return result;
+    }
+
+    @Test
+    void depositedMembersCountForVia() {
+        // D has no grant, so no REPORTED edge can name it: its deposits alone make clients its members
+        dropboxNode(D);
+        routing.recordUploaded(T, D, NOW - 10);
+        routing.recordDeposited(D, "oldClient", NOW - HOUR, NOW);
+        routing.recordDeposited(D, "staleDeposit", NOW - TTL.toMillis() - 1, NOW);
+        routing.recordDeposited(D, D, NOW, NOW); // the dropbox's own bundle
+        routing.recordDeposited(D, null, NOW, NOW);
+        assertEquals(List.of(D, "oldClient"), routing.clientsForCarrier(T, NOW));
+        assertEquals(Map.of("oldClient", NOW - HOUR), deposited(D), "stale and self deposits are not written");
+        // a deposit at a dropbox the carrier does not reach routes nothing
+        routing.recordDeposited("elsewhere", "farClient", NOW, NOW);
+        assertEquals(List.of(D, "oldClient"), routing.clientsForCarrier(T, NOW));
+    }
+
+    @Test
+    void depositedLastSeenIsSightingFirstSeen() {
+        routing.recordDeposited(D, C, NOW - 5 * HOUR, NOW);
+        assertEquals(Map.of(C, NOW - 5 * HOUR), deposited(D), "dated by the sighting, not by the report");
+        routing.recordDeposited(D, C, NOW - 2 * HOUR, NOW + HOUR);
+        assertEquals(Map.of(C, NOW - 2 * HOUR), deposited(D), "a newer sighting raises lastSeen");
+        routing.recordDeposited(D, C, NOW - 9 * HOUR, NOW + 2 * HOUR);
+        assertEquals(Map.of(C, NOW - 2 * HOUR), deposited(D), "an older sighting never lowers it");
+    }
 }

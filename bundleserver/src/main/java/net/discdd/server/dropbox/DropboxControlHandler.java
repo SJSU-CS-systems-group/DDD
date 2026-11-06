@@ -10,6 +10,7 @@ import net.discdd.dropbox.control.RetentionPlan;
 import net.discdd.model.ADU;
 import net.discdd.server.applicationdatamanager.AduStores;
 import net.discdd.server.applicationdatamanager.InternalAppHandler;
+import net.discdd.server.bundlerouting.BundleRouting;
 import net.discdd.server.dropbox.DropboxRetentionPlanner.Decision;
 import net.discdd.server.dropbox.DropboxRetentionPlanner.Direction;
 import net.discdd.server.repository.BundleMetadataRepository;
@@ -56,6 +57,11 @@ import static java.util.logging.Level.WARNING;
  * ({@code ControlStateStore.recordPlanApplied} on the dropbox). Ignoring it would leave every report of the reset
  * dropbox unanswered until its numbering caught up.
  * <p>
+ * Routing: each accepted report also records a DEPOSITED edge ({@link BundleRouting#recordDeposited}) from the dropbox
+ * to every client whose held bundles the server can map, dated by the newest first sighting of those bundles. A
+ * client that never reports its peers (an old client) is then still delivered through carriers that reach the
+ * dropbox.
+ * <p>
  * Timing (Research R6 §3.3 "evaluation timing"): a dropbox uploads its own control bundle in the same carrier sync as
  * the relayed bundles it reports, and the server may process the report first. So {@link #beforeBundleGeneration}
  * re-plans the stored report just before each bundle for the dropbox is built, and queues a fresh plan only when the
@@ -87,6 +93,7 @@ public class DropboxControlHandler implements InternalAppHandler {
     private final ObjectProvider<ServerSecurity> serverSecurityProvider;
     private final StoreADUs sendFolder;
     private final DropboxRetentionPlanner planner;
+    private final BundleRouting bundleRouting;
     private final BundleIdKeys bundleIdKeys = new BundleIdKeys();
 
     public DropboxControlHandler(DropboxNodeRepository dropboxNodeRepository,
@@ -96,6 +103,7 @@ public class DropboxControlHandler implements InternalAppHandler {
                                  ClientDownstreamAckRepository clientDownstreamAckRepository,
                                  ObjectProvider<ServerSecurity> serverSecurityProvider,
                                  AduStores aduStores,
+                                 BundleRouting bundleRouting,
                                  @Value("${dropbox.retention.unknown-ttl:14d}") Duration unknownTtl) {
         this.dropboxNodeRepository = dropboxNodeRepository;
         this.inventorySightingRepository = inventorySightingRepository;
@@ -105,6 +113,7 @@ public class DropboxControlHandler implements InternalAppHandler {
         this.serverSecurityProvider = serverSecurityProvider;
         this.sendFolder = aduStores.getSendADUsStorage();
         this.planner = new DropboxRetentionPlanner(unknownTtl);
+        this.bundleRouting = bundleRouting;
         logger.log(INFO, "Dropbox retention: unknown bundles expire " + unknownTtl + " after first sighting");
     }
 
@@ -175,7 +184,9 @@ public class DropboxControlHandler implements InternalAppHandler {
 
         var sightings = refreshSightings(clientId, newest, now,
                                          InventoryCompleteness.isComplete(newestJson.getBytes(StandardCharsets.UTF_8)));
-        var decision = planner.plan(newest, facts(newest, sightings), now);
+        var facts = facts(newest, sightings);
+        var decision = planner.plan(newest, facts, now);
+        recordDeposits(clientId, newest, facts, now);
         // every accepted report gets a plan, even an empty one, so the dropbox learns its report was processed
         enqueuePlan(node, newest, decision, now);
     }
@@ -216,6 +227,22 @@ public class DropboxControlHandler implements InternalAppHandler {
                                         clientDownstreamAckRepository,
                                         serverSecurityProvider.getIfAvailable(),
                                         bundleIdKeys);
+    }
+
+    /**
+     * Records a DEPOSITED edge from the dropbox to each client {@code facts} maps an upstream entry's key fingerprint
+     * to, with the newest first sighting among that client's listed bundles. Unmapped entries are skipped.
+     */
+    private void recordDeposits(String dropboxId, InventoryReport report, DropboxRetentionPlanner.Facts facts,
+                                long now) {
+        var newestByClient = new HashMap<String, Long>();
+        for (var entry : report.getUpstream()) {
+            String key = entry.getClientKeyB64();
+            String client = key == null ? null : facts.clientIdForKey(key);
+            Long firstSeen = facts.firstSeenMs(Direction.UPSTREAM, entry.getBundleId());
+            if (client != null && firstSeen != null) newestByClient.merge(client, firstSeen, Math::max);
+        }
+        newestByClient.forEach((client, firstSeen) -> bundleRouting.recordDeposited(dropboxId, client, firstSeen, now));
     }
 
     /**

@@ -28,9 +28,11 @@ import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import net.discdd.server.repository.ClientDownstreamAckRepository;
 import net.discdd.server.repository.DropboxNodeRepository;
 import net.discdd.server.repository.DropboxRecencyGrantRepository;
+import net.discdd.server.repository.InventorySightingRepository;
 import net.discdd.server.repository.ReceivedBundleRepository;
 import net.discdd.server.repository.RoutingEdgeRepository;
 import net.discdd.server.repository.SentAduDetailsRepository;
+import net.discdd.server.repository.compositeId.InventorySightingId;
 import net.discdd.server.repository.entity.RoutingEdgeId;
 import net.discdd.server.service.GrpcExecutor;
 import net.discdd.tls.GrpcSecurityKey;
@@ -143,6 +145,8 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
     RoutingEdgeRepository routingEdgeRepository;
     @Autowired
     BundleRouting bundleRouting;
+    @Autowired
+    InventorySightingRepository inventorySightingRepository;
 
     @BeforeAll
     static void setUpDropboxEndpoint() throws Exception {
@@ -468,6 +472,39 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
                    "the client's report is still fresh; only the carrier's route to the dropbox went stale");
     }
 
+    /**
+     * DEPOSITED membership: a client that never reports its peers ({@code {}} metadata, an old client) is routed
+     * through a carrier that reaches the dropbox, because the dropbox's inventory lists the client's bundle.
+     */
+    @Test
+    void test13OldClientRoutedViaDeposit() throws Exception {
+        // forget the client's report (test10) and the deposits of earlier inventories: only this inventory may route it
+        String dropboxPeerId = dropboxRecencyGrantRepository.findById(dropboxId).orElseThrow().senderId;
+        routingEdgeRepository.findById(reported(dropboxPeerId, clientId)).ifPresent(routingEdgeRepository::delete);
+        routingEdgeRepository.findById(deposited(dropboxId, clientId)).ifPresent(routingEdgeRepository::delete);
+        assertEquals(List.of(), bundleRouting.clientsForCarrier("T3", System.currentTimeMillis()));
+
+        // the dropbox holds the client's bundle 8, which the server has not received
+        String held = BundleJarInfo.read(stockClientBundle(8, null)).getBundleId();
+        var node = dropboxNodeRepository.findById(dropboxId).orElseThrow();
+        dropboxUploads(DropboxControl.APP_ID,
+                       DropboxControlCodec.encode(report(node.lastReportSeq + 1,
+                                                         node.lastPlanSeq,
+                                                         List.of(new UpstreamEntry(held, 100, stockClientKey)),
+                                                         List.of(),
+                                                         List.of())),
+                       "T3");
+
+        long firstSeen = inventorySightingRepository.findById(new InventorySightingId(dropboxId, "UPSTREAM", held))
+                .orElseThrow().firstSeenMs;
+        assertEquals(firstSeen,
+                     routingEdgeRepository.findById(deposited(dropboxId, clientId)).orElseThrow().lastSeenMs);
+        var toT3 = inventory("T3");
+        String current = generateBundleForClient(clientId);
+        assertTrue(toT3.bundlesToDownload().contains(current), () -> "the client's bundle rides T3: " + toT3);
+        assertFalse(routingEdgeRepository.existsById(uploaded("T3", clientId)), "T3 never carried the client");
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private static RoutingEdgeId uploaded(String peerId, String client) {
@@ -476,6 +513,10 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
 
     private static RoutingEdgeId reported(String peerId, String client) {
         return new RoutingEdgeId(peerId, client, RoutingSource.REPORTED);
+    }
+
+    private static RoutingEdgeId deposited(String dropboxId, String client) {
+        return new RoutingEdgeId(dropboxId, client, RoutingSource.DEPOSITED);
     }
 
     private long reportedEdgeCount(String client) {

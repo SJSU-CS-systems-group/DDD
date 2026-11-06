@@ -13,14 +13,18 @@ import net.discdd.dropbox.control.RetentionPlan.Deletion;
 import net.discdd.model.ADU;
 import net.discdd.server.applicationdatamanager.AduStores;
 import net.discdd.server.applicationdatamanager.ServerApplicationDataManager;
+import net.discdd.server.bundlerouting.BundleRouting;
+import net.discdd.server.bundlerouting.RoutingSource;
 import net.discdd.server.config.BundleServerConfig;
 import net.discdd.server.repository.BundleMetadataRepository;
 import net.discdd.server.repository.ClientBundleCountersRepository;
 import net.discdd.server.repository.ClientDownstreamAckRepository;
 import net.discdd.server.repository.DropboxNodeRepository;
+import net.discdd.server.repository.DropboxRecencyGrantRepository;
 import net.discdd.server.repository.InventorySightingRepository;
 import net.discdd.server.repository.ReceivedBundleRepository;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
+import net.discdd.server.repository.RoutingEdgeRepository;
 import net.discdd.server.repository.SentAduDetailsRepository;
 import net.discdd.server.repository.compositeId.InventorySightingId;
 import net.discdd.server.repository.entity.BundleMetadata;
@@ -35,6 +39,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -44,7 +49,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -92,6 +99,12 @@ class DropboxStorageRepositoryTest {
     @Autowired
     ClientBundleCountersRepository clientBundleCountersRepository;
     @Autowired
+    RoutingEdgeRepository routingEdgeRepository;
+    @Autowired
+    DropboxRecencyGrantRepository dropboxRecencyGrantRepository;
+    @Autowired
+    TestEntityManager entityManager;
+    @Autowired
     ObjectProvider<ServerSecurity> noServerSecurity;
     @SuppressWarnings("unchecked")
     private final ObjectProvider<ServerSecurity> keysKnowingNoClient = mock(ObjectProvider.class);
@@ -127,6 +140,12 @@ class DropboxStorageRepositoryTest {
                                          clientDownstreamAckRepository,
                                          serverSecurity,
                                          aduStores,
+                                         new BundleRouting(routingEdgeRepository,
+                                                           receivedBundleRepository,
+                                                           dropboxNodeRepository,
+                                                           dropboxRecencyGrantRepository,
+                                                           Duration.ofDays(14),
+                                                           64),
                                          Duration.ofDays(14));
     }
 
@@ -226,6 +245,47 @@ class DropboxStorageRepositoryTest {
         assertEquals(1, plans.get(0).getBasedOnReportSeq());
         assertEquals(List.of(new Deletion("U1", Reason.RECEIVED_BY_SERVER)), plans.get(0).getDeleteUpstream());
         assertEquals(2, inventorySightingRepository.findByIdDropboxId(D).size());
+    }
+
+    /** the dropbox's DEPOSITED edges: client to lastSeen, as the database holds them */
+    private Map<String, Long> deposited() {
+        entityManager.flush();
+        entityManager.clear();
+        var result = new HashMap<String, Long>();
+        for (var edge : routingEdgeRepository.findAll()) {
+            if (edge.id.source == RoutingSource.DEPOSITED && edge.id.peerId.equals(D)) {
+                result.put(edge.id.clientId, edge.lastSeenMs);
+            }
+        }
+        return result;
+    }
+
+    private static InventorySighting upstreamSighting(String bundleId, long firstSeenMs) {
+        return new InventorySighting(new InventorySightingId(D, "UPSTREAM", bundleId), firstSeenMs);
+    }
+
+    @Test
+    void inventoryRecordsDepositedEdgeFromSightings() throws Exception {
+        long start = System.currentTimeMillis();
+        receivedBundleRepository.save(new ReceivedBundle("U1", C, 1, "fpC", 10, "T")); // maps fpC to C
+        // earlier reports already listed U2 and U3
+        long older = start - Duration.ofDays(2).toMillis();
+        long old = start - Duration.ofDays(1).toMillis();
+        inventorySightingRepository.save(upstreamSighting("U2", older));
+        inventorySightingRepository.save(upstreamSighting("U3", old));
+        handler.handleUpstream(D, List.of(inventory(1, List.of(new UpstreamEntry("U2", 5, "fpC"),
+                                                              new UpstreamEntry("U3", 5, "fpC"),
+                                                              new UpstreamEntry("U7", 5, null),
+                                                              new UpstreamEntry("U8", 5, "fpUnknown")), List.of())));
+        assertEquals(Map.of(C, old), deposited(), "the newest first sighting of C's bundles, not the report time");
+
+        // a bundle listed for the first time is first seen now
+        handler.handleUpstream(D, List.of(inventory(2, List.of(new UpstreamEntry("U3", 5, "fpC"),
+                                                              new UpstreamEntry("U4", 5, "fpC")), List.of())));
+        long u4 = inventorySightingRepository.findById(new InventorySightingId(D, "UPSTREAM", "U4"))
+                .orElseThrow().firstSeenMs;
+        assertTrue(u4 >= start);
+        assertEquals(Map.of(C, u4), deposited());
     }
 
     @Test
