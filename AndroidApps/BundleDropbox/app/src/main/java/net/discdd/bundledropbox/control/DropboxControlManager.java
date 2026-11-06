@@ -194,7 +194,7 @@ public final class DropboxControlManager implements ControlChannel {
             if (o == Ownership.MINE_NEW) {
                 Path path = store.pathFor(Direction.DOWNSTREAM, r.bundleId());
                 if (path != null) {
-                    DropboxControlEndpoint.AcceptResult result = endpoint.accept(path, null);
+                    DropboxControlEndpoint.AcceptResult result = endpoint.accept(path);
                     safeToDelete = result == DropboxControlEndpoint.AcceptResult.PROCESSED ||
                                    result == DropboxControlEndpoint.AcceptResult.ALREADY_PROCESSED;
                 }
@@ -296,9 +296,9 @@ public final class DropboxControlManager implements ControlChannel {
     }
 
     @Override
-    public synchronized boolean accept(Path stagedJar, String carrierSenderId) {
+    public synchronized boolean accept(Path stagedJar) {
         if (endpoint == null) return false;
-        DropboxControlEndpoint.AcceptResult r = endpoint.accept(stagedJar, carrierSenderId);
+        DropboxControlEndpoint.AcceptResult r = endpoint.accept(stagedJar);
         if (r == DropboxControlEndpoint.AcceptResult.FAILED) {
             listener.problem("A server cleanup bundle could not be processed; a carrier will offer it again");
         }

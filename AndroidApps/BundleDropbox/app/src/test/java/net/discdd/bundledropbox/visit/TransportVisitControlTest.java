@@ -36,9 +36,9 @@ import static org.junit.Assert.assertTrue;
  * <ul>
  *   <li>the dropbox's own bundle is uploaded <b>first</b>, before relayed bundles, and is neither stored nor
  *       recorded in the ledger;</li>
- *   <li>downloaded bundles addressed to the dropbox go to {@link ControlChannel#accept} with the carrier's
- *       recency-blob sender id (when that blob is from our server) and <b>never</b> into the relay store, while
- *       the carrier's blob itself is never offered to the recency store (09 Own Recency Blob Design);</li>
+ *   <li>downloaded bundles addressed to the dropbox go to {@link ControlChannel#accept} and <b>never</b> into the
+ *       relay store, while the carrier's blob is only checked ({@link VisitResult#carrierTrusted()}) and never
+ *       offered to the recency store (09 Own Recency Blob Design);</li>
  *   <li>after a processed plan the regenerated own bundle (carrying the ack) is uploaded at the end;</li>
  *   <li>a failing control channel never breaks the relay.</li>
  * </ul>
@@ -64,7 +64,6 @@ public class TransportVisitControlTest {
         OwnBundle lastOwn;
         final Map<String, Ownership> ownership = new HashMap<>();
         final List<String> acceptedIds = new ArrayList<>();
-        final List<String> acceptedSenders = new ArrayList<>();
         final List<byte[]> acceptedBytes = new ArrayList<>();
         int ownBundleCalls;
         boolean explode;
@@ -84,14 +83,13 @@ public class TransportVisitControlTest {
         }
 
         @Override
-        public synchronized boolean accept(Path stagedJar, String carrierSenderId) {
+        public synchronized boolean accept(Path stagedJar) {
             try {
                 acceptedBytes.add(Files.readAllBytes(stagedJar));
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
             acceptedIds.add(TransportVisitClient.readJarBundleId(stagedJar));
-            acceptedSenders.add(carrierSenderId);
             return true;
         }
     }
@@ -184,7 +182,6 @@ public class TransportVisitControlTest {
         assertTrue(r.toString(), r.ok());
         assertEquals(List.of("d1"), downstreamIds());
         assertEquals(List.of("mine1"), control.acceptedIds);
-        assertEquals(List.of(SENDER_ID), control.acceptedSenders);
         assertArrayEquals(Files.readAllBytes(mine), control.acceptedBytes.get(0));
         assertEquals(1, r.controlProcessed());
         assertEquals(1, r.downloaded());
@@ -264,29 +261,30 @@ public class TransportVisitControlTest {
         assertEquals(1, r.controlProcessed());
     }
 
-    /** The trusted carrier's sender id names it in routing metadata; its blob is still never stored. */
+    /** The trusted carrier's blob only sets carrierTrusted; it is never stored. */
     @Test(timeout = 60_000)
-    public void trustedCarrierBlobOnlyNamesTheCarrier() throws Exception {
+    public void trustedCarrierBlobIsOnlyChecked() throws Exception {
         BundleFixtures.bundleJar(carrier.toClient, "mine1", "mine1", 120);
         control.ownership.put("mine1", ControlChannel.Ownership.MINE_NEW);
 
         VisitResult r = visit();
 
         assertTrue(r.carrierTrusted());
-        assertEquals(List.of(SENDER_ID), control.acceptedSenders);
+        assertEquals(List.of("mine1"), control.acceptedIds);
         assertEquals("never offered", 0, recency.offers);
         assertFalse(recency.current().isPresent());
     }
 
+    /** A carrier that never synced is not trusted, but the own bundle it carries is still accepted. */
     @Test(timeout = 60_000)
-    public void untrustedRecencyBlobGivesNoSenderId() throws Exception {
+    public void untrustedCarrierStillDeliversTheOwnBundle() throws Exception {
         carrier.recency = GetRecencyBlobResponse.getDefaultInstance(); // carrier never synced
         BundleFixtures.bundleJar(carrier.toClient, "mine1", "mine1", 120);
         control.ownership.put("mine1", ControlChannel.Ownership.MINE_NEW);
 
-        visit();
+        VisitResult r = visit();
 
+        assertFalse(r.carrierTrusted());
         assertEquals(List.of("mine1"), control.acceptedIds);
-        assertEquals(java.util.Collections.singletonList(null), control.acceptedSenders);
     }
 }

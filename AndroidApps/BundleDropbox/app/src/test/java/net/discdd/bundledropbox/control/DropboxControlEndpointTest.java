@@ -51,6 +51,7 @@ import java.io.PipedInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.spec.ECGenParameterSpec;
@@ -88,8 +89,8 @@ import static org.junit.Assert.assertTrue;
  * relay-store deletions, results in the next inventory, start-up adoption, and the own recency blob: request out,
  * grant in, stored only when minted for the dropbox's own sender id; 09 Own Recency Blob Design).
  *
- * <p><b>One endpoint root per JVM.</b> bundle-core keeps {@code ClientSecurity} and {@code ClientRouting} as
- * process-wide singletons, so every test here shares one static root, wiped before each test (the endpoint then
+ * <p><b>One endpoint root per JVM.</b> bundle-core keeps {@code ClientSecurity} as a process-wide singleton, so
+ * every test here shares one static root, wiped before each test (the endpoint then
  * starts a fresh identity). No other test class opens an endpoint; if one ever must, give it its own JVM
  * ({@code forkEvery}) instead. The in-test server is a singleton too: {@code SecurityUtils.getClientID} reads
  * {@code ServerSecurity.getInstance}.
@@ -352,13 +353,13 @@ public class DropboxControlEndpointTest {
         String id = BundleJarInfo.read(jar).getBundleId();
 
         assertEquals(ControlChannel.Ownership.MINE_NEW, ep.classify(id));
-        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(jar, "transport-T1"));
+        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(jar));
         assertTrue("the caller's file is untouched", Files.exists(jar));
         assertEquals(List.of(DropboxControlCodec.decodePlan(planBytes)), plans);
 
         // Re-offered by a carrier: recognized as already processed, never decrypted or delivered again.
         assertEquals(ControlChannel.Ownership.MINE_ALREADY_PROCESSED, ep.classify(id));
-        assertEquals(DropboxControlEndpoint.AcceptResult.ALREADY_PROCESSED, ep.accept(jar, "transport-T2"));
+        assertEquals(DropboxControlEndpoint.AcceptResult.ALREADY_PROCESSED, ep.accept(jar));
         assertEquals(1, plans.size());
         assertEquals(List.of(), receivedControlAduFiles());
         try (Stream<Path> leftovers = Files.list(root.resolve("BundleTransmission").resolve("bundle-generation")
@@ -383,7 +384,7 @@ public class DropboxControlEndpointTest {
         Path jar = server.send(ep.clientId(), 1, 1, plan(1, 1, List.of()), own.bundleId(), work("out"));
 
         sinkFails.set(true);
-        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(jar, null));
+        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(jar));
         assertTrue(plans.isEmpty());
         assertEquals(1, receivedControlAduFiles().size()); // kept for replay
 
@@ -413,7 +414,7 @@ public class DropboxControlEndpointTest {
         server.receive(own.path(), work("w"));
         Files.write(root.resolve("Shared").resolve("DB").resolve("LARGEST_BUNDLE_ID_RECEIVED.txt"), "".getBytes(StandardCharsets.UTF_8));
         Path jar = server.send(ep.clientId(), 1, 1, plan(1, 1, List.of()), own.bundleId(), work("out"));
-        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(jar, null));
+        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(jar));
         assertEquals(1, plans.size());
     }
 
@@ -455,7 +456,10 @@ public class DropboxControlEndpointTest {
         assertTrue(open(keysA).wasResetForNewServer());
     }
 
-    /** A truncated routing.metadata (bundle-core's truncating writer, then a crash) must not wedge the endpoint. */
+    /**
+     * A truncated routing.metadata (an older bundle-core's truncating writer, then a crash) must not wedge the
+     * endpoint, and the next open repairs it.
+     */
     @Test
     public void truncatedRoutingMetadataIsRepaired() throws Exception {
         DropboxControlEndpoint ep = open(keysA);
@@ -463,8 +467,45 @@ public class DropboxControlEndpointTest {
         Path metadata = root.resolve("BundleRouting").resolve("routing.metadata");
         Files.write(metadata, "{\"transport-1\": 4".getBytes(StandardCharsets.UTF_8));
 
-        assertNotNull(ep.prepareUpstream(inventory(2)));
-        new com.fasterxml.jackson.databind.ObjectMapper().readTree(metadata.toFile()); // parses again
+        assertNotNull(ep.prepareUpstream(inventory(2))); // bundle-core builds the metadata from memory
+        assertNotNull(open(keysA).prepareUpstream(inventory(3)));
+        assertEquals("{}", new String(Files.readAllBytes(metadata), StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Routing metadata alone never makes a new own bundle (bundle-core regenerates when the file's mtime passes the
+     * last bundle's): not on repeated generation, not after the endpoint is re-opened, not when the file goes
+     * missing, and not when a re-open repairs an unreadable file. Each new bundle would burn a counter and a Signal
+     * message and be uploaded again to every carrier.
+     */
+    @Test
+    public void routingMetadataNeverForcesOwnBundleRegeneration() throws Exception {
+        DropboxControlEndpoint ep = open(keysA);
+        ControlChannel.OwnBundle own = ep.prepareUpstream(inventory(1));
+        String id = own.bundleId();
+        FileTime beforeBundle = FileTime.fromMillis(Files.getLastModifiedTime(own.path()).toMillis() - 60_000);
+        Path metadata = root.resolve("BundleRouting").resolve("routing.metadata");
+        assertEquals(id, ep.prepareUpstream(null).bundleId());
+
+        // A valid file an older build left behind; a fresh ClientRouting loads it on re-open.
+        Files.write(metadata, "{}".getBytes(StandardCharsets.UTF_8));
+        Files.setLastModifiedTime(metadata, beforeBundle);
+        ep = open(keysA);
+        assertEquals(id, ep.prepareUpstream(null).bundleId());
+
+        Files.delete(metadata);
+        assertEquals(id, ep.prepareUpstream(null).bundleId());
+        ep = open(keysA);
+        assertEquals(id, ep.prepareUpstream(null).bundleId());
+        assertFalse("a missing file is left missing", Files.exists(metadata));
+
+        // An unreadable file: the repair at open keeps its mtime.
+        Files.write(metadata, "".getBytes(StandardCharsets.UTF_8));
+        Files.setLastModifiedTime(metadata, beforeBundle);
+        ep = open(keysA);
+        assertEquals("{}", new String(Files.readAllBytes(metadata), StandardCharsets.UTF_8));
+        assertEquals(beforeBundle, Files.getLastModifiedTime(metadata));
+        assertEquals(id, ep.prepareUpstream(null).bundleId());
     }
 
     private static void deleteTree(Path dir) throws IOException {
@@ -498,17 +539,17 @@ public class DropboxControlEndpointTest {
         RecencyGrant grant = RecencyGrant.of(1, server.mint("sender", 5).toByteArray(), 7L);
         Path grantJar = server.send(DropboxControl.RECENCY_APP_ID, ep.clientId(), 1, 1,
                                     DropboxControlCodec.encode(grant), own.bundleId(), work("g"));
-        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(grantJar, null));
+        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(grantJar));
         assertEquals(List.of(grant), grants);
         assertTrue(plans.isEmpty());
 
         // A message of the other channel's type on either queue is dropped and never blocks the queue.
         Path planOnRecency = server.send(DropboxControl.RECENCY_APP_ID, ep.clientId(), 2, 2, plan(1, 1, List.of()),
                                          own.bundleId(), work("p"));
-        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(planOnRecency, null));
+        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(planOnRecency));
         Path grantOnPlans = server.send(DropboxControl.APP_ID, ep.clientId(), 3, 1, DropboxControlCodec.encode(grant),
                                         own.bundleId(), work("q"));
-        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(grantOnPlans, null));
+        assertEquals(DropboxControlEndpoint.AcceptResult.PROCESSED, ep.accept(grantOnPlans));
         assertEquals(1, grants.size());
         assertTrue(plans.isEmpty());
         assertEquals(List.of(), receivedControlAduFiles());
@@ -627,7 +668,7 @@ public class DropboxControlEndpointTest {
         Path delayedPlan = server.send(m.status().endpointClientId(), 1, 1,
                                        plan(1, firstReport.getReportSeq(), List.of()), refreshed.bundleId(),
                                        work("large-plan"));
-        assertTrue(m.accept(delayedPlan, "transport-T1"));
+        assertTrue(m.accept(delayedPlan));
         ControlChannel.OwnBundle tail = m.ownBundleForVisit();
         InventoryReport tailReport = server.receive(tail.path(), work("large-tail")).onlyInventory();
         assertEquals(3, tailReport.getReportSeq());
@@ -668,7 +709,7 @@ public class DropboxControlEndpointTest {
                                    own1.bundleId(), work("out"));
         String planId = BundleJarInfo.read(planJar).getBundleId();
         assertEquals(ControlChannel.Ownership.MINE_NEW, m.classify(planId));
-        assertTrue(m.accept(planJar, "transport-T1"));
+        assertTrue(m.accept(planJar));
 
         assertFalse(store.contains(Direction.UPSTREAM, "u1"));
         assertTrue(store.contains(Direction.DOWNSTREAM, "d1"));
@@ -693,7 +734,7 @@ public class DropboxControlEndpointTest {
         // third report, or every plan would trigger a report and every report a plan, forever.
         Path emptyPlanJar = server.send(clientId, 2, 2, plan(2, inv2.getReportSeq(), List.of()), own2.bundleId(),
                                         work("out2"));
-        assertTrue(m.accept(emptyPlanJar, "transport-T1"));
+        assertTrue(m.accept(emptyPlanJar));
         assertEquals(2, m.status().lastPlanSeq());
         m.ownBundleForVisit();
         assertEquals(List.of(1L, 2L), events.reports);
@@ -810,7 +851,7 @@ public class DropboxControlEndpointTest {
         RecencyGrant foreign = RecencyGrant.of(1, server.mint("carrier-sender", now - 2_000).toByteArray(), now);
         Path foreignJar = server.send(DropboxControl.RECENCY_APP_ID, clientId, 1, 1,
                                       DropboxControlCodec.encode(foreign), own1.bundleId(), work("g1"));
-        assertTrue(m.accept(foreignJar, "transport-T1"));
+        assertTrue(m.accept(foreignJar));
         assertFalse(recency.current().isPresent());
         assertFalse(m.status().recencyOutstanding());
         assertEquals(List.of("1:false"), events.recencyGrants);
@@ -828,7 +869,7 @@ public class DropboxControlEndpointTest {
         Path grantJar = server.send(DropboxControl.RECENCY_APP_ID, clientId, 2, 2,
                                     DropboxControlCodec.encode(RecencyGrant.of(2, mine.toByteArray(), now)),
                                     own2.bundleId(), work("g2"));
-        assertTrue(m.accept(grantJar, "transport-T1"));
+        assertTrue(m.accept(grantJar));
         assertArrayEquals(mine.toByteArray(), recency.current().get());
         assertEquals(now - 1_000, recency.currentTimestamp());
         assertEquals(2, m.status().recencyAnsweredSeq());

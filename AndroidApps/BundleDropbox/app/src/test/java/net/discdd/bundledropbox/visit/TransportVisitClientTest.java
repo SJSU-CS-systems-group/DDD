@@ -451,8 +451,8 @@ public class TransportVisitClientTest {
 
     /**
      * Audit M5 and 09 Own Recency Blob Design: a carrier synced to another deployment's server serves a SUCCESS
-     * blob our clients would reject, so its sender id is not believed; its bundles are still exchanged as usual.
-     * A carrier synced to OUR server is trusted for its sender id, but its blob is not stored either.
+     * blob our clients would reject, so it is not trusted; its bundles are still exchanged as usual. A carrier
+     * synced to OUR server is trusted, but its blob is not stored either.
      */
     @Test(timeout = 60_000)
     public void carrierBlobIsNeverStoredWhetherTrustedOrNot() throws Exception {
@@ -497,6 +497,50 @@ public class TransportVisitClientTest {
         assertFalse(r.carrierTrusted());
         assertEquals(1, r.uploaded());
         assertEquals(1, r.downloaded());
+    }
+
+    /**
+     * The dropbox records no routing peers, so meeting a new carrier never makes a new own bundle: the same bundle
+     * id goes to each carrier once (the server learns the carrier from that upload) and is not re-sent to a
+     * carrier that already acknowledged it.
+     */
+    @Test(timeout = 60_000)
+    public void reusedOwnBundleUploadedOnceToEachOfTwoCarriers() throws Exception {
+        ControlChannel.OwnBundle own =
+                new ControlChannel.OwnBundle("own1", BundleFixtures.bundleJar(fixtures.resolve("own"), "own1",
+                                                                              "own1", 64));
+        java.util.concurrent.atomic.AtomicInteger ownCalls = new java.util.concurrent.atomic.AtomicInteger();
+        ControlChannel reusing = new ControlChannel() {
+            @Override
+            public OwnBundle ownBundleForVisit() {
+                ownCalls.incrementAndGet();
+                return own; // what the endpoint returns while nothing changed
+            }
+
+            @Override
+            public Ownership classify(String bundleId) { return Ownership.NOT_MINE; }
+
+            @Override
+            public boolean accept(Path stagedJar) { return false; }
+        };
+        TransportVisitClient withControl = new TransportVisitClient(store, ledger, recency::isServerSigned, reusing,
+                                                                    CarrierChannelFactory.tls(null),
+                                                                    VisitOptions.DEFAULTS.withProbe(3, 50),
+                                                                    System::currentTimeMillis);
+        carrier.recency = successBlob(1_000);
+        try (FakeCarrier second = new FakeCarrier(tmp.newFolder("carrier2").toPath())) {
+            second.recency = successBlob(2_000);
+            InetAddress lo = InetAddress.getLoopbackAddress();
+            for (int round = 0; round < 2; round++) {
+                assertTrue(withControl.visit(lo, carrier.port, CARRIER, () -> true).ok());
+                assertTrue(withControl.visit(lo, second.port, "carrier-T2", () -> true).ok());
+            }
+
+            assertEquals(4, ownCalls.get());
+            assertEquals(List.of("own1"), carrier.uploadOrder);
+            assertEquals(List.of("own1"), second.uploadOrder);
+            assertSameBytes(own.path(), second.toServer.resolve("own1"));
+        }
     }
 
     private static GetRecencyBlobResponse signedBlob(ECKeyPair signer, long ts) throws Exception {

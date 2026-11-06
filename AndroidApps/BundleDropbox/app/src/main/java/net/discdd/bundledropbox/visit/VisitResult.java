@@ -42,8 +42,7 @@ public final class VisitResult {
      * @param reachable      true if the carrier's gRPC port answered the socket probe
      * @param carrierTrusted true if the carrier answered {@code getRecencyBlob} with a blob signed by the server
      *                       the dropbox's clients trust (SUCCESS, pinned key, valid signature, not from the
-     *                       future), so its {@code senderId} could name the carrier in routing metadata. The
-     *                       blob itself is never stored
+     *                       future), i.e. the carrier synced with our server. The blob itself is never stored
      * @param uploaded       UPSTREAM bundles the carrier acknowledged with {@code SUCCESS} during this visit
      * @param downloaded     new DOWNSTREAM bundles committed to the store during this visit
      * @param skipped        downloaded carrier files discarded: the store (or this visit) already held that id, or
@@ -106,8 +105,7 @@ public final class VisitResult {
 
     /**
      * @return true if the carrier served a recency blob signed by the server our clients trust: it has synced with
-     *         our server, and its {@code senderId} was used to name it in the dropbox endpoint's routing metadata.
-     *         Informational only (logs, tests); the blob was not stored.
+     *         our server. Informational only (status line, logs, tests); the blob was not stored.
      */
     public boolean carrierTrusted() { return carrierTrusted; }
 

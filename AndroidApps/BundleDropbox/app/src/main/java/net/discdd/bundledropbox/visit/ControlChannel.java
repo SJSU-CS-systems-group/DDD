@@ -7,9 +7,9 @@ import java.util.Objects;
  * The dropbox's own DDD client endpoint as seen by a carrier visit ({@link TransportVisitClient}). The visit
  * splices it into the exchange it already runs (Research/R6 §3.1, 06 Storage Management Design "Visit flow"):
  * <ol>
- *   <li>after the carrier's {@code getRecencyBlob} (used only to learn the carrier's sender id), it uploads
- *       {@link #ownBundleForVisit()} <b>first</b>, before any relayed bundle, so the inventory, the recency request
- *       and the acks it carries are never starved by a short dwell;</li>
+ *   <li>after the carrier's {@code getRecencyBlob} (used only to see whether the carrier synced with our server),
+ *       it uploads {@link #ownBundleForVisit()} <b>first</b>, before any relayed bundle, so the inventory, the
+ *       recency request and the acks it carries are never starved by a short dwell;</li>
  *   <li>during download-all, every downloaded jar is {@linkplain #classify classified}: a bundle addressed to the
  *       dropbox goes to {@link #accept} and <b>never</b> into the relay store, since no stock client could ever
  *       PSI-match it.</li>
@@ -73,12 +73,13 @@ public interface ControlChannel {
      * Processes a bundle {@link #classify} called {@link Ownership#MINE_NEW}. The caller still owns
      * {@code stagedJar} and discards it afterwards; the endpoint works on its own copy.
      *
-     * @param stagedJar       the downloaded jar
-     * @param carrierSenderId the carrier's recency-blob {@code senderId} (the transport id the server routes by),
-     *                        or {@code null} if unknown
+     * <p>Nothing about the carrier is passed: the dropbox records no routing peers. The server learns which carriers
+     * met the dropbox from their uploads of its bundles (Research/R11 §1.5).
+     *
+     * @param stagedJar the downloaded jar
      * @return true if the bundle was processed (its plans applied, its recency grants offered to the store)
      */
-    boolean accept(Path stagedJar, String carrierSenderId);
+    boolean accept(Path stagedJar);
 
     /** Relay-only: no own bundle, nothing is ever addressed to the dropbox. */
     ControlChannel NONE = new ControlChannel() {
@@ -89,7 +90,7 @@ public interface ControlChannel {
         public Ownership classify(String bundleId) { return Ownership.NOT_MINE; }
 
         @Override
-        public boolean accept(Path stagedJar, String carrierSenderId) { return false; }
+        public boolean accept(Path stagedJar) { return false; }
 
         @Override
         public String toString() { return "ControlChannel.NONE"; }

@@ -30,6 +30,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.FileTime;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,11 +62,12 @@ import javax.crypto.spec.SecretKeySpec;
  * <p>No network: the endpoint only builds and consumes bundle files. The visit uploads its bundle and hands it
  * downloaded bundles ({@code DropboxControlManager}, {@link ControlChannel}).
  *
- * <h2>Process-wide singletons (Research/R7 §1)</h2>
- * bundle-core keeps {@code ClientSecurity} and {@code ClientRouting} as per-process singletons that keep their
- * first {@code ClientPaths}. So there is <b>one endpoint root per process</b> ({@link #open} refuses a second
- * root), and re-opening (new server keys) calls {@code ClientSecurity.resetInstance()} so the singleton re-reads
- * the key files from disk. JVM tests must use one root per test JVM.
+ * <h2>Process-wide singleton (Research/R7 §1)</h2>
+ * bundle-core keeps {@code ClientSecurity} as a per-process singleton that keeps its first {@code ClientPaths}. So
+ * there is <b>one endpoint root per process</b> ({@link #open} refuses a second root), and re-opening (new server
+ * keys) calls {@code ClientSecurity.resetInstance()} so the singleton re-reads the key files from disk. JVM tests
+ * must use one root per test JVM. ({@code ClientRouting} is per {@code ClientBundleTransmission}, so each
+ * {@link #open} loads the routing file afresh.)
  *
  * <h2>Rules around {@code processReceivedBundle} (R7 §4)</h2>
  * <ul>
@@ -79,8 +81,11 @@ import javax.crypto.spec.SecretKeySpec;
  *   <li><b>Pass a copy.</b> {@code processReceivedBundle} deletes its input file.</li>
  *   <li><b>Repair a blank largest-received file to {@code "0"}.</b> bundle-core rewrites it with a truncating
  *       writer; an empty file makes it reject every reply forever (R7 §7).</li>
- *   <li><b>Recreate a missing {@code routing.metadata}.</b> bundle-core's {@code ClientRouting} singleton writes it
- *       only once per process, so a re-created root (server-key change) would otherwise lack it.</li>
+ *   <li><b>No routing peers.</b> The dropbox records no carriers: {@link #accept} passes no sender, and the
+ *       embedded endpoint never runs bundle-core's transport exchange, the only place a client records a peer. Its
+ *       {@code routing.metadata} stays empty, and the server learns which carriers met the dropbox from their
+ *       uploads of its bundles (Research/R11 §1.5). {@link #ensureRoutingMetadata} only repairs an unreadable file
+ *       at {@link #open}, without ever forcing a new own bundle.</li>
  *   <li><b>Union {@link DropboxControl#APP_ID} and {@link DropboxControl#RECENCY_APP_ID} into the registered app
  *       ids</b> at open and after each bundle: the client only sends app ids the server listed, so a server that
  *       omitted one would silence the inventory or the recency request (R7 §3). The server lists them for
@@ -260,8 +265,8 @@ public final class DropboxControlEndpoint {
     /**
      * Queues {@code inventoryAdu} and {@code recencyRequestAdu} (each if given) and returns the bundle to upload.
      *
-     * <p>bundle-core reuses the newest generated bundle unless a newer ack or new ADUs exist
-     * ({@code generateBundleForTransmission}), so passing {@code null} for both when nothing changed keeps
+     * <p>bundle-core reuses the newest generated bundle unless a newer ack, new ADUs or a routing change exist
+     * ({@code generateBundleForTransmission}; the dropbox makes no routing changes), so passing {@code null} for both when nothing changed keeps
      * re-offering the same bundle id instead of using up a new one per visit; queuing either one forces a new
      * bundle. Queued ADUs stay in every new bundle until the server acknowledges a bundle that carried them, so a
      * request waiting for its grant still rides along without being queued again. Older generated bundles are
@@ -284,7 +289,6 @@ public final class DropboxControlEndpoint {
         // a recency request that would stall until something else changes. Whatever was queued must ride, so the
         // superseded bundle goes now rather than after generation (pruneToSend would delete it anyway).
         if (inventoryAdu != null || recencyRequestAdu != null) pruneToSend(null);
-        ensureRoutingMetadata(paths);
         Bundle bundle = transmission.generateBundleForTransmission();
         Path file = bundle.getSource().toPath();
         pruneToSend(file);
@@ -323,13 +327,12 @@ public final class DropboxControlEndpoint {
      * {@code processReceivedBundle}, which stores its ADUs and delivers plans and grants to their sinks, then
      * cleans up the extracted files bundle-core leaves behind.
      *
-     * @param jar             the downloaded jar (not modified or deleted)
-     * @param carrierSenderId the carrier's recency-blob {@code senderId}; bundle-core adds it to this endpoint's
-     *                        routing metadata, so the server can route replies via every carrier the dropbox met
-     *                        (R7 §4). {@code null} if unknown
+     * <p>No sender is passed to bundle-core: the dropbox records no routing peers (class Javadoc).
+     *
+     * @param jar the downloaded jar (not modified or deleted)
      * @return what happened
      */
-    public synchronized AcceptResult accept(Path jar, String carrierSenderId) {
+    public synchronized AcceptResult accept(Path jar) {
         checkOpen();
         String bundleId;
         try {
@@ -344,9 +347,8 @@ public final class DropboxControlEndpoint {
         Path copy = scratchDir.resolve(bundleId); // extractBundle names its directory after the file
         try {
             repairBlankLargestReceived(paths.largestBundleIdReceived);
-            ensureRoutingMetadata(paths);
             Files.copy(jar, copy, StandardCopyOption.REPLACE_EXISTING);
-            transmission.processReceivedBundle(carrierSenderId, new Bundle(bundleId, copy.toFile()));
+            transmission.processReceivedBundle(null, new Bundle(bundleId, copy.toFile()));
         } catch (Exception e) {
             logger.log(Level.WARNING, "Control bundle " + bundleId + " could not be processed", e);
             return AcceptResult.FAILED;
@@ -558,32 +560,33 @@ public final class DropboxControlEndpoint {
     }
 
     /**
-     * Recreates {@code BundleRouting/routing.metadata} as an empty JSON map if it is missing, blank or not the map
-     * bundle-core expects. bundle-core's {@code ClientRouting} is a process-wide singleton that writes this file
-     * only when it is first constructed, and reads it on every bundle generation and every received bundle. Two
-     * ways it goes bad: a server-key change wipes the endpoint root in the same process (the singleton survives,
-     * the file does not), and bundle-core's truncating Jackson {@code writeValue} can leave a partial file after a
-     * crash. Either makes every later bundle fail; worse, {@code processReceivedBundle} updates this file only
-     * after Signal decryption, so each failed attempt also burns that bundle's Signal message (R7 §7). The file
-     * holds only per-transport sighting counts, so resetting it loses nothing the server needs.
+     * Backstop for {@code BundleRouting/routing.metadata}, run by {@link #open} before bundle-core's per-instance
+     * {@code ClientRouting} loads it: content that is not the JSON map of numbers it reads (blank, truncated by an
+     * older bundle-core's non-atomic writer, {@code null}) is replaced with {@code {}}. bundle-core now copes with
+     * such a file itself and builds each bundle's routing metadata from memory, so this only keeps its load quiet.
+     *
+     * <p>It never forces a new own bundle. bundle-core regenerates when the file's mtime is newer than the last
+     * bundle ({@code ClientRouting.changedSince}), so a repair keeps the old mtime, and a missing file is left
+     * missing (bundle-core reads it as empty). Running only at open, it cannot race a bundle generation either. The
+     * dropbox records no peers, so the file has nothing the server needs. Not covered here: an older build's file
+     * of sighting counts parses fine, and bundle-core drops those counts on load and rewrites the file once,
+     * which mints one new own bundle after the upgrade (Research/R11 §5 risk 3).
      */
     static void ensureRoutingMetadata(ClientPaths paths) throws IOException {
         Path file = paths.metadataFile.toPath();
-        boolean valid;
         try {
-            // the exact shape ClientRouting reads: a JSON object of numbers
-            // ("null" parses to no map at all, which ClientRouting would then dereference)
-            valid = new ObjectMapper().readValue(file.toFile(), new TypeReference<HashMap<String, Long>>() {}) != null;
+            // the exact shape ClientRouting reads: a JSON object of numbers ("null" parses to no map at all)
+            if (new ObjectMapper().readValue(file.toFile(), new TypeReference<HashMap<String, Long>>() {}) != null) {
+                return;
+            }
         } catch (NoSuchFileException | FileNotFoundException e) {
-            valid = false;
+            return;
         } catch (JsonProcessingException e) {
             logger.log(Level.WARNING, "Repairing unreadable " + file.getFileName() + ": " + e.getOriginalMessage());
-            valid = false;
         }
-        if (!valid) {
-            Files.createDirectories(file.toAbsolutePath().getParent());
-            Files.write(file, "{}".getBytes(StandardCharsets.UTF_8));
-        }
+        FileTime mtime = Files.getLastModifiedTime(file);
+        Files.write(file, "{}".getBytes(StandardCharsets.UTF_8));
+        Files.setLastModifiedTime(file, mtime);
     }
 
     /**
