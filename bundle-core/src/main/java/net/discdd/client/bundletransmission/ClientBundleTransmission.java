@@ -397,8 +397,11 @@ public class ClientBundleTransmission {
                     var peerCert = trustManager.getCheckedCert();
                     String peerId = boundPeerId(blobRecencyReply, peerCert);
                     if (peerId != null) {
-                        clientRouting.record(peerId, System.currentTimeMillis());
-                        logger.log(INFO, "Recorded carrier " + peerId);
+                        if (clientRouting.record(peerId, System.currentTimeMillis())) {
+                            logger.log(INFO, "Recorded carrier " + peerId);
+                        } else {
+                            logger.log(INFO, "Carrier " + peerId + " matches the TLS peer; already recorded recently");
+                        }
                     } else {
                         String certPeerId =
                                 peerCert == null ? "<no cert>" : SecurityUtils.peerIdForTlsKey(peerCert.getPublicKey());
