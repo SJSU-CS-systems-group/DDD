@@ -510,8 +510,8 @@ public class DropboxControlEndpointTest {
     /**
      * Routing metadata alone never makes a new own bundle (bundle-core regenerates when the file's mtime passes the
      * last bundle's): not on repeated generation, not after the endpoint is re-opened, not when the file goes
-     * missing, and not when a re-open repairs an unreadable file. Each new bundle would burn a counter and a Signal
-     * message and be uploaded again to every carrier.
+     * missing, and not when a re-open repairs an unreadable file or resets an older build's sighting counts. Each
+     * new bundle would burn a counter and a Signal message and be uploaded again to every carrier.
      */
     @Test
     public void routingMetadataNeverForcesOwnBundleRegeneration() throws Exception {
@@ -540,6 +540,15 @@ public class DropboxControlEndpointTest {
         ep = open(keysA);
         assertEquals("{}", new String(Files.readAllBytes(metadata), StandardCharsets.UTF_8));
         assertEquals(beforeBundle, Files.getLastModifiedTime(metadata));
+        assertEquals(id, ep.prepareUpstream(null).bundleId());
+
+        // An older build's {"peer": count} file parses fine; the reset at open clears it and keeps its mtime.
+        Files.write(metadata, "{\"transport-1\": 4}".getBytes(StandardCharsets.UTF_8));
+        Files.setLastModifiedTime(metadata, beforeBundle);
+        ep = open(keysA);
+        assertEquals("{}", new String(Files.readAllBytes(metadata), StandardCharsets.UTF_8));
+        assertEquals(beforeBundle, Files.getLastModifiedTime(metadata));
+        assertEquals(id, ep.prepareUpstream(null).bundleId());
         assertEquals(id, ep.prepareUpstream(null).bundleId());
     }
 

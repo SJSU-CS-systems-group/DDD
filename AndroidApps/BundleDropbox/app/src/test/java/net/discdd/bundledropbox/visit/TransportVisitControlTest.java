@@ -77,6 +77,8 @@ public class TransportVisitControlTest {
         IntSupplier psiCount = () -> -1;
         int ownBundleCalls;
         boolean explode;
+        /** The next this many accepts fail (return false, the bundle stays new). */
+        int failAccepts;
 
         @Override
         public synchronized List<String> ownProbeIds() {
@@ -99,6 +101,10 @@ public class TransportVisitControlTest {
 
         @Override
         public synchronized boolean accept(Path stagedJar) {
+            if (failAccepts > 0) {
+                failAccepts--;
+                return false;
+            }
             try {
                 acceptedBytes.add(Files.readAllBytes(stagedJar));
             } catch (IOException e) {
@@ -368,6 +374,28 @@ public class TransportVisitControlTest {
         assertEquals(1, r.psiExchanges()); // the counting exchange only
         assertEquals(List.of(), downstreamIds());
         assertTrue(r.lastError(), r.lastError().contains("already found by id"));
+    }
+
+    /** Full box, probe hit whose accept fails: not found by id, so the control-only walk still runs and retries. */
+    @Test(timeout = 60_000)
+    public void probeHitWithFailedAcceptKeepsDownloadAll() throws Exception {
+        for (int i = 0; i < 4; i++) BundleFixtures.bundleJar(carrier.toClient, "d" + i, "d" + i, 100);
+        BundleFixtures.bundleJar(carrier.toClient, "own-3", "own-3", 120);
+        control.ownership.put("own-3", ControlChannel.Ownership.MINE_NEW);
+        control.probeIds.add("own-3");
+        control.failAccepts = 1;
+        store.hasCapacity = false;
+
+        VisitResult r = visit();
+
+        assertFalse(r.ownByProbe());
+        assertEquals(1, carrier.byIdDownloads.get());
+        assertTrue("control-only walk ran", carrier.psiDownloads.get() > 0);
+        assertEquals(List.of("own-3"), control.acceptedIds);
+        assertTrue("accepted by download-all", control.psiAtAccept.get(0) > 0);
+        assertEquals(1, r.controlProcessed());
+        assertEquals(List.of(), downstreamIds());
+        assertFalse(r.lastError(), r.lastError().contains("already found by id"));
     }
 
     /** A carrier that never synced with our server cannot hold our own bundle: no by-id requests. */

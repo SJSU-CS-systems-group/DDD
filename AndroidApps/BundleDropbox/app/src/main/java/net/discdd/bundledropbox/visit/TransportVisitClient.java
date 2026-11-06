@@ -364,7 +364,10 @@ public final class TransportVisitClient {
         private String lastError;
         private int controlUploaded;
         private int controlProcessed;
-        /** The own bundle was fetched by id this visit, so control-only mode has nothing left to look for. */
+        /**
+         * The own bundle was fetched by id and accepted this visit, so control-only mode has nothing left to look
+         * for.
+         */
         private boolean ownFoundThisVisit;
         private int probes;
         private int psiExchanges;
@@ -698,8 +701,10 @@ public final class TransportVisitClient {
          * Downloads the dropbox's own newest bundle by id, before download-all and without PSI (Research/R11 RT8).
          * A stock carrier answers {@code downloadBundle} from its file name and NOT_FOUND otherwise (R11 §0 item
          * 8). Probing stops at the first hit, and also at any answer other than "not there", leaving the rest to
-         * download-all. Only called for a carrier that synced with our server: any other carrier cannot hold a
-         * bundle our server made for the dropbox.
+         * download-all. A hit counts as found ({@link #ownFoundThisVisit}) only if {@code control.accept}
+         * succeeded; otherwise download-all and control-only mode look for the own bundle as before. Only called
+         * for a carrier that synced with our server: any other carrier cannot hold a bundle our server made for
+         * the dropbox.
          */
         private void probeOwn(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blocking) {
             List<String> ids;
@@ -725,9 +730,11 @@ public final class TransportVisitClient {
                                                       id,
                                                       true);
                 if (outcome.own) {
-                    ownFoundThisVisit = true;
-                    logger.log(INFO, "own bundle " + id + " found by id on " + carrierId + " after " + probes +
-                            " request(s)");
+                    if (outcome.accepted) {
+                        ownFoundThisVisit = true;
+                        logger.log(INFO, "own bundle " + id + " found by id on " + carrierId + " after " + probes +
+                                " request(s)");
+                    }
                     return;
                 }
                 if (!outcome.listingChanged) return; // not a plain "not there": leave it to download-all
@@ -995,9 +1002,11 @@ public final class TransportVisitClient {
             ControlChannel.Ownership ownership = classifyOwn(bundleId);
             if (ownership != ControlChannel.Ownership.NOT_MINE) {
                 // Addressed to the dropbox itself: process it in-app and never relay it (class Javadoc).
+                boolean accepted = false;
                 try {
                     if (ownership == ControlChannel.Ownership.MINE_NEW) {
                         if (control.accept(staged.path())) {
+                            accepted = true;
                             controlProcessed++;
                             logger.log(INFO, "processed own control bundle " + bundleId + " from " + carrierId);
                         } else {
@@ -1011,7 +1020,7 @@ public final class TransportVisitClient {
                 } finally {
                     store.abort(staged);
                 }
-                return new IndexOutcome(bundleId, false, true);
+                return new IndexOutcome(bundleId, false, true, accepted);
             }
             if (controlOnly) {
                 store.abort(staged); // a relayed bundle: no room for it now
@@ -1092,15 +1101,18 @@ public final class TransportVisitClient {
         final boolean listingChanged;
         /** The bundle was addressed to the dropbox itself (processed or already processed). */
         final boolean own;
+        /** {@code control.accept} processed this own bundle (returned true, did not throw). */
+        final boolean accepted;
 
         IndexOutcome(String bundleId, boolean listingChanged) {
-            this(bundleId, listingChanged, false);
+            this(bundleId, listingChanged, false, false);
         }
 
-        IndexOutcome(String bundleId, boolean listingChanged, boolean own) {
+        IndexOutcome(String bundleId, boolean listingChanged, boolean own, boolean accepted) {
             this.bundleId = bundleId;
             this.listingChanged = listingChanged;
             this.own = own;
+            this.accepted = accepted;
         }
     }
 }

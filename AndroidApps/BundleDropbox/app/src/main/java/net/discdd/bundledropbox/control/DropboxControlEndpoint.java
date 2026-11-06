@@ -40,6 +40,7 @@ import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -87,8 +88,8 @@ import javax.crypto.spec.SecretKeySpec;
  *   <li><b>No routing peers.</b> The dropbox records no carriers: {@link #accept} passes no sender, and the
  *       embedded endpoint never runs bundle-core's transport exchange, the only place a client records a peer. Its
  *       {@code routing.metadata} stays empty, and the server learns which carriers met the dropbox from their
- *       uploads of its bundles (Research/R11 §1.5). {@link #ensureRoutingMetadata} only repairs an unreadable file
- *       at {@link #open}, without ever forcing a new own bundle.</li>
+ *       uploads of its bundles (Research/R11 §1.5). {@link #ensureRoutingMetadata} resets a non-empty or
+ *       unreadable file to {@code {}} at {@link #open}, without ever forcing a new own bundle.</li>
  *   <li><b>Union {@link DropboxControl#APP_ID} and {@link DropboxControl#RECENCY_APP_ID} into the registered app
  *       ids</b> at open and after each bundle: the client only sends app ids the server listed, so a server that
  *       omitted one would silence the inventory or the recency request (R7 §3). The server lists them for
@@ -271,12 +272,13 @@ public final class DropboxControlEndpoint {
     /**
      * Queues {@code inventoryAdu} and {@code recencyRequestAdu} (each if given) and returns the bundle to upload.
      *
-     * <p>bundle-core reuses the newest generated bundle unless a newer ack, new ADUs or a routing change exist
-     * ({@code generateBundleForTransmission}; the dropbox makes no routing changes), so passing {@code null} for both when nothing changed keeps
-     * re-offering the same bundle id instead of using up a new one per visit; queuing either one forces a new
-     * bundle. Queued ADUs stay in every new bundle until the server acknowledges a bundle that carried them, so a
-     * request waiting for its grant still rides along without being queued again. Older generated bundles are
-     * deleted: bundle-core never prunes {@code to-send/} itself (R7 §3).
+     * <p>bundle-core reuses the newest generated bundle unless a newer ack, new ADUs or a newer routing file exist
+     * ({@code generateBundleForTransmission}; the dropbox records no routing peers, so its routing file never
+     * changes after {@link #open}). Passing {@code null} for both when nothing changed therefore keeps re-offering
+     * the same bundle id instead of using up a new one per visit; queuing either one forces a new bundle. Queued
+     * ADUs stay in every new bundle until the server acknowledges a bundle that carried them, so a request waiting
+     * for its grant still rides along without being queued again. Older generated bundles are deleted: bundle-core
+     * never prunes {@code to-send/} itself (R7 §3).
      *
      * @param inventoryAdu      an encoded inventory to send under {@link DropboxControl#APP_ID}, replacing any older
      *                          unsent one; {@code null} to keep the queued ones as they are
@@ -600,24 +602,24 @@ public final class DropboxControlEndpoint {
 
     /**
      * Backstop for {@code BundleRouting/routing.metadata}, run by {@link #open} before bundle-core's per-instance
-     * {@code ClientRouting} loads it: content that is not the JSON map of numbers it reads (blank, truncated by an
-     * older bundle-core's non-atomic writer, {@code null}) is replaced with {@code {}}. bundle-core now copes with
-     * such a file itself and builds each bundle's routing metadata from memory, so this only keeps its load quiet.
+     * {@code ClientRouting} loads it: anything but an empty JSON map is replaced with {@code {}}. That covers
+     * unreadable content (blank, truncated by an older bundle-core's non-atomic writer, {@code null}) and any
+     * recorded peers, such as an older build's {@code {"peer": count}} sighting counts, which bundle-core would
+     * otherwise drop on load and rewrite once. The dropbox records no peers, so the file has nothing the server
+     * needs.
      *
      * <p>It never forces a new own bundle. bundle-core regenerates when the file's mtime is newer than the last
-     * bundle ({@code ClientRouting.changedSince}), so a repair keeps the old mtime, and a missing file is left
-     * missing (bundle-core reads it as empty). Running only at open, it cannot race a bundle generation either. The
-     * dropbox records no peers, so the file has nothing the server needs. Not covered here: an older build's file
-     * of sighting counts parses fine, and bundle-core drops those counts on load and rewrites the file once,
-     * which mints one new own bundle after the upgrade (Research/R11 §5 risk 3).
+     * bundle ({@code ClientRouting.changedSince}), so a reset keeps the old mtime, and a missing file is left
+     * missing (bundle-core reads it as empty). Running only at open, it cannot race a bundle generation either.
      */
     static void ensureRoutingMetadata(ClientPaths paths) throws IOException {
         Path file = paths.metadataFile.toPath();
         try {
             // the exact shape ClientRouting reads: a JSON object of numbers ("null" parses to no map at all)
-            if (new ObjectMapper().readValue(file.toFile(), new TypeReference<HashMap<String, Long>>() {}) != null) {
-                return;
-            }
+            Map<String, Long> peers =
+                    new ObjectMapper().readValue(file.toFile(), new TypeReference<HashMap<String, Long>>() {});
+            if (peers != null && peers.isEmpty()) return;
+            logger.log(Level.INFO, "Resetting " + file.getFileName() + " to {}: the dropbox records no peers");
         } catch (NoSuchFileException | FileNotFoundException e) {
             return;
         } catch (JsonProcessingException e) {

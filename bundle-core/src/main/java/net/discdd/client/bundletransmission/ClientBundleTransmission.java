@@ -398,13 +398,17 @@ public class ClientBundleTransmission {
                 // record the carrier before generating this exchange's upload, so the upload already names it;
                 // a direct server exchange records nothing
                 if (connectingToTransport) {
-                    String peerId = boundPeerId(blobRecencyReply, trustManager.getCheckedCert());
+                    var peerCert = trustManager.getCheckedCert();
+                    String peerId = boundPeerId(blobRecencyReply, peerCert);
                     if (peerId != null) {
                         clientRouting.record(peerId, System.currentTimeMillis());
+                        logger.log(INFO, "Recorded carrier " + peerId);
                     } else {
+                        String certPeerId =
+                                peerCert == null ? "<no cert>" : SecurityUtils.peerIdForTlsKey(peerCert.getPublicKey());
                         logger.log(WARNING,
                                    "Recency blob senderId " + blobRecencyReply.getRecencyBlob().getSenderId() +
-                                           " does not name the TLS peer; not recorded");
+                                           " does not name the TLS peer " + certPeerId + "; not recorded");
                     }
                 }
 
