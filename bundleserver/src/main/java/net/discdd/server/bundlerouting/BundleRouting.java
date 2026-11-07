@@ -3,12 +3,14 @@ package net.discdd.server.bundlerouting;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.discdd.bundlerouting.RoutingExceptions;
+import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.server.repository.ServerRoutingRepository;
 import net.discdd.server.repository.entity.ServerRouting;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
+import java.security.PublicKey;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,6 +28,11 @@ public class BundleRouting {
 
     @Autowired
     ServerRoutingRepository serverRoutingRepository;
+
+    // must match the senderId in recency blobs, which clients copy into routing.metadata
+    public static String transportIdFor(PublicKey transportKey) {
+        return SecurityUtils.generateID(transportKey.getEncoded());
+    }
 
     public List<String> getClientsForTransportId(String transportId) {
         List<ServerRouting> serverRoutings = serverRoutingRepository.findByServerRoutingIdTransportID(transportId);
