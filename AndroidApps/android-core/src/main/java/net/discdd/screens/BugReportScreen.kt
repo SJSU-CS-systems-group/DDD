@@ -15,10 +15,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import net.discdd.viewmodels.BugReportSink
 import net.discdd.viewmodels.BugReportViewModel
 
 @Composable
 fun BugReportScreen(
+        sink: BugReportSink? = null,
         viewModel: BugReportViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -55,7 +57,7 @@ fun BugReportScreen(
                 enabled = !isSubmitting
         )
         Button(
-                onClick = { viewModel.submitBugReport(context) },
+                onClick = { viewModel.submitBugReport(context, sink) },
                 modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),

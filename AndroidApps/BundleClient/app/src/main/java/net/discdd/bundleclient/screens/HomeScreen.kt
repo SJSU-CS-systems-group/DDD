@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
+import net.discdd.bundleclient.service.ClientBugReportSink
 import net.discdd.bundleclient.viewmodels.ClientUsbViewModel
 import net.discdd.bundleclient.viewmodels.ServerViewModel
 import net.discdd.screens.LogScreen
@@ -104,7 +105,7 @@ fun HomeScreen(
         ),
         TabItem(
             title = "Bug reports",
-            screen = { BugReportScreen() }
+            screen = { BugReportScreen(sink = ClientBugReportSink.INSTANCE) }
         ),
         TabItem(
             title = "Notifications",

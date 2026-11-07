@@ -1,5 +1,6 @@
 package net.discdd.server;
 
+import net.discdd.bugreport.BugReport;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
@@ -253,9 +254,11 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
         downstream2 = generateBundleForClient(clientId);
         assertNotEquals(downstream1, downstream2);
 
-        // (e) the stock client's app ID list and bundle contents are untouched by the dropbox feature
-        assertEquals(serverApplicationDataManager.getRegisteredAppIds(),
-                     serverApplicationDataManager.getRegisteredAppIds(clientId));
+        // (e) the stock client's app ID list and bundle contents are untouched by the dropbox feature (every client
+        // gets the bug report app ID)
+        var expectedAppIds = new ArrayList<>(serverApplicationDataManager.getRegisteredAppIds());
+        expectedAppIds.add(BugReport.APP_ID);
+        assertEquals(expectedAppIds, serverApplicationDataManager.getRegisteredAppIds(clientId));
         assertFalse(serverApplicationDataManager.getRegisteredAppIds(clientId).contains(DropboxControl.APP_ID));
         for (var id : List.of(downstream1, downstream2)) {
             assertTrue(sentAduDetailsRepository.findByBundleId(id)

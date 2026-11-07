@@ -3,16 +3,19 @@ package net.discdd.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileWriter
 import java.nio.file.Path
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.logging.Level.INFO
+import java.util.logging.Level.WARNING
 import java.util.logging.Logger
 
 class BugReportViewModel : ViewModel() {
@@ -32,22 +35,33 @@ class BugReportViewModel : ViewModel() {
         _bugReportText.value = text
     }
 
-    fun submitBugReport(context: Context) {
+    /**
+     * With a [sink] the report is handed to it (BundleClient sends it to the server); without one it is only
+     * appended to a local file on the device.
+     */
+    fun submitBugReport(context: Context, sink: BugReportSink? = null) {
         // will prevent memory leaks
         viewModelScope.launch {
             _isSubmitting.value = true
             _submitResult.value = null
 
             try {
-                val success = saveBugReportToFile(context, _bugReportText.value)
+                val report = formatReport(_bugReportText.value)
+                val success = withContext(Dispatchers.IO) {
+                    sink?.submit(context.applicationContext, report) ?: saveBugReportToFile(context, report)
+                }
                 if (success) {
-                    _submitResult.value = "Bug report submitted successfully!"
+                    _submitResult.value = if (sink != null) {
+                        "Bug report queued. It will be sent to the server with your next bundle exchange."
+                    } else {
+                        "Bug report saved on this device."
+                    }
                     _bugReportText.value = "" // clears the text field
                 } else {
                     _submitResult.value = "Failed to save bug report"
                 }
             } catch (e: Exception) {
-                logger.log(INFO, "Error saving bug report")
+                logger.log(WARNING, "Error saving bug report", e)
                 _submitResult.value = "Error: ${e.message}"
             } finally {
                 _isSubmitting.value = false
@@ -55,7 +69,14 @@ class BugReportViewModel : ViewModel() {
         }
     }
 
-    private fun saveBugReportToFile(context: Context, bugReport: String): Boolean {
+    private fun formatReport(bugReport: String): String {
+        // fetch most current logs
+        val logMessages = LogViewModel.getCurrLogs()
+        val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        return "=== Bug Report - $timestamp ===\n$bugReport\n\n=== System Logs ===\n${logMessages.joinToString("\n")}\n\n"
+    }
+
+    private fun saveBugReportToFile(context: Context, reportContent: String): Boolean {
         return try {
             // adapted from crash report logic
             val rootDir: Path = context.applicationContext.dataDir.toPath()
@@ -74,14 +95,6 @@ class BugReportViewModel : ViewModel() {
             }
 
             val logFile = File(finalRootDir.toString(), "bug_report.txt")
-
-            // fetch most current logs
-            val logMessages = LogViewModel.getCurrLogs()
-
-            // Create timestamp for the bug report
-            val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-
-            val reportContent = "=== Bug Report - $timestamp ===\n$bugReport\n\n=== System Logs ===\n${logMessages.joinToString("\n")}\n\n"
 
             // appends to file (or creates if doesn't exist)
             FileWriter(logFile, true).use { writer ->
