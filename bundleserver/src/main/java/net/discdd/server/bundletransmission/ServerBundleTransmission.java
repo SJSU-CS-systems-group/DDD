@@ -184,7 +184,11 @@ public class ServerBundleTransmission {
             }
 
             try {
-                this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().toPath(), senderId, clientId);
+                // a client uploading directly is not a transport
+                var deliveringTransport = senderType == BundleSenderType.CLIENT ? null : senderId;
+                this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().toPath(),
+                                                         deliveringTransport,
+                                                         clientId);
             } catch (ClientMetaDataFileException | SQLException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
