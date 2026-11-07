@@ -7,12 +7,14 @@ import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.server.repository.ServerRoutingRepository;
 import net.discdd.server.repository.entity.ServerRouting;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
 import java.security.PublicKey;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,20 +31,45 @@ public class BundleRouting {
     @Autowired
     ServerRoutingRepository serverRoutingRepository;
 
+    @Value("${bundle-server.routing.max-transports-per-client:10}")
+    int maxTransportsPerClient = 10;
+
     // must match the senderId in recency blobs, which clients copy into routing.metadata
     public static String transportIdFor(PublicKey transportKey) {
         return SecurityUtils.generateID(transportKey.getEncoded());
     }
 
+    // clients for which this transport is among their top maxTransportsPerClient (ties included)
     public List<String> getClientsForTransportId(String transportId) {
         List<ServerRouting> serverRoutings = serverRoutingRepository.findByServerRoutingIdTransportID(transportId);
         List<String> clientIDs = new ArrayList<>();
         if (serverRoutings != null) {
             for (ServerRouting serverRouting : serverRoutings) {
-                clientIDs.add(serverRouting.getServerRoutingId().getClientID());
+                String clientId = serverRouting.getServerRoutingId().getClientID();
+                if (scoreOf(serverRouting) >= cutoffScore(clientId)) {
+                    clientIDs.add(clientId);
+                }
             }
         }
         return clientIDs;
+    }
+
+    private long cutoffScore(String clientId) {
+        List<Long> scores = new ArrayList<>();
+        for (ServerRouting serverRouting : serverRoutingRepository.findByServerRoutingIdClientID(clientId)) {
+            scores.add(scoreOf(serverRouting));
+        }
+        if (maxTransportsPerClient <= 0 || scores.size() <= maxTransportsPerClient) return Long.MIN_VALUE;
+        scores.sort(Comparator.reverseOrder());
+        return scores.get(maxTransportsPerClient - 1);
+    }
+
+    private static long scoreOf(ServerRouting serverRouting) {
+        try {
+            return Long.parseLong(serverRouting.getScore());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private void updateEntry(String transportID, String clientID, long score) {
@@ -60,8 +87,20 @@ public class BundleRouting {
         logger.log(FINE, "Updating transport-client mapping entry in serverRoutingRepository");
     }
 
+    // adds the transport without lowering an existing score
+    private void ensureEntry(String transportID, String clientID) {
+        if (null == transportID) return;
+        ServerRouting serverRouting =
+                serverRoutingRepository.findByServerRoutingIdClientIDAndServerRoutingIdTransportID(clientID,
+                                                                                                   transportID);
+        if (null == serverRouting || scoreOf(serverRouting) < 1) {
+            updateEntry(transportID, clientID, 1);
+        }
+    }
+
     /*
      * payloadPath: path of received payload where routing metadata file exists
+     * transportID: the transport that delivered the bundle, or null if the client uploaded it directly
      */
     public void processClientMetaData(Path payloadPath, String transportID, String clientID) throws
             RoutingExceptions.ClientMetaDataFileException, SQLException {
@@ -73,15 +112,28 @@ public class BundleRouting {
         try {
             clientMap = mapper.readValue(clientMetaDataPath.toFile(), new TypeReference<HashMap<String, Long>>() {});
         } catch (Exception e) {
-            throw new RoutingExceptions.ClientMetaDataFileException("Error Reading client metadata: " + e);
+            logger.log(WARNING, "Error reading client metadata for " + clientID, e);
         }
 
-        updateEntry(transportID, clientID, 0);
-
-        if (clientMap != null && !clientMap.keySet().isEmpty()) {
+        // the client's counts are a full snapshot, so they replace the stored scores
+        if (clientMap != null) {
             for (Map.Entry<String, Long> entry : clientMap.entrySet()) {
                 updateEntry(entry.getKey(), clientID, entry.getValue());
             }
+        }
+
+        // a non-empty list is the client's whole list; an empty one (older clients) removes nothing
+        if (clientMap != null && !clientMap.isEmpty()) {
+            for (ServerRouting serverRouting : serverRoutingRepository.findByServerRoutingIdClientID(clientID)) {
+                String routedTransport = serverRouting.getServerRoutingId().getTransportID();
+                if (!clientMap.containsKey(routedTransport) && !routedTransport.equals(transportID)) {
+                    serverRoutingRepository.delete(serverRouting);
+                }
+            }
+        }
+
+        if (clientMap == null || !clientMap.containsKey(transportID)) {
+            ensureEntry(transportID, clientID);
         }
     }
 
