@@ -24,9 +24,7 @@ public class ClientRouting {
     public static final long TRANSPORT_EXPIRATION_MS = 30L * 24 * 60 * 60 * 1000;
 
     private static ClientRouting singleClientRoutingInstance = null;
-    // sent to the server as routing.metadata
-    HashMap<String, Long> metadata = null;
-    // client only, used to expire transports
+    // transportId -> time of the last visit; routing.metadata is built from its keys
     HashMap<String, Long> lastSeen = null;
     ClientPaths clientPaths;
     private final LongSupplier clock;
@@ -45,15 +43,14 @@ public class ClientRouting {
     ClientRouting(ClientPaths clientPaths, LongSupplier clock) throws IOException, ClientMetaDataFileException {
         this.clientPaths = clientPaths;
         this.clock = clock;
-        metadata = readMap(clientPaths.metadataFile);
         lastSeen = readMap(clientPaths.transportLastSeenFile);
 
-        // older entries have no visit time yet
+        // transports saved by older versions in routing.metadata have no visit time yet
         long now = clock.getAsLong();
-        for (String transportId : metadata.keySet()) {
+        for (String transportId : readMap(clientPaths.metadataFile).keySet()) {
             lastSeen.putIfAbsent(transportId, now);
         }
-        lastSeen.keySet().retainAll(metadata.keySet());
+        Files.deleteIfExists(clientPaths.metadataFile.toPath());
         save();
     }
 
@@ -69,18 +66,12 @@ public class ClientRouting {
     }
 
     private void save() throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.writeValue(clientPaths.metadataFile, metadata);
-        mapper.writeValue(clientPaths.transportLastSeenFile, lastSeen);
+        new ObjectMapper().writeValue(clientPaths.transportLastSeenFile, lastSeen);
     }
 
     private boolean expireOldTransports() {
         long cutoff = clock.getAsLong() - TRANSPORT_EXPIRATION_MS;
-        boolean removed = lastSeen.entrySet().removeIf(entry -> entry.getValue() < cutoff);
-        if (removed) {
-            metadata.keySet().retainAll(lastSeen.keySet());
-        }
-        return removed;
+        return lastSeen.entrySet().removeIf(entry -> entry.getValue() < cutoff);
     }
 
     public static ClientRouting initializeInstance(ClientPaths clientPaths) throws ClientMetaDataFileException,
@@ -100,7 +91,7 @@ public class ClientRouting {
         return singleClientRoutingInstance;
     }
 
-    /* Updates the score for the transport
+    /* Marks the transport as seen
      * Parameters:
      * transportID      : encoded transport ID
      * Returns:
@@ -111,7 +102,6 @@ public class ClientRouting {
             logger.log(WARNING, ("senderId cannot be null"));
             return;
         }
-        metadata.merge(senderId, 1L, Long::sum);
         lastSeen.put(senderId, clock.getAsLong());
         expireOldTransports();
 
@@ -122,16 +112,18 @@ public class ClientRouting {
         }
     }
 
-    /* Creates the metadata file in the bundle directory
+    /* Builds routing.metadata for an outgoing bundle: every transport seen recently, each marked 1
      * Parameters:
-     * bundlePath   : Path to the bundle to be sent
-     * Returns:
      * None
+     * Returns:
+     * routing.metadata contents
      */
     public synchronized byte[] bundleMetaData() throws IOException {
         if (expireOldTransports()) {
             save();
         }
-        return Files.readAllBytes(clientPaths.metadataFile.toPath());
+        var transports = new HashMap<String, Long>();
+        lastSeen.keySet().forEach(transportId -> transports.put(transportId, 1L));
+        return new ObjectMapper().writeValueAsBytes(transports);
     }
 }

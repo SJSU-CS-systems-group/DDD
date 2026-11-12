@@ -31,13 +31,13 @@ public class ClientRoutingTest {
     }
 
     @Test
-    void visitsAreCounted() throws Exception {
+    void everySeenTransportIsListedOnce() throws Exception {
         var routing = newRouting();
         routing.updateMetaData("T1");
         routing.updateMetaData("T1");
         routing.updateMetaData("T2");
 
-        Assertions.assertEquals(Map.of("T1", 2L, "T2", 1L), sent(routing));
+        Assertions.assertEquals(Map.of("T1", 1L, "T2", 1L), sent(routing));
     }
 
     @Test
@@ -54,14 +54,14 @@ public class ClientRoutingTest {
     }
 
     @Test
-    void revisitKeepsTransportAndItsCount() throws Exception {
+    void revisitKeepsTransport() throws Exception {
         var routing = newRouting();
         routing.updateMetaData("T1");
         now.addAndGet(TRANSPORT_EXPIRATION_MS - DAY_MS);
         routing.updateMetaData("T1");
         now.addAndGet(2 * DAY_MS);
 
-        Assertions.assertEquals(Map.of("T1", 2L), sent(routing));
+        Assertions.assertEquals(Map.of("T1", 1L), sent(routing));
     }
 
     @Test
@@ -78,8 +78,9 @@ public class ClientRoutingTest {
         Files.writeString(paths.metadataFile.toPath(), "{\"T1\":4}");
 
         var routing = newRouting();
+        Assertions.assertFalse(Files.exists(paths.metadataFile.toPath()));
         now.addAndGet(TRANSPORT_EXPIRATION_MS - DAY_MS);
-        Assertions.assertEquals(Map.of("T1", 4L), sent(routing));
+        Assertions.assertEquals(Map.of("T1", 1L), sent(routing));
 
         now.addAndGet(2 * DAY_MS);
         Assertions.assertEquals(Map.of(), sent(routing));
