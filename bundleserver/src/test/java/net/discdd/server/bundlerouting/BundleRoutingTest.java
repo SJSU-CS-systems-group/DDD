@@ -14,6 +14,8 @@ import org.springframework.test.context.DynamicPropertySource;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @DataJpaTest
 @Import({ BundleRouting.class, GrpcExecutor.class })
@@ -24,7 +26,6 @@ public class BundleRoutingTest {
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("bundle-server.bundle-store-root", () -> tempDir.toString());
-        registry.add("bundle-server.routing.max-transports-per-client", () -> "3");
     }
 
     @Autowired
@@ -44,86 +45,75 @@ public class BundleRoutingTest {
         bundleRouting.processClientMetaData(payloadDir, deliveringTransport, clientId);
     }
 
-    private long score(String transportId, String clientId) {
-        return Long.parseLong(serverRoutingRepository.findByServerRoutingIdClientIDAndServerRoutingIdTransportID(
-                clientId,
-                transportId).getScore());
+    private Set<String> routedTransports(String clientId) {
+        return serverRoutingRepository.findByServerRoutingIdClientID(clientId)
+                .stream()
+                .map(serverRouting -> serverRouting.getServerRoutingId().getTransportID())
+                .collect(Collectors.toSet());
     }
 
     @Test
-    void onlyTopTransportsCarryClient() throws Exception {
-        receive("{\"T1\":5,\"T2\":4,\"T3\":3,\"T4\":2,\"T5\":1}", "T1", "C");
+    void everyListedTransportCarriesTheClient() throws Exception {
+        receive("{\"T1\":1,\"T2\":1,\"T3\":1,\"T4\":1,\"T5\":1}", "T1", "C");
 
-        Assertions.assertTrue(bundleRouting.getClientsForTransportId("T1").contains("C"));
-        Assertions.assertTrue(bundleRouting.getClientsForTransportId("T2").contains("C"));
-        Assertions.assertTrue(bundleRouting.getClientsForTransportId("T3").contains("C"));
-        Assertions.assertFalse(bundleRouting.getClientsForTransportId("T4").contains("C"));
-        Assertions.assertFalse(bundleRouting.getClientsForTransportId("T5").contains("C"));
-    }
-
-    @Test
-    void transportsTiedForLastPlaceAreIncluded() throws Exception {
-        receive("{\"T1\":2,\"T2\":2,\"T3\":2,\"T4\":2}", "T1", "C");
-
-        for (var transport : new String[] { "T1", "T2", "T3", "T4" }) {
+        for (var transport : new String[] { "T1", "T2", "T3", "T4", "T5" }) {
             Assertions.assertTrue(bundleRouting.getClientsForTransportId(transport).contains("C"));
         }
     }
 
     @Test
-    void deliveringTransportKeepsReportedCount() throws Exception {
-        receive("{\"T1\":5}", "T1", "C");
-        Assertions.assertEquals(5, score("T1", "C"));
+    void countsInTheListAreIgnored() throws Exception {
+        receive("{\"T1\":7,\"T2\":1}", "T1", "C");
+        Assertions.assertEquals(Set.of("T1", "T2"), routedTransports("C"));
     }
 
     @Test
-    void unreportedDeliveringTransportIsAddedWithoutLoweringScore() throws Exception {
-        receive("{\"T9\":3}", "T1", "C");
-        Assertions.assertEquals(1, score("T1", "C"));
+    void listWithoutCountsIsAccepted() throws Exception {
+        receive("{\"T1\":null,\"T2\":null}", null, "C");
+        Assertions.assertEquals(Set.of("T1", "T2"), routedTransports("C"));
 
-        // T9 delivers later but is no longer in the snapshot: its earlier score stays
-        receive("{}", "T9", "C");
-        Assertions.assertEquals(3, score("T9", "C"));
+        receive("[\"T2\",\"T3\"]", null, "C");
+        Assertions.assertEquals(Set.of("T2", "T3"), routedTransports("C"));
+    }
+
+    @Test
+    void invalidTransportIdsAreIgnored() throws Exception {
+        receive("{\"\":1,\"" + "x".repeat(300) + "\":1,\"T1\":1}", null, "C");
+        Assertions.assertEquals(Set.of("T1"), routedTransports("C"));
     }
 
     @Test
     void deliveringTransportRecordedWhenMetadataIsUnreadable() throws Exception {
         receive("not json", "T1", "C");
-        Assertions.assertEquals(1, score("T1", "C"));
+        Assertions.assertEquals(Set.of("T1"), routedTransports("C"));
     }
 
     @Test
-    void transportsTheClientExpiredAreRemoved() throws Exception {
-        receive("{\"T1\":2,\"T2\":1}", "T1", "C");
-        receive("{\"T1\":3}", "T1", "C");
+    void transportsMissingFromTheListAreRemoved() throws Exception {
+        receive("{\"T1\":1,\"T2\":1}", "T1", "C");
+        receive("{\"T1\":1}", "T1", "C");
 
-        Assertions.assertNull(serverRoutingRepository.findByServerRoutingIdClientIDAndServerRoutingIdTransportID("C",
-                                                                                                                "T2"));
-        Assertions.assertEquals(3, score("T1", "C"));
+        Assertions.assertEquals(Set.of("T1"), routedTransports("C"));
+        Assertions.assertFalse(bundleRouting.getClientsForTransportId("T2").contains("C"));
     }
 
     @Test
     void deliveringTransportIsKeptEvenIfNotListed() throws Exception {
         receive("{\"T2\":1}", "T1", "C");
-        receive("{\"T2\":2}", "T1", "C");
-
-        Assertions.assertEquals(1, score("T1", "C"));
-        Assertions.assertEquals(2, score("T2", "C"));
+        receive("{\"T2\":1}", "T1", "C");
+        Assertions.assertEquals(Set.of("T1", "T2"), routedTransports("C"));
     }
 
     @Test
     void emptyListRemovesNothing() throws Exception {
-        receive("{\"T1\":2,\"T2\":1}", "T1", "C");
+        receive("{\"T1\":1,\"T2\":1}", "T1", "C");
         receive("{}", "T1", "C");
-
-        Assertions.assertEquals(2, score("T1", "C"));
-        Assertions.assertEquals(1, score("T2", "C"));
+        Assertions.assertEquals(Set.of("T1", "T2"), routedTransports("C"));
     }
 
     @Test
-    void directClientUploadRecordsOnlyReportedTransports() throws Exception {
-        receive("{\"T1\":2}", null, "C");
-        Assertions.assertEquals(1, serverRoutingRepository.findByServerRoutingIdClientID("C").size());
-        Assertions.assertEquals(2, score("T1", "C"));
+    void directClientUploadRecordsOnlyListedTransports() throws Exception {
+        receive("{\"T1\":1}", null, "C");
+        Assertions.assertEquals(Set.of("T1"), routedTransports("C"));
     }
 }
