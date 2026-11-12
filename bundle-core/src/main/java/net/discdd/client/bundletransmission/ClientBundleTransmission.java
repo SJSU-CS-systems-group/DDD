@@ -30,6 +30,7 @@ import net.discdd.grpc.PSIElement;
 import net.discdd.grpc.PSIRequest;
 import net.discdd.grpc.PSIResponse;
 import net.discdd.grpc.PublicKeyMap;
+import net.discdd.grpc.RecencyBlob;
 import net.discdd.grpc.RecencyBlobStatus;
 import net.discdd.grpc.Status;
 import net.discdd.model.ADU;
@@ -68,6 +69,7 @@ import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
@@ -177,6 +179,12 @@ public class ClientBundleTransmission {
 
     public static String bundleSenderToString(String senderId) {
         return senderId;
+    }
+
+    // the server sets senderId from the key the transport fetched the blob with
+    static boolean isBlobIssuedTo(RecencyBlob recencyBlob, X509Certificate peerCert) {
+        return peerCert != null &&
+                SecurityUtils.generateID(peerCert.getPublicKey().getEncoded()).equals(recencyBlob.getSenderId());
     }
 
     private Bundle generateNewBundle(String bundleId) throws IOException, NoSuchAlgorithmException,
@@ -363,6 +371,11 @@ public class ClientBundleTransmission {
                 } else {
                     transportSenderId = recencyBlob.getSenderId();
                     logger.log(INFO, "Recency blob processed for " + transportSenderId);
+                }
+                // any device can replay a blob, so it must belong to the device we are connected to
+                if (connectingToTransport && !isBlobIssuedTo(recencyBlob, trustManager.getCheckedCert())) {
+                    throw new RecencyException("Recency blob for " + recencyBlob.getSenderId() +
+                                                       " was not issued to this transport");
                 }
 
                 var clientSecurity = bundleSecurity.getClientSecurity();
