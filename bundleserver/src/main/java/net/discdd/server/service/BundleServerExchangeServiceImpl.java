@@ -10,6 +10,7 @@ import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.grpc.GrpcService;
 import net.discdd.grpc.PublicKeyMap;
 import net.discdd.grpc.RecencyBlobStatus;
+import net.discdd.server.bundlerouting.BundleRouting;
 import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.NettyServerCertificateInterceptor;
@@ -43,7 +44,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
         logger.log(INFO, "Downloaded " + bundleExchangeName.encryptedBundleId());
         bundleTransmission.processBundleFile(path.toFile(),
                                              senderType,
-                                             DDDTLSUtil.publicKeyToName(clientCert.getPublicKey()));
+                                             BundleRouting.transportIdFor(clientCert.getPublicKey()));
     }
 
     @Override
@@ -123,7 +124,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     public void getRecencyBlob(GetRecencyBlobRequest request, StreamObserver<GetRecencyBlobResponse> responseObserver) {
         GetRecencyBlobResponse recencyBlob = null;
         X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
-        String senderId = SecurityUtils.generateID(clientCert.getPublicKey().getEncoded());
+        String senderId = BundleRouting.transportIdFor(clientCert.getPublicKey());
 
         try {
             recencyBlob = bundleTransmission.getRecencyBlob(senderId);
