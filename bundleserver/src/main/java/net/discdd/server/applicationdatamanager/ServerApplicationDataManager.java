@@ -140,8 +140,11 @@ public class ServerApplicationDataManager {
 
         @Override
         public boolean test(Long size) {
+            if (size < 0 || size > remaining) {
+                return false;
+            }
             remaining -= size;
-            return remaining >= 0;
+            return true;
         }
     }
 
@@ -150,20 +153,36 @@ public class ServerApplicationDataManager {
         List<ADU> adusToSend = new ArrayList<>();
 
         final long dataSizeLimit = this.bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit();
-        var sizeLimiter = new SizeLimiter(dataSizeLimit - initialSize);
+        final long budget = Math.max(0, dataSizeLimit - initialSize);
+        var sizeLimiter = new SizeLimiter(budget);
         for (String appId : this.getRegisteredAppIds()) {
             var sentAdus = new SentAduDetails();
             sentAdus.appId = appId;
             sentAdus.bundleId = bundleId;
             sentAdus.ClientBundleCounter = bundleCounter;
-            sendADUsStorage.getADUs(clientId, appId).takeWhile(a -> sizeLimiter.test(a.getSize())).peek(adu -> {
+
+            List<ADU> appAdus = new ArrayList<>();
+            sendADUsStorage.getADUs(clientId, appId)
+                    .takeWhile(a -> sizeLimiter.test(a.getSize()))
+                    .forEach(appAdus::add);
+            if (appAdus.isEmpty()) {
+                // nothing fit: if the oldest ADU can never fit in a bundle, trim it so it can't
+                // permanently wedge this app's queue
+                sendADUsStorage.trimOversizedADU(clientId, appId, budget, sizeLimiter.remaining).ifPresent(adu -> {
+                    sizeLimiter.test(adu.getSize()); // uses up the rest of the budget
+                    appAdus.add(adu);
+                });
+            }
+
+            for (ADU adu : appAdus) {
                 if (adu.getADUId() > sentAdus.aduIdRangeEnd) {
                     sentAdus.aduIdRangeEnd = adu.getADUId();
                 }
                 if (adu.getADUId() < sentAdus.aduIdRangeStart || sentAdus.aduIdRangeStart == 0) {
                     sentAdus.aduIdRangeStart = adu.getADUId();
                 }
-            }).forEach(adusToSend::add);
+            }
+            adusToSend.addAll(appAdus);
             if (sentAdus.aduIdRangeEnd > 0) {
                 sentAduDetailsRepository.save(sentAdus);
             }
