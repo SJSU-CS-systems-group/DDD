@@ -144,8 +144,6 @@ public class ClientBundleTransmission {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, clientPaths.uncompressedPayloadStore);
         Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
-        logger.log(INFO, "Updating client routing metadata for sender:  " + bundleSenderToString(senderId));
-        clientRouting.updateMetaData(senderId);
 
         String bundleId = payload.getBundleId();
 
@@ -177,6 +175,19 @@ public class ClientBundleTransmission {
 
     public static String bundleSenderToString(String senderId) {
         return senderId;
+    }
+
+    // the server's recency blob names us, not a transport
+    private boolean recordVisit(boolean connectingToTransport, String transportId) {
+        if (!connectingToTransport || transportId == null) return false;
+        try {
+            logger.log(INFO, "Updating client routing metadata for sender: " + bundleSenderToString(transportId));
+            clientRouting.updateMetaData(transportId);
+            return true;
+        } catch (RoutingExceptions.ClientMetaDataFileException e) {
+            logger.log(WARNING, "Could not record visit to " + transportId, e);
+            return false;
+        }
     }
 
     private Bundle generateNewBundle(String bundleId) throws IOException, NoSuchAlgorithmException,
@@ -356,14 +367,12 @@ public class ClientBundleTransmission {
                 var blobRecencyReply = blockingStub.withDeadlineAfter(GRPC_SHORT_TIMEOUT_MS, MILLISECONDS)
                         .getRecencyBlob(recencyBlobRequest);
                 var recencyBlob = blobRecencyReply.getRecencyBlob();
+                // "newer" only matters for deciding to connect; discovery already saved this same blob
                 if (!processRecencyBlob(device, blobRecencyReply)) {
-                    logger.log(SEVERE,
-                               "Did not process recency blob. In the future, we need to stop talking to this " +
-                                       "device");
-                } else {
-                    transportSenderId = recencyBlob.getSenderId();
-                    logger.log(INFO, "Recency blob processed for " + transportSenderId);
+                    logger.log(INFO, "Recency blob is not newer than the one already seen for this transport");
                 }
+                transportSenderId = recencyBlob.getSenderId();
+                logger.log(INFO, "Recency blob processed for " + transportSenderId);
 
                 var clientSecurity = bundleSecurity.getClientSecurity();
                 var bundleRequests = getNextBundles();
@@ -393,9 +402,16 @@ public class ClientBundleTransmission {
                     logger.log(WARNING, "Processing received bundle failed", e);
                 }
 
+                // counted before the upload so the bundle generated below already includes it
+                boolean visitRecorded =
+                        downloadStatus == Statuses.COMPLETE && recordVisit(connectingToTransport, transportSenderId);
+
                 var stub = BundleExchangeServiceGrpc.newStub(channel)
                         .withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS);
                 uploadStatus = uploadBundle(stub);
+                if (!visitRecorded && uploadStatus == Statuses.COMPLETE) {
+                    recordVisit(connectingToTransport, transportSenderId);
+                }
 
             }
         } catch (Exception e) {
