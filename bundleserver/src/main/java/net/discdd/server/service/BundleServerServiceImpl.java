@@ -14,6 +14,7 @@ import net.discdd.grpc.GrpcService;
 import net.discdd.grpc.ServerMessage;
 import net.discdd.grpc.Status;
 import net.discdd.server.applicationdatamanager.ServerApplicationDataManager;
+import net.discdd.server.bundlerouting.BundleRouting;
 import net.discdd.server.repository.TransportMessageRepository;
 import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import net.discdd.tls.DDDTLSUtil;
@@ -80,7 +81,7 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
         var downloadList = new ArrayList<EncryptedBundleId>();
 
         X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
-        String senderId = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
+        String senderId = BundleRouting.transportIdFor(clientCert.getPublicKey());
         try {
             var bundlesToExchange = bundleTransmission.inventoryBundlesForTransmission(request.getSenderType(),
                                                                                        senderId,
