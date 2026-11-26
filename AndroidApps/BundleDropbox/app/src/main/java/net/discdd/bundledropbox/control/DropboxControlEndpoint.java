@@ -17,14 +17,10 @@ import net.discdd.pathutils.ClientPaths;
 import net.discdd.utils.Constants;
 import net.discdd.utils.StoreADUs;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -32,15 +28,12 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.FileTime;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -85,11 +78,13 @@ import javax.crypto.spec.SecretKeySpec;
  *   <li><b>Pass a copy.</b> {@code processReceivedBundle} deletes its input file.</li>
  *   <li><b>Repair a blank largest-received file to {@code "0"}.</b> bundle-core rewrites it with a truncating
  *       writer; an empty file makes it reject every reply forever (R7 §7).</li>
- *   <li><b>No routing peers.</b> The dropbox records no carriers: {@link #accept} passes no sender, and the
- *       embedded endpoint never runs bundle-core's transport exchange, the only place a client records a peer. Its
- *       {@code routing.metadata} stays empty, and the server learns which carriers met the dropbox from their
- *       uploads of its bundles (Research/R11 §1.5). {@link #ensureRoutingMetadata} resets a non-empty or
- *       unreadable file to {@code {}} at {@link #open}, without ever forcing a new own bundle.</li>
+ *   <li><b>Routing peers, like a client.</b> The embedded endpoint never runs bundle-core's transport exchange,
+ *       where a client records the carriers it meets, so the visit records them through {@link #recordCarrier}
+ *       instead, only for a carrier whose server-signed recency blob names its TLS key. bundle-core keeps them in
+ *       {@code routing.metadata} as for a client (newest first, dropped after 30 days, a known carrier refreshed
+ *       at most once a day), and every own bundle carries the list to the server. A newly recorded or refreshed
+ *       carrier makes the next own bundle a new one, as it does for a client. {@link #accept} passes no
+ *       sender.</li>
  *   <li><b>Union {@link DropboxControl#APP_ID} and {@link DropboxControl#RECENCY_APP_ID} into the registered app
  *       ids</b> at open and after each bundle: the client only sends app ids the server listed, so a server that
  *       omitted one would silence the inventory or the recency request (R7 §3). The server lists them for
@@ -228,7 +223,6 @@ public final class DropboxControlEndpoint {
             // Overwrites the three server key files whenever they are given (ClientPaths, R7 §1).
             ClientPaths paths = new ClientPaths(r, identityPem, signedPrePem, ratchetPem);
             repairBlankLargestReceived(paths.largestBundleIdReceived);
-            ensureRoutingMetadata(paths);
             resetClientSecurityIfInitialized();
             DropboxControlEndpoint endpoint = new DropboxControlEndpoint(r, paths, sink, grantSink, reset);
             processRoot = r;
@@ -273,8 +267,8 @@ public final class DropboxControlEndpoint {
      * Queues {@code inventoryAdu} and {@code recencyRequestAdu} (each if given) and returns the bundle to upload.
      *
      * <p>bundle-core reuses the newest generated bundle unless a newer ack, new ADUs or a newer routing file exist
-     * ({@code generateBundleForTransmission}; the dropbox records no routing peers, so its routing file never
-     * changes after {@link #open}). Passing {@code null} for both when nothing changed therefore keeps re-offering
+     * ({@code generateBundleForTransmission}; the routing file changes only when {@link #recordCarrier} records a
+     * new carrier or refreshes one). Passing {@code null} for both when nothing changed therefore keeps re-offering
      * the same bundle id instead of using up a new one per visit; queuing either one forces a new bundle. Queued
      * ADUs stay in every new bundle until the server acknowledges a bundle that carried them, so a request waiting
      * for its grant still rides along without being queued again. Older generated bundles are deleted: bundle-core
@@ -348,6 +342,17 @@ public final class DropboxControlEndpoint {
     }
 
     /**
+     * Records that the dropbox met carrier {@code peerId} now, in its {@code routing.metadata} (class Javadoc).
+     *
+     * @param peerId the carrier's peer ID, verified by the caller
+     * @return true if the routing file was rewritten, so the next own bundle lists the carrier
+     */
+    public synchronized boolean recordCarrier(String peerId) {
+        checkOpen();
+        return transmission.recordCarrier(peerId);
+    }
+
+    /**
      * The encrypted downstream id the server gives this endpoint's bundle {@code counter}: the inverse of
      * {@link #decryptOwnCounter}, the same string as {@code ServerSecurity.createEncryptedBundleId} (zero IV, so
      * deterministic).
@@ -368,7 +373,7 @@ public final class DropboxControlEndpoint {
      * {@code processReceivedBundle}, which stores its ADUs and delivers plans and grants to their sinks, then
      * cleans up the extracted files bundle-core leaves behind.
      *
-     * <p>No sender is passed to bundle-core: the dropbox records no routing peers (class Javadoc).
+     * <p>No sender is passed to bundle-core: carriers are recorded by {@link #recordCarrier} (class Javadoc).
      *
      * @param jar the downloaded jar (not modified or deleted)
      * @return what happened
@@ -598,36 +603,6 @@ public final class DropboxControlEndpoint {
             Files.write(file, "0".getBytes(StandardCharsets.UTF_8));
             logger.log(Level.WARNING, "Repaired blank " + file.getFileName() + " to \"0\"");
         }
-    }
-
-    /**
-     * Backstop for {@code BundleRouting/routing.metadata}, run by {@link #open} before bundle-core's per-instance
-     * {@code ClientRouting} loads it: anything but an empty JSON map is replaced with {@code {}}. That covers
-     * unreadable content (blank, truncated by an older bundle-core's non-atomic writer, {@code null}) and any
-     * recorded peers, such as an older build's {@code {"peer": count}} sighting counts, which bundle-core would
-     * otherwise drop on load and rewrite once. The dropbox records no peers, so the file has nothing the server
-     * needs.
-     *
-     * <p>It never forces a new own bundle. bundle-core regenerates when the file's mtime is newer than the last
-     * bundle ({@code ClientRouting.changedSince}), so a reset keeps the old mtime, and a missing file is left
-     * missing (bundle-core reads it as empty). Running only at open, it cannot race a bundle generation either.
-     */
-    static void ensureRoutingMetadata(ClientPaths paths) throws IOException {
-        Path file = paths.metadataFile.toPath();
-        try {
-            // the exact shape ClientRouting reads: a JSON object of numbers ("null" parses to no map at all)
-            Map<String, Long> peers =
-                    new ObjectMapper().readValue(file.toFile(), new TypeReference<HashMap<String, Long>>() {});
-            if (peers != null && peers.isEmpty()) return;
-            logger.log(Level.INFO, "Resetting " + file.getFileName() + " to {}: the dropbox records no peers");
-        } catch (NoSuchFileException | FileNotFoundException e) {
-            return;
-        } catch (JsonProcessingException e) {
-            logger.log(Level.WARNING, "Repairing unreadable " + file.getFileName() + ": " + e.getOriginalMessage());
-        }
-        FileTime mtime = Files.getLastModifiedTime(file);
-        Files.write(file, "{}".getBytes(StandardCharsets.UTF_8));
-        Files.setLastModifiedTime(file, mtime);
     }
 
     /**

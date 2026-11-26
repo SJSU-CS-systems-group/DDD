@@ -96,6 +96,8 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
     private static final String TRANSPORT_ID = "dropbox-test-transport";
     /** an upstream ID no client of this server produced; the planner must keep it (until the TTL) */
     private static final String UNKNOWN_UPSTREAM = "neverSeenByThisServer0123456789";
+    /** older than any expiry the server once had: routes never expire */
+    private static final long LONG_AGO_MS = 60L * 24 * 60 * 60 * 1000;
 
     @TempDir
     static Path dropboxRoot;
@@ -416,38 +418,35 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
         assertTrue(receivedBundleRepository.existsById(BundleJarInfo.read(jar5).getBundleId()), "it was processed");
         deliverToServer(jar5, BundleSenderType.CLIENT, "clientSelf");
         assertFalse(routingEdgeRepository.existsById(uploaded("clientSelf", clientId)));
-        assertTrue(bundleRouting.clientsForCarrier("clientSelf", System.currentTimeMillis()).isEmpty());
+        assertTrue(bundleRouting.clientsForCarrier("clientSelf").isEmpty());
     }
 
-    /** replay guard: re-uploading a bundle first received longer ago than the TTL refreshes no route */
+    /** a duplicate upload makes its carrier a route, however long ago the server first received the bundle */
     @Test
-    void test09DuplicateOlderThanTtlDoesNotRefresh() throws Exception {
+    void test09DuplicateUploadIsARoute() throws Exception {
         long t1Before = routingEdgeRepository.findById(uploaded("T1", clientId)).orElseThrow().lastSeenMs;
         var received = receivedBundleRepository.findById(BundleJarInfo.read(upstream4Jar).getBundleId()).orElseThrow();
-        received.receivedAtMs = System.currentTimeMillis() - bundleRouting.ttlMs() - 60_000;
+        received.receivedAtMs = System.currentTimeMillis() - LONG_AGO_MS;
         receivedBundleRepository.save(received);
 
         Thread.sleep(5);
         deliverToServer(upstream4Jar, "T1");
         deliverToServer(upstream4Jar, "T9");
-        assertEquals(t1Before, routingEdgeRepository.findById(uploaded("T1", clientId)).orElseThrow().lastSeenMs);
-        assertFalse(routingEdgeRepository.existsById(uploaded("T9", clientId)));
+        assertTrue(routingEdgeRepository.findById(uploaded("T1", clientId)).orElseThrow().lastSeenMs > t1Before);
+        assertTrue(routingEdgeRepository.existsById(uploaded("T9", clientId)));
     }
 
-    /**
-     * replay guard: a duplicate with no receipt row (superseded before it arrived) writes an undated row, so neither
-     * that upload nor a later one of the same jar makes its carrier a route
-     */
+    /** a duplicate with no receipt row (superseded before it arrived) writes an undated row and is a route too */
     @Test
-    void test09bUndatedDuplicateRefreshesNoCarrier() throws Exception {
+    void test09bUndatedDuplicateIsARoute() throws Exception {
         String bundleId = BundleJarInfo.read(upstream4Jar).getBundleId();
         receivedBundleRepository.deleteById(bundleId);
 
         deliverToServer(upstream4Jar, "T7");
         assertEquals(0, receivedBundleRepository.findById(bundleId).orElseThrow().receivedAtMs, "undated row");
         deliverToServer(upstream4Jar, "T8");
-        assertFalse(routingEdgeRepository.existsById(uploaded("T7", clientId)));
-        assertFalse(routingEdgeRepository.existsById(uploaded("T8", clientId)), "upload order makes no route");
+        assertTrue(routingEdgeRepository.existsById(uploaded("T7", clientId)));
+        assertTrue(routingEdgeRepository.existsById(uploaded("T8", clientId)));
     }
 
     /**
@@ -482,17 +481,16 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
         assertEquals(reportedBefore, reportedEdgeCount(clientId));
     }
 
-    /** once the carrier's own edge to the dropbox is older than the TTL, the dropbox's members stop riding it */
+    /** routes never expire: a carrier's edge to the dropbox from long ago still carries the dropbox's members */
     @Test
-    void test12StaleDropboxEdgeStopsVia() throws Exception {
+    void test12OldDropboxEdgeStillRoutesVia() throws Exception {
         var edge = routingEdgeRepository.findById(uploaded("T3", dropboxId)).orElseThrow();
-        edge.lastSeenMs = System.currentTimeMillis() - bundleRouting.ttlMs() - 60_000;
+        edge.lastSeenMs = System.currentTimeMillis() - LONG_AGO_MS;
         routingEdgeRepository.save(edge);
 
-        assertEquals(List.of(), inventory("T3").bundlesToDownload());
-        String dropboxPeerId = dropboxRecencyGrantRepository.findById(dropboxId).orElseThrow().senderId;
-        assertTrue(routingEdgeRepository.existsById(reported(dropboxPeerId, clientId)),
-                   "the client's report is still fresh; only the carrier's route to the dropbox went stale");
+        var toT3 = inventory("T3");
+        String current = generateBundleForClient(clientId);
+        assertTrue(toT3.bundlesToDownload().contains(current), () -> "the client's bundle still rides T3: " + toT3);
     }
 
     /**
@@ -505,7 +503,7 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
         String dropboxPeerId = dropboxRecencyGrantRepository.findById(dropboxId).orElseThrow().senderId;
         routingEdgeRepository.findById(reported(dropboxPeerId, clientId)).ifPresent(routingEdgeRepository::delete);
         routingEdgeRepository.findById(deposited(dropboxId, clientId)).ifPresent(routingEdgeRepository::delete);
-        assertEquals(List.of(), bundleRouting.clientsForCarrier("T3", System.currentTimeMillis()));
+        assertEquals(List.of(dropboxId), bundleRouting.clientsForCarrier("T3"), "T3 reaches the dropbox, no member");
 
         // the dropbox holds the client's bundle 8, which the server has not received
         String held = BundleJarInfo.read(stockClientBundle(8, null)).getBundleId();
@@ -552,6 +550,29 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
         dropboxUploadsInventory(report(node.lastReportSeq + 1, node.lastPlanSeq, List.of(), List.of(), List.of()));
         assertEquals(acked + window, clientDownstreamAckRepository.findById(dropboxId).orElseThrow().ackedCounter);
         assertEquals(acked + window + 1, counterOf(generateBundleForClient(dropboxId)));
+    }
+
+    /**
+     * The dropbox's own carrier list: a carrier only the dropbox lists (it never uploaded a bundle of the dropbox or
+     * of the client) gets the reply of a client that reported meeting the dropbox.
+     */
+    @Test
+    void test15CarrierOnlyOnTheDropboxListGetsItsClients() throws Exception {
+        String listedOnly = SecurityUtils.generateID("T5".getBytes(StandardCharsets.UTF_8));
+        String dropboxPeerId = dropboxRecencyGrantRepository.findById(dropboxId).orElseThrow().senderId;
+        long t = System.currentTimeMillis();
+        deliverToServer(stockClientBundle(9, null, "{\"" + dropboxPeerId + "\":" + t + ",\"@gen\":" + t + "}"), "T1");
+
+        assertTrue(dropbox.recordCarrier(listedOnly));
+        var node = dropboxNodeRepository.findById(dropboxId).orElseThrow();
+        dropboxUploadsInventory(report(node.lastReportSeq + 1, node.lastPlanSeq, List.of(), List.of(), List.of()));
+        assertTrue(routingEdgeRepository.existsById(reported(listedOnly, dropboxId)));
+        assertFalse(routingEdgeRepository.existsById(uploaded(listedOnly, dropboxId)), "it never carried the dropbox");
+
+        aduStores.getSendADUsStorage().addADU(clientId, TEST_APPID, "reply via the dropbox's list".getBytes(), -1);
+        var toListed = inventory(listedOnly);
+        String current = generateBundleForClient(clientId);
+        assertTrue(toListed.bundlesToDownload().contains(current), () -> "the client's reply rides it: " + toListed);
     }
 
     // ---------------------------------------------------------------- helpers

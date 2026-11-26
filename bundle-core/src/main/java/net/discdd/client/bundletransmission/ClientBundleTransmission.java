@@ -309,6 +309,16 @@ public class ClientBundleTransmission {
         return senderId.equals(SecurityUtils.peerIdForTlsKey(peerCert.getPublicKey())) ? senderId : null;
     }
 
+    /**
+     * Records that this client met carrier {@code peerId} now, for the {@code routing.metadata} its bundles carry.
+     *
+     * @return true if the routing file was rewritten, so the next generated bundle names the carrier; false if the
+     *         carrier was already recorded recently, the ID is invalid or the write failed
+     */
+    public boolean recordCarrier(String peerId) {
+        return clientRouting.record(peerId, System.currentTimeMillis());
+    }
+
     public void deleteSentBundle(Bundle bundle) {
         FileUtils.recursiveDelete(bundle.getSource().toPath());
     }
@@ -397,7 +407,7 @@ public class ClientBundleTransmission {
                     var peerCert = trustManager.getCheckedCert();
                     String peerId = boundPeerId(blobRecencyReply, peerCert);
                     if (peerId != null) {
-                        if (clientRouting.record(peerId, System.currentTimeMillis())) {
+                        if (recordCarrier(peerId)) {
                             logger.log(INFO, "Recorded carrier " + peerId);
                         } else {
                             logger.log(INFO, "Carrier " + peerId + " matches the TLS peer; already recorded recently");

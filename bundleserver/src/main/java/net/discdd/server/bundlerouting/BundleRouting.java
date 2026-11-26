@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.discdd.server.repository.DropboxNodeRepository;
 import net.discdd.server.repository.DropboxRecencyGrantRepository;
-import net.discdd.server.repository.ReceivedBundleRepository;
 import net.discdd.server.repository.RoutingEdgeRepository;
 import net.discdd.server.repository.entity.RoutingEdge;
 import net.discdd.server.repository.entity.RoutingEdgeId;
@@ -14,7 +13,6 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -43,7 +41,7 @@ import static java.util.logging.Level.WARNING;
  * exceptions run before the gRPC server accepts calls: {@link LegacyRoutingImporter} writes UPLOADED rows, and the
  * handler may write DEPOSITED rows when it consumes ADUs left from before a restart. The residual risk is the same for
  * every source: the lock is per JVM, so a second server process on the same database could still insert a colliding
- * key, and that RPC's commit would then fail. No deletes run here; {@link RoutingSweeper} removes old rows.
+ * key, and that RPC's commit would then fail. Rows are never deleted: a route does not expire.
  * <p>
  * Edges come from carriers uploading a client's bundles (UPLOADED), from the peers a client lists in its
  * {@code routing.metadata} (REPORTED, {@link #recordReported}), and from the client bundles a dropbox's inventory
@@ -71,57 +69,25 @@ public class BundleRouting {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private final RoutingEdgeRepository routingEdgeRepository;
-    private final ReceivedBundleRepository receivedBundleRepository;
     private final DropboxNodeRepository dropboxNodeRepository;
     private final DropboxRecencyGrantRepository dropboxRecencyGrantRepository;
-    private final long ttlMs;
     private final int maxRelayedClients;
 
     public BundleRouting(RoutingEdgeRepository routingEdgeRepository,
-                         ReceivedBundleRepository receivedBundleRepository,
                          DropboxNodeRepository dropboxNodeRepository,
                          DropboxRecencyGrantRepository dropboxRecencyGrantRepository,
-                         @Value("${routing.ttl:14d}") Duration ttl,
                          @Value("${routing.max-relayed-clients-per-carrier:64}") int maxRelayedClients) {
         this.routingEdgeRepository = routingEdgeRepository;
-        this.receivedBundleRepository = receivedBundleRepository;
         this.dropboxNodeRepository = dropboxNodeRepository;
         this.dropboxRecencyGrantRepository = dropboxRecencyGrantRepository;
-        this.ttlMs = ttl.toMillis();
         this.maxRelayedClients = Math.max(0, maxRelayedClients);
     }
 
-    /** how long an edge stays usable after its {@code lastSeenMs} */
-    public long ttlMs() {
-        return ttlMs;
-    }
-
-    /** Carrier {@code peerId} uploaded a new bundle of {@code clientId} at {@code nowMs}. Never throws. */
-    public void recordUploaded(String peerId, String clientId, long nowMs) {
-        upsert(peerId, clientId, RoutingSource.UPLOADED, nowMs);
-    }
-
     /**
-     * Carrier {@code peerId} uploaded a bundle of {@code clientId} the server had already processed. This refreshes
-     * the edge only if the server first received this bundle ({@code ReceivedBundle.receivedAtMs}) within the TTL,
-     * so re-uploading an old jar cannot make a carrier a route. A bundle with no receipt row (one superseded before
-     * it arrived) cannot be dated and refreshes nothing, and nor does the undated row ({@code receivedAtMs} 0) its
-     * first duplicate upload writes. Call it before the duplicate's receipt row is written.
-     * Never throws.
+     * Carrier {@code peerId} uploaded a bundle of {@code clientId} at {@code nowMs}, new or one the server already
+     * had: either way the carrier carried the client's bundle. Never throws.
      */
-    public void recordUploadedDuplicate(String peerId, String clientId, String bundleId, long nowMs) {
-        try {
-            if (bundleId == null) return;
-            var received = receivedBundleRepository.findById(bundleId);
-            if (received.isEmpty() || received.get().receivedAtMs < nowMs - ttlMs) {
-                logger.log(FINE, "Not refreshing route " + peerId + " -> " + clientId + ": duplicate " + bundleId +
-                        " was first received outside the routing TTL");
-                return;
-            }
-        } catch (RuntimeException e) {
-            logger.log(WARNING, "Could not check duplicate " + bundleId + " for routing", e);
-            return;
-        }
+    public void recordUploaded(String peerId, String clientId, long nowMs) {
         upsert(peerId, clientId, RoutingSource.UPLOADED, nowMs);
     }
 
@@ -134,7 +100,7 @@ public class BundleRouting {
      * <p>
      * Ignored: a missing, unparseable or oversized ({@link #MAX_METADATA_BYTES}) file, and a v1 report (no
      * {@link #GEN_KEY}, or one that is not epoch milliseconds, so relative ages cannot be computed from it). Entries are kept only if the key is a peer ID other than the client's own and the value is
-     * epoch milliseconds (legacy counts are not); entries older than the TTL are skipped, and only the newest
+     * epoch milliseconds (legacy counts are not), and only the newest
      * {@link #MAX_REPORTED_PEERS} are recorded. Call it only for a decrypted, non-duplicate bundle, under the client's
      * receive lock. Never throws.
      */
@@ -153,12 +119,10 @@ public class BundleRouting {
             logger.log(FINE, "Ignoring v1 routing metadata of " + clientId);
             return;
         }
-        long oldest = receiptMs - ttlMs;
         report.entrySet()
                 .stream()
                 .filter(e -> e.getValue() != null && e.getValue() >= MIN_EPOCH_MS &&
                         PEER_ID.matcher(e.getKey()).matches() && !e.getKey().equals(clientId))
-                .filter(e -> reportedLastSeen(receiptMs, gen, e.getValue()) >= oldest)
                 .sorted(Map.Entry.<String, Long>comparingByValue(Comparator.reverseOrder())
                                 .thenComparing(Map.Entry.comparingByKey()))
                 .limit(MAX_REPORTED_PEERS)
@@ -172,12 +136,11 @@ public class BundleRouting {
      * Dropbox {@code dropboxId}'s accepted inventory lists a bundle of {@code clientId} that it first listed at
      * {@code firstSeenMs} (the {@code InventorySighting}, server clock): the client visited the dropbox then. This
      * DEPOSITED edge makes the client a via member of the dropbox even if it never reports its peers (an old client).
-     * A sighting already older than the TTL at {@code nowMs}, and the dropbox's own ID, are ignored. Call it only from
-     * the dropbox control handler while the dropbox's bundle holds its receive lock (see the class comment). Never
-     * throws.
+     * The dropbox's own ID is ignored. Call it only from the dropbox control handler while the dropbox's bundle holds
+     * its receive lock (see the class comment). Never throws.
      */
-    public void recordDeposited(String dropboxId, String clientId, long firstSeenMs, long nowMs) {
-        if (firstSeenMs < nowMs - ttlMs || clientId == null || clientId.equals(dropboxId)) return;
+    public void recordDeposited(String dropboxId, String clientId, long firstSeenMs) {
+        if (clientId == null || clientId.equals(dropboxId)) return;
         upsert(dropboxId, clientId, RoutingSource.DEPOSITED, firstSeenMs);
     }
 
@@ -203,22 +166,18 @@ public class BundleRouting {
     /**
      * The clients to put on carrier {@code peerId}, as {@code direct ++ via}:
      * <ul>
-     *   <li>direct: every client with a fresh UPLOADED or REPORTED edge from the carrier. Uncapped.</li>
+     *   <li>direct: every client with an UPLOADED or REPORTED edge from the carrier. Uncapped.</li>
      *   <li>via (one hop only): for each direct client that is a dropbox ({@code DropboxNode}), the clients with a
-     *       fresh REPORTED edge to the dropbox's TLS peer ID (the {@code senderId} of its {@code DropboxRecencyGrant})
-     *       or a fresh DEPOSITED edge from the dropbox; minus the direct clients and every dropbox; at most
+     *       REPORTED edge to the dropbox's TLS peer ID (the {@code senderId} of its {@code DropboxRecencyGrant})
+     *       or a DEPOSITED edge from the dropbox; minus the direct clients and every dropbox; at most
      *       {@code routing.max-relayed-clients-per-carrier}.</li>
      * </ul>
      * Each part is ordered newest {@code lastSeenMs} first, then by client ID, so the result (and the carrier's
      * deletion set) is deterministic.
      */
-    public List<String> clientsForCarrier(String peerId, long nowMs) {
+    public List<String> clientsForCarrier(String peerId) {
         if (!validId(peerId)) return List.of();
-        long freshFrom = nowMs - ttlMs;
-        List<String> direct = newestFirst(routingEdgeRepository.findByIdPeerIdAndIdSourceInAndLastSeenMsGreaterThanEqual(
-                peerId,
-                DIRECT_SOURCES,
-                freshFrom));
+        List<String> direct = newestFirst(routingEdgeRepository.findByIdPeerIdAndIdSourceIn(peerId, DIRECT_SOURCES));
         if (direct.isEmpty() || maxRelayedClients == 0) return direct;
         List<String> drops = dropboxNodeRepository.findExistingClientIds(direct);
         if (drops.isEmpty()) return direct;
@@ -229,13 +188,9 @@ public class BundleRouting {
         }
         List<RoutingEdge> members = new ArrayList<>();
         if (!dropPeerIds.isEmpty()) {
-            members.addAll(routingEdgeRepository.findByIdPeerIdInAndIdSourceAndLastSeenMsGreaterThanEqual(dropPeerIds,
-                                                                                                          RoutingSource.REPORTED,
-                                                                                                          freshFrom));
+            members.addAll(routingEdgeRepository.findByIdPeerIdInAndIdSource(dropPeerIds, RoutingSource.REPORTED));
         }
-        members.addAll(routingEdgeRepository.findByIdPeerIdInAndIdSourceAndLastSeenMsGreaterThanEqual(drops,
-                                                                                                      RoutingSource.DEPOSITED,
-                                                                                                      freshFrom));
+        members.addAll(routingEdgeRepository.findByIdPeerIdInAndIdSource(drops, RoutingSource.DEPOSITED));
         Set<String> directSet = new HashSet<>(direct);
         members.removeIf(e -> directSet.contains(e.id.clientId));
         if (members.isEmpty()) return direct;

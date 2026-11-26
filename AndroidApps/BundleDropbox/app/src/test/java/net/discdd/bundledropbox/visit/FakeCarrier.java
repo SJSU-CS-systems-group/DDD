@@ -57,6 +57,8 @@ final class FakeCarrier implements AutoCloseable {
     final Path toClient;
     final Path toServer;
     final int port;
+    /** this carrier's peer ID: {@code SecurityUtils.peerIdForTlsKey} of the TLS key it serves */
+    final String peerId;
     volatile GetRecencyBlobResponse recency = GetRecencyBlobResponse.getDefaultInstance();
     /** If set, {@code getRecencyBlob} fails with this status instead of answering {@link #recency}. */
     volatile io.grpc.Status recencyFailure;
@@ -81,6 +83,7 @@ final class FakeCarrier implements AutoCloseable {
         toClient = Files.createDirectories(root.resolve("client"));
         toServer = Files.createDirectories(root.resolve("server"));
         GrpcSecurityKey key = new GrpcSecurityKey(root.resolve("GrpcSecurity"), SecurityUtils.SERVER);
+        peerId = SecurityUtils.peerIdForTlsKey(key.grpcKeyPair.getPublic());
         var credentials = TlsServerCredentials.newBuilder()
                 .keyManager(DDDTLSUtil.getKeyManagerFactory(key.grpcKeyPair, key.grpcCert).getKeyManagers())
                 .build();

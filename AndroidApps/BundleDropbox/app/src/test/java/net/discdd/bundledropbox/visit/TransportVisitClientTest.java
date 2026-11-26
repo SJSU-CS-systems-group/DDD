@@ -500,8 +500,7 @@ public class TransportVisitClientTest {
     }
 
     /**
-     * The dropbox records no routing peers, so meeting a new carrier never makes a new own bundle: the same bundle
-     * id goes to each carrier once (the server learns the carrier from that upload) and is not re-sent to a
+     * While the own bundle does not change, the same bundle id goes to each carrier once and is not re-sent to a
      * carrier that already acknowledged it.
      */
     @Test(timeout = 60_000)

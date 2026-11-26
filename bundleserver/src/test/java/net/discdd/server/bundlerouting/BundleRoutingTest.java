@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.server.repository.DropboxNodeRepository;
 import net.discdd.server.repository.DropboxRecencyGrantRepository;
-import net.discdd.server.repository.ReceivedBundleRepository;
 import net.discdd.server.repository.RoutingEdgeRepository;
 import net.discdd.server.repository.entity.DropboxNode;
 import net.discdd.server.repository.entity.DropboxRecencyGrant;
@@ -20,7 +19,6 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.transaction.PlatformTransactionManager;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -39,13 +37,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * H2-backed tests of {@link BundleRouting} (UPLOADED and REPORTED writes, direct and one-hop via delivery sets) and
- * {@link RoutingSweeper} on a real {@link RoutingEdgeRepository}.
+ * H2-backed tests of {@link BundleRouting} (UPLOADED and REPORTED writes, direct and one-hop via delivery sets) on a
+ * real {@link RoutingEdgeRepository}.
  */
 @DataJpaTest
 @Import({ GrpcExecutor.class })
 class BundleRoutingTest {
-    private static final Duration TTL = Duration.ofDays(14);
+    /** older than any expiry the server once had: routes never expire */
+    private static final long OLD = Duration.ofDays(60).toMillis();
     private static final long NOW = 1_800_000_000_000L;
     private static final String T = "carrierT";
     private static final String C = "clientC";
@@ -65,13 +64,9 @@ class BundleRoutingTest {
     @Autowired
     RoutingEdgeRepository routingEdgeRepository;
     @Autowired
-    ReceivedBundleRepository receivedBundleRepository;
-    @Autowired
     DropboxNodeRepository dropboxNodeRepository;
     @Autowired
     DropboxRecencyGrantRepository dropboxRecencyGrantRepository;
-    @Autowired
-    PlatformTransactionManager transactionManager;
     @Autowired
     TestEntityManager entityManager;
 
@@ -83,12 +78,7 @@ class BundleRoutingTest {
     }
 
     private BundleRouting routingWithCap(int cap) {
-        return new BundleRouting(routingEdgeRepository,
-                                 receivedBundleRepository,
-                                 dropboxNodeRepository,
-                                 dropboxRecencyGrantRepository,
-                                 TTL,
-                                 cap);
+        return new BundleRouting(routingEdgeRepository, dropboxNodeRepository, dropboxRecencyGrantRepository, cap);
     }
 
     /** the bulk touch bypasses the persistence context; read what the database holds */
@@ -119,18 +109,18 @@ class BundleRoutingTest {
         routing.recordUploaded(T, "c".repeat(RoutingEdgeId.MAX_ID_CHARS + 1), NOW);
         routing.recordUploaded(T, null, NOW);
         assertEquals(0, routingEdgeRepository.count());
-        assertEquals(List.of(), routing.clientsForCarrier("", NOW));
-        assertEquals(List.of(), routing.clientsForCarrier(null, NOW));
+        assertEquals(List.of(), routing.clientsForCarrier(""));
+        assertEquals(List.of(), routing.clientsForCarrier(null));
 
         routing.recordUploaded("p".repeat(RoutingEdgeId.MAX_ID_CHARS), C, NOW);
         assertEquals(1, routingEdgeRepository.count(), "an ID of exactly the column width is kept");
     }
 
     @Test
-    void staleEdgeNotRouted() {
-        routing.recordUploaded(T, "stale", NOW - TTL.toMillis() - 1);
-        routing.recordUploaded(T, "edge", NOW - TTL.toMillis());
-        assertEquals(List.of("edge"), routing.clientsForCarrier(T, NOW));
+    void oldEdgeStillRouted() {
+        routing.recordUploaded(T, "old", NOW - OLD);
+        routing.recordUploaded(T, "new", NOW);
+        assertEquals(List.of("new", "old"), routing.clientsForCarrier(T));
     }
 
     @Test
@@ -142,27 +132,7 @@ class BundleRoutingTest {
         routing.recordUploaded("otherCarrier", "clientE", NOW);
         // REPORTED edges from the carrier count too; the newest edge per client decides its place
         routingEdgeRepository.save(new RoutingEdge(new RoutingEdgeId(T, "clientD", RoutingSource.REPORTED), NOW));
-        assertEquals(List.of("clientD", "clientC", "clientA", "clientB"), routing.clientsForCarrier(T, NOW));
-    }
-
-    @Test
-    void sweepDeletesOnlyOlderThanTwiceTtl() {
-        long twoTtl = 2 * TTL.toMillis();
-        // more than one sweep batch of old rows
-        for (int i = 0; i <= RoutingSweeper.BATCH; i++) routing.recordUploaded(T, "old" + i, NOW - twoTtl - 1 - i);
-        routing.recordUploaded(T, "atTwoTtl", NOW - twoTtl);
-        routing.recordUploaded(T, "stale", NOW - TTL.toMillis() - 1);
-        routing.recordUploaded(T, "fresh", NOW);
-        entityManager.flush();
-
-        var sweeper = new RoutingSweeper(routingEdgeRepository, transactionManager, TTL, Duration.ofHours(6));
-        assertEquals(RoutingSweeper.BATCH + 1, sweeper.sweep(NOW));
-        entityManager.clear();
-        assertEquals(3, routingEdgeRepository.count());
-        assertTrue(routingEdgeRepository.existsById(new RoutingEdgeId(T, "atTwoTtl", RoutingSource.UPLOADED)));
-        assertTrue(routingEdgeRepository.existsById(new RoutingEdgeId(T, "stale", RoutingSource.UPLOADED)));
-        assertFalse(routingEdgeRepository.existsById(new RoutingEdgeId(T, "old0", RoutingSource.UPLOADED)));
-        assertEquals(0, sweeper.sweep(NOW));
+        assertEquals(List.of("clientD", "clientC", "clientA", "clientB"), routing.clientsForCarrier(T));
     }
 
     // ---------------------------------------------------------------- REPORTED
@@ -284,12 +254,10 @@ class BundleRoutingTest {
     }
 
     @Test
-    void entryOlderThanTtlSkipped() throws Exception {
+    void oldEntryKept() throws Exception {
         long gen = NOW - 5 * HOUR; // the report itself sat on carriers for 5 h; only the entries' ages count
-        routing.recordReported(C, metadata(Map.of(BundleRouting.GEN_KEY, gen,
-                                                  peer("tooOld"), gen - TTL.toMillis() - 1,
-                                                  peer("atTtl"), gen - TTL.toMillis())), NOW);
-        assertEquals(Map.of(peer("atTtl"), NOW - TTL.toMillis()), reported(C));
+        routing.recordReported(C, metadata(Map.of(BundleRouting.GEN_KEY, gen, peer("old"), gen - OLD)), NOW);
+        assertEquals(Map.of(peer("old"), NOW - OLD), reported(C));
     }
 
     @Test
@@ -340,11 +308,11 @@ class BundleRoutingTest {
         carrierReachesDropbox();
         edge(D_PEER, "reporter", RoutingSource.REPORTED, NOW - 5);
         edge(D, "depositor", RoutingSource.DEPOSITED, NOW - 7);
-        // stale evidence of D does not count
-        edge(D_PEER, "staleReporter", RoutingSource.REPORTED, NOW - TTL.toMillis() - 1);
+        // old evidence of D still counts
+        edge(D_PEER, "oldReporter", RoutingSource.REPORTED, NOW - OLD);
         // members report D's TLS peer ID; a REPORTED edge naming D's client ID is not D's member
         edge(D, "misfiled", RoutingSource.REPORTED, NOW);
-        assertEquals(List.of(D, "reporter", "depositor"), routing.clientsForCarrier(T, NOW));
+        assertEquals(List.of(D, "reporter", "depositor", "oldReporter"), routing.clientsForCarrier(T));
     }
 
     @Test
@@ -359,7 +327,7 @@ class BundleRoutingTest {
         routing.recordUploaded(T, "noGrant", NOW - 1);
         edge(peer("noGrant-tls"), "reporterOfN", RoutingSource.REPORTED, NOW);
         edge("noGrant", "depositorOfN", RoutingSource.DEPOSITED, NOW);
-        assertEquals(List.of("notDropbox", "noGrant", "depositorOfN"), routing.clientsForCarrier(T, NOW));
+        assertEquals(List.of("notDropbox", "noGrant", "depositorOfN"), routing.clientsForCarrier(T));
     }
 
     @Test
@@ -373,7 +341,7 @@ class BundleRoutingTest {
         edge(D_PEER, "member", RoutingSource.REPORTED, NOW);
         // nothing beyond one hop: a member of a dropbox reached only through D
         edge("otherDropbox", "twoHops", RoutingSource.DEPOSITED, NOW);
-        assertEquals(List.of(D, "directToo", "member"), routing.clientsForCarrier(T, NOW));
+        assertEquals(List.of(D, "directToo", "member"), routing.clientsForCarrier(T));
     }
 
     @Test
@@ -388,10 +356,10 @@ class BundleRoutingTest {
         edge(D, "m-e", RoutingSource.DEPOSITED, NOW - 1);
         var capped = routingWithCap(3);
         var expected = List.of(D, "m-c", "m-a", "m-b");
-        assertEquals(expected, capped.clientsForCarrier(T, NOW));
-        assertEquals(expected, capped.clientsForCarrier(T, NOW), "the same inputs give the same list");
-        assertEquals(List.of(D, "m-c", "m-a", "m-b", "m-e", "m-d"), routing.clientsForCarrier(T, NOW));
-        assertEquals(List.of(D), routingWithCap(0).clientsForCarrier(T, NOW), "a cap of 0 turns via off");
+        assertEquals(expected, capped.clientsForCarrier(T));
+        assertEquals(expected, capped.clientsForCarrier(T), "the same inputs give the same list");
+        assertEquals(List.of(D, "m-c", "m-a", "m-b", "m-e", "m-d"), routing.clientsForCarrier(T));
+        assertEquals(List.of(D), routingWithCap(0).clientsForCarrier(T), "a cap of 0 turns via off");
     }
 
     // ---------------------------------------------------------------- DEPOSITED
@@ -413,24 +381,26 @@ class BundleRoutingTest {
         // D has no grant, so no REPORTED edge can name it: its deposits alone make clients its members
         dropboxNode(D);
         routing.recordUploaded(T, D, NOW - 10);
-        routing.recordDeposited(D, "oldClient", NOW - HOUR, NOW);
-        routing.recordDeposited(D, "staleDeposit", NOW - TTL.toMillis() - 1, NOW);
-        routing.recordDeposited(D, D, NOW, NOW); // the dropbox's own bundle
-        routing.recordDeposited(D, null, NOW, NOW);
-        assertEquals(List.of(D, "oldClient"), routing.clientsForCarrier(T, NOW));
-        assertEquals(Map.of("oldClient", NOW - HOUR), deposited(D), "stale and self deposits are not written");
+        routing.recordDeposited(D, "recentClient", NOW - HOUR);
+        routing.recordDeposited(D, "oldDeposit", NOW - OLD);
+        routing.recordDeposited(D, D, NOW); // the dropbox's own bundle
+        routing.recordDeposited(D, null, NOW);
+        assertEquals(List.of(D, "recentClient", "oldDeposit"), routing.clientsForCarrier(T));
+        assertEquals(Map.of("recentClient", NOW - HOUR, "oldDeposit", NOW - OLD),
+                     deposited(D),
+                     "self deposits are not written");
         // a deposit at a dropbox the carrier does not reach routes nothing
-        routing.recordDeposited("elsewhere", "farClient", NOW, NOW);
-        assertEquals(List.of(D, "oldClient"), routing.clientsForCarrier(T, NOW));
+        routing.recordDeposited("elsewhere", "farClient", NOW);
+        assertEquals(List.of(D, "recentClient", "oldDeposit"), routing.clientsForCarrier(T));
     }
 
     @Test
     void depositedLastSeenIsSightingFirstSeen() {
-        routing.recordDeposited(D, C, NOW - 5 * HOUR, NOW);
+        routing.recordDeposited(D, C, NOW - 5 * HOUR);
         assertEquals(Map.of(C, NOW - 5 * HOUR), deposited(D), "dated by the sighting, not by the report");
-        routing.recordDeposited(D, C, NOW - 2 * HOUR, NOW + HOUR);
+        routing.recordDeposited(D, C, NOW - 2 * HOUR);
         assertEquals(Map.of(C, NOW - 2 * HOUR), deposited(D), "a newer sighting raises lastSeen");
-        routing.recordDeposited(D, C, NOW - 9 * HOUR, NOW + 2 * HOUR);
+        routing.recordDeposited(D, C, NOW - 9 * HOUR);
         assertEquals(Map.of(C, NOW - 2 * HOUR), deposited(D), "an older sighting never lowers it");
     }
 }

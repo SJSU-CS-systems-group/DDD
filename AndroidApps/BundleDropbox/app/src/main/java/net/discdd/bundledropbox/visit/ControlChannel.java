@@ -81,11 +81,20 @@ public interface ControlChannel {
     default List<String> ownProbeIds() { return List.of(); }
 
     /**
+     * Records that the dropbox met carrier {@code peerId}, as a stock client records the carriers it meets: the
+     * dropbox's own bundles list it in their {@code routing.metadata}, so the server routes the dropbox's clients
+     * through it. Called only for a carrier whose server-signed recency blob names its TLS key, before
+     * {@link #ownBundleForVisit()}.
+     *
+     * @param peerId the carrier's peer ID ({@code SecurityUtils.peerIdForTlsKey} of its TLS key)
+     */
+    default void recordCarrier(String peerId) {}
+
+    /**
      * Processes a bundle {@link #classify} called {@link Ownership#MINE_NEW}. The caller still owns
      * {@code stagedJar} and discards it afterwards; the endpoint works on its own copy.
      *
-     * <p>Nothing about the carrier is passed: the dropbox records no routing peers. The server learns which carriers
-     * met the dropbox from their uploads of its bundles (Research/R11 §1.5).
+     * <p>Nothing about the carrier is passed: carriers are recorded by {@link #recordCarrier}.
      *
      * @param stagedJar the downloaded jar
      * @return true if the bundle was processed (its plans applied, its recency grants offered to the store)

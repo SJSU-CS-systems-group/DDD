@@ -141,10 +141,8 @@ class DropboxStorageRepositoryTest {
                                          serverSecurity,
                                          aduStores,
                                          new BundleRouting(routingEdgeRepository,
-                                                           receivedBundleRepository,
                                                            dropboxNodeRepository,
                                                            dropboxRecencyGrantRepository,
-                                                           Duration.ofDays(14),
                                                            64),
                                          Duration.ofDays(14));
     }

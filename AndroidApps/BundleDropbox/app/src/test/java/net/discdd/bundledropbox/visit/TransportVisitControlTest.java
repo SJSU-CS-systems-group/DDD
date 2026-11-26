@@ -43,7 +43,9 @@ import static org.junit.Assert.assertTrue;
  *   <li>after a processed plan the regenerated own bundle (carrying the ack) is uploaded at the end;</li>
  *   <li>a failing control channel never breaks the relay;</li>
  *   <li>a carrier that synced with our server is first asked for the own bundle by id ({@link
- *       ControlChannel#ownProbeIds()}), before any PSI; a miss leaves download-all as it was (Research/R11 RT8).</li>
+ *       ControlChannel#ownProbeIds()}), before any PSI; a miss leaves download-all as it was (Research/R11 RT8);</li>
+ *   <li>a carrier that synced with our server and whose blob names its TLS key is recorded as a routing peer
+ *       ({@link ControlChannel#recordCarrier}) before the own bundle is prepared.</li>
  * </ul>
  */
 public class TransportVisitControlTest {
@@ -79,6 +81,14 @@ public class TransportVisitControlTest {
         boolean explode;
         /** The next this many accepts fail (return false, the bundle stays new). */
         int failAccepts;
+        /** {@code "record <peerId>"} and {@code "own"} calls, in order. */
+        final List<String> events = new ArrayList<>();
+
+        @Override
+        public synchronized void recordCarrier(String peerId) {
+            events.add("record " + peerId);
+            if (explode) throw new IllegalStateException("boom");
+        }
 
         @Override
         public synchronized List<String> ownProbeIds() {
@@ -88,6 +98,7 @@ public class TransportVisitControlTest {
         @Override
         public synchronized OwnBundle ownBundleForVisit() {
             ownBundleCalls++;
+            events.add("own");
             if (explode) throw new IllegalStateException("boom");
             if (!ownBundles.isEmpty()) lastOwn = ownBundles.poll();
             return lastOwn;
@@ -148,6 +159,14 @@ public class TransportVisitControlTest {
 
     private VisitResult visit() {
         return client.visit(InetAddress.getLoopbackAddress(), carrier.port, CARRIER, () -> true);
+    }
+
+    /** a SUCCESS blob for {@code senderId}, which the default trust check accepts */
+    private static GetRecencyBlobResponse blobNaming(String senderId) {
+        return GetRecencyBlobResponse.newBuilder()
+                .setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)
+                .setRecencyBlob(RecencyBlob.newBuilder().setBlobTimestamp(1_000).setSenderId(senderId))
+                .build();
     }
 
     private ControlChannel.OwnBundle own(String id) throws IOException {
@@ -236,6 +255,7 @@ public class TransportVisitControlTest {
     public void failingControlChannelDoesNotBreakTheRelay() throws Exception {
         store.seed(Direction.UPSTREAM, BundleFixtures.bundleJar(fixtures, "up1", "up1", 300));
         BundleFixtures.bundleJar(carrier.toClient, "d1", "d1", 100);
+        carrier.recency = blobNaming(carrier.peerId); // recording fails too
         control.explode = true;
 
         VisitResult r = visit();
@@ -244,6 +264,55 @@ public class TransportVisitControlTest {
         assertEquals(List.of("up1"), carrier.uploadOrder);
         assertEquals(List.of("d1"), downstreamIds());
         assertEquals(0, r.controlUploaded());
+        assertTrue(control.events.toString(), control.events.contains("record " + carrier.peerId));
+    }
+
+    // ------------------------------------------------------------------ routing peers
+
+    /** A trusted carrier whose blob names its TLS key is recorded once, before the own bundle is prepared. */
+    @Test(timeout = 60_000)
+    public void trustedCarrierNamingItsKeyIsRecordedBeforeTheOwnBundle() throws Exception {
+        carrier.recency = blobNaming(carrier.peerId);
+        control.ownBundles.add(own("own1"));
+
+        VisitResult r = visit();
+
+        assertTrue(r.toString(), r.ok());
+        assertEquals(List.of("record " + carrier.peerId, "own"), control.events);
+        assertEquals(List.of("own1"), carrier.uploadOrder);
+    }
+
+    /** A replayed blob (its senderId names another key) is not recorded; the visit goes on as usual. */
+    @Test(timeout = 60_000)
+    public void blobNamingAnotherKeyIsNotRecorded() throws Exception {
+        // setUp's blob names SENDER_ID, not the carrier's TLS key
+        control.ownBundles.add(own("own1"));
+
+        VisitResult r = visit();
+
+        assertTrue(r.toString(), r.ok());
+        assertTrue(r.carrierTrusted());
+        assertEquals(List.of("own"), control.events);
+        assertEquals(List.of("own1"), carrier.uploadOrder);
+    }
+
+    /** A carrier whose blob our server did not sign is not recorded, even if the blob names its TLS key. */
+    @Test(timeout = 60_000)
+    public void untrustedCarrierIsNotRecorded() throws Exception {
+        carrier.recency = blobNaming(carrier.peerId);
+        TransportVisitClient distrusting = new TransportVisitClient(store,
+                                                                    ledger,
+                                                                    raw -> false,
+                                                                    control,
+                                                                    CarrierChannelFactory.tls(null),
+                                                                    VisitOptions.DEFAULTS.withProbe(3, 50),
+                                                                    System::currentTimeMillis);
+
+        VisitResult r = distrusting.visit(InetAddress.getLoopbackAddress(), carrier.port, CARRIER, () -> true);
+
+        assertTrue(r.toString(), r.ok());
+        assertFalse(r.carrierTrusted());
+        assertEquals(List.of("own"), control.events);
     }
 
     /** Full box: the plan bundle must still arrive, or nothing ever frees the space (review v2, critical). */

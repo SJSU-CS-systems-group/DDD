@@ -5,7 +5,6 @@ import net.discdd.grpc.GrpcServerRunner;
 import net.discdd.server.commands.CLRunner;
 import net.discdd.server.repository.DropboxNodeRepository;
 import net.discdd.server.repository.DropboxRecencyGrantRepository;
-import net.discdd.server.repository.ReceivedBundleRepository;
 import net.discdd.server.repository.RoutingEdgeRepository;
 import net.discdd.server.repository.RoutingMetaRepository;
 import net.discdd.server.repository.ServerRoutingRepository;
@@ -29,7 +28,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 import java.nio.file.Path;
 import java.security.PublicKey;
-import java.time.Duration;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -57,8 +55,6 @@ class LegacyRoutingImporterTest {
     @Autowired
     RoutingMetaRepository routingMetaRepository;
     @Autowired
-    ReceivedBundleRepository receivedBundleRepository;
-    @Autowired
     DropboxNodeRepository dropboxNodeRepository;
     @Autowired
     DropboxRecencyGrantRepository dropboxRecencyGrantRepository;
@@ -71,12 +67,7 @@ class LegacyRoutingImporterTest {
 
     @BeforeEach
     void setUp() {
-        var routing = new BundleRouting(routingEdgeRepository,
-                                        receivedBundleRepository,
-                                        dropboxNodeRepository,
-                                        dropboxRecencyGrantRepository,
-                                        Duration.ofDays(14),
-                                        64);
+        var routing = new BundleRouting(routingEdgeRepository, dropboxNodeRepository, dropboxRecencyGrantRepository, 64);
         importer = new LegacyRoutingImporter(serverRoutingRepository, routingMetaRepository, routing,
                                              transactionManager);
     }

@@ -31,6 +31,8 @@ import net.discdd.model.ADU;
 import net.discdd.model.Bundle;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.utils.BundleUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.ByteString;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -51,7 +53,6 @@ import java.io.PipedInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.FileTime;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.spec.ECGenParameterSpec;
@@ -59,7 +60,9 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -171,6 +174,7 @@ public class DropboxControlEndpointTest {
                     if (name.startsWith("ADU/" + DropboxControl.APP_ID + "/")) r.controlAdus.add(bytes);
                     if (name.startsWith("ADU/" + DropboxControl.RECENCY_APP_ID + "/")) r.recencyAdus.add(bytes);
                     if (name.equals("acknowledgement.txt")) r.ack = new String(bytes, StandardCharsets.UTF_8).trim();
+                    if (name.equals("routing.metadata")) r.routing = new String(bytes, StandardCharsets.UTF_8);
                 }
             }
             return r;
@@ -231,6 +235,8 @@ public class DropboxControlEndpointTest {
         final List<byte[]> controlAdus = new ArrayList<>();
         final List<byte[]> recencyAdus = new ArrayList<>();
         String ack;
+        /** the {@code routing.metadata} JSON */
+        String routing;
 
         InventoryReport onlyInventory() throws Exception {
             assertEquals(1, controlAdus.size());
@@ -508,48 +514,36 @@ public class DropboxControlEndpointTest {
     }
 
     /**
-     * Routing metadata alone never makes a new own bundle (bundle-core regenerates when the file's mtime passes the
-     * last bundle's): not on repeated generation, not after the endpoint is re-opened, not when the file goes
-     * missing, and not when a re-open repairs an unreadable file or resets an older build's sighting counts. Each
-     * new bundle would burn a counter and a Signal message and be uploaded again to every carrier.
+     * The dropbox keeps its own carrier list, as a client does: recording a new carrier makes a new own bundle that
+     * lists it, and nothing else about the list does (repeated generation, the same carrier again within a day, a
+     * re-open, a missing file). The list survives a re-open.
      */
     @Test
-    public void routingMetadataNeverForcesOwnBundleRegeneration() throws Exception {
+    public void recordingANewCarrierMakesANewOwnBundleThatListsIt() throws Exception {
         DropboxControlEndpoint ep = open(keysA);
-        ControlChannel.OwnBundle own = ep.prepareUpstream(inventory(1));
-        String id = own.bundleId();
-        FileTime beforeBundle = FileTime.fromMillis(Files.getLastModifiedTime(own.path()).toMillis() - 60_000);
+        String id = ep.prepareUpstream(inventory(1)).bundleId();
+        assertEquals(id, ep.prepareUpstream(null).bundleId());
+        ep = open(keysA);
+        assertEquals(id, ep.prepareUpstream(null).bundleId());
         Path metadata = root.resolve("BundleRouting").resolve("routing.metadata");
-        assertEquals(id, ep.prepareUpstream(null).bundleId());
+        Files.deleteIfExists(metadata);
+        assertEquals("a missing file lists no carrier and changes nothing", id, ep.prepareUpstream(null).bundleId());
 
-        // A valid file an older build left behind; a fresh ClientRouting loads it on re-open.
-        Files.write(metadata, "{}".getBytes(StandardCharsets.UTF_8));
-        Files.setLastModifiedTime(metadata, beforeBundle);
-        ep = open(keysA);
-        assertEquals(id, ep.prepareUpstream(null).bundleId());
+        String carrier = SecurityUtils.peerIdForTlsKey(tlsKeyPair().getPublic());
+        assertFalse("not a peer ID", ep.recordCarrier("transport-1"));
+        Thread.sleep(20); // bundle-core compares the routing file's mtime with the last bundle's, in milliseconds
+        assertTrue(ep.recordCarrier(carrier));
+        ControlChannel.OwnBundle own = ep.prepareUpstream(null);
+        assertNotEquals(id, own.bundleId());
+        Map<String, Long> listed = new ObjectMapper().readValue(server.receive(own.path(), work("w")).routing,
+                                                                new TypeReference<HashMap<String, Long>>() {});
+        assertTrue(listed.toString(), listed.containsKey(carrier));
 
-        Files.delete(metadata);
-        assertEquals(id, ep.prepareUpstream(null).bundleId());
+        assertFalse("the same carrier again within a day", ep.recordCarrier(carrier));
+        assertEquals(own.bundleId(), ep.prepareUpstream(null).bundleId());
         ep = open(keysA);
-        assertEquals(id, ep.prepareUpstream(null).bundleId());
-        assertFalse("a missing file is left missing", Files.exists(metadata));
-
-        // An unreadable file: the repair at open keeps its mtime.
-        Files.write(metadata, "".getBytes(StandardCharsets.UTF_8));
-        Files.setLastModifiedTime(metadata, beforeBundle);
-        ep = open(keysA);
-        assertEquals("{}", new String(Files.readAllBytes(metadata), StandardCharsets.UTF_8));
-        assertEquals(beforeBundle, Files.getLastModifiedTime(metadata));
-        assertEquals(id, ep.prepareUpstream(null).bundleId());
-
-        // An older build's {"peer": count} file parses fine; the reset at open clears it and keeps its mtime.
-        Files.write(metadata, "{\"transport-1\": 4}".getBytes(StandardCharsets.UTF_8));
-        Files.setLastModifiedTime(metadata, beforeBundle);
-        ep = open(keysA);
-        assertEquals("{}", new String(Files.readAllBytes(metadata), StandardCharsets.UTF_8));
-        assertEquals(beforeBundle, Files.getLastModifiedTime(metadata));
-        assertEquals(id, ep.prepareUpstream(null).bundleId());
-        assertEquals(id, ep.prepareUpstream(null).bundleId());
+        assertEquals(own.bundleId(), ep.prepareUpstream(null).bundleId());
+        assertFalse("still listed after a re-open", ep.recordCarrier(carrier));
     }
 
     private static void deleteTree(Path dir) throws IOException {

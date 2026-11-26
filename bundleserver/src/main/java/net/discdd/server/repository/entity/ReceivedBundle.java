@@ -47,7 +47,7 @@ public class ReceivedBundle {
 
     /**
      * when the server first received this bundle, in epoch milliseconds, or 0 if undated (first recorded by a
-     * duplicate upload, so the real first receipt is unknown); read only by the routing replay guard
+     * duplicate upload, so the real first receipt is unknown)
      */
     public long receivedAtMs;
 

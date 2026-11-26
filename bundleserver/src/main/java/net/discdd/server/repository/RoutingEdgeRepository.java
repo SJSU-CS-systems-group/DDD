@@ -3,7 +3,6 @@ package net.discdd.server.repository;
 import net.discdd.server.bundlerouting.RoutingSource;
 import net.discdd.server.repository.entity.RoutingEdge;
 import net.discdd.server.repository.entity.RoutingEdgeId;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
@@ -30,26 +29,8 @@ public interface RoutingEdgeRepository extends CrudRepository<RoutingEdge, Routi
               @Param("source") RoutingSource source,
               @Param("t") long t);
 
-    List<RoutingEdge> findByIdPeerIdAndIdSourceInAndLastSeenMsGreaterThanEqual(String peerId,
-                                                                               Collection<RoutingSource> sources,
-                                                                               long minLastSeenMs);
+    List<RoutingEdge> findByIdPeerIdAndIdSourceIn(String peerId, Collection<RoutingSource> sources);
 
-    /** fresh edges of one source from any of {@code peerIds}; for a carrier's one-hop (via) clients */
-    List<RoutingEdge> findByIdPeerIdInAndIdSourceAndLastSeenMsGreaterThanEqual(Collection<String> peerIds,
-                                                                               RoutingSource source,
-                                                                               long minLastSeenMs);
-
-    /** keys of rows last seen before {@code cutoffMs}, a page at a time, for the sweeper */
-    @Query("select e.id from RoutingEdge e where e.lastSeenMs < :cutoff order by e.lastSeenMs")
-    List<RoutingEdgeId> findIdsLastSeenBefore(@Param("cutoff") long cutoffMs, Pageable page);
-
-    /** deletes the row only if it is still older than {@code cutoffMs}, so a concurrent touch keeps it */
-    @Transactional
-    @Modifying
-    @Query("delete from RoutingEdge e where e.id.peerId = :peer and e.id.clientId = :client and " +
-            "e.id.source = :source and e.lastSeenMs < :cutoff")
-    int deleteIfLastSeenBefore(@Param("peer") String peerId,
-                               @Param("client") String clientId,
-                               @Param("source") RoutingSource source,
-                               @Param("cutoff") long cutoffMs);
+    /** edges of one source from any of {@code peerIds}; for a carrier's one-hop (via) clients */
+    List<RoutingEdge> findByIdPeerIdInAndIdSource(Collection<String> peerIds, RoutingSource source);
 }

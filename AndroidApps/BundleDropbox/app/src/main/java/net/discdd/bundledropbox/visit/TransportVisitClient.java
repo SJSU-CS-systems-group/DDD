@@ -26,6 +26,7 @@ import net.discdd.grpc.PSIRequest;
 import net.discdd.grpc.PSIResponse;
 import net.discdd.grpc.RecencyBlobStatus;
 import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.client.bundletransmission.ClientBundleTransmission;
 import net.discdd.dropbox.control.DropboxControl;
 import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.utils.BundleUtils;
@@ -39,6 +40,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -78,9 +80,10 @@ import static java.util.logging.Level.WARNING;
  *   <li><b>{@code getRecencyBlob}</b>, as a stock client does. The carrier's blob is <b>never stored or
  *       served</b>: it names the carrier, not the dropbox (09 Own Recency Blob Design). It is only checked with
  *       {@code carrierBlobTrusted} (pinned server key, valid signature, not from the future), which sets
- *       {@link VisitResult#carrierTrusted()}. The dropbox records no routing peers, so the blob's {@code senderId}
- *       is not used. A failure here is logged, not counted as a visit error; it only skips the own-bundle probe
- *       below (download-all still runs).</li>
+ *       {@link VisitResult#carrierTrusted()}. A trusted blob whose {@code senderId} names the carrier's TLS key is
+ *       recorded as a routing peer ({@link ControlChannel#recordCarrier}), as a stock client records the carriers
+ *       it meets, so the own bundle below lists it. A failure here is logged, not counted as a visit error; it
+ *       only skips the recording and the own-bundle probe below (download-all still runs).</li>
  *   <li><b>Own control bundle</b> ({@link ControlChannel#ownBundleForVisit()}): the dropbox's own DDD client
  *       bundle, carrying its inventory report, its outstanding recency request (the dropbox's only way to get a
  *       recency blob of its own) and the ack of the last control bundle it processed, is uploaded
@@ -422,7 +425,8 @@ public final class TransportVisitClient {
         }
 
         private void exchange() throws Exception {
-            ManagedChannel channel = channelFactory.create(host, port);
+            CarrierChannelFactory.CarrierChannel carrierChannel = channelFactory.create(host, port);
+            ManagedChannel channel = carrierChannel.channel();
             // Publish before checking the flag; cancel() sets the flag before reading the channel, so one of the
             // two always sees the other (both fields are volatile).
             activeChannel = channel;
@@ -430,7 +434,7 @@ public final class TransportVisitClient {
                 checkCancelled();
                 var blocking = BundleExchangeServiceGrpc.newBlockingStub(channel);
                 var async = BundleExchangeServiceGrpc.newStub(channel);
-                fetchRecencyBlob(blocking);
+                fetchRecencyBlob(blocking, carrierChannel);
                 uploadOwnBundle(async);
                 uploadAll(async);
                 if (carrierTrusted) probeOwn(blocking);
@@ -476,15 +480,15 @@ public final class TransportVisitClient {
         // ---------------------------------------------------------------- recency
 
         /**
-         * Asks the carrier for its recency blob, as a stock client would, only to learn whether the carrier synced
-         * with our server ({@code carrierTrusted}: it gates {@link #probeOwn} and is shown in the status line). Its {@code senderId} is not used: the
-         * dropbox records no routing peers, and the server learns which carriers met the dropbox from their uploads
-         * of its bundles (Research/R11 §1.5). The blob is <b>never</b> stored or served: it was minted for the
-         * carrier, and the dropbox gets its own through the control channel (09 Own Recency Blob Design). A carrier
-         * that never synced answers with the default instance (status UNDEFINED); that, and a failing RPC, are
-         * logged, not visit errors.
+         * Asks the carrier for its recency blob, as a stock client would, to learn whether the carrier synced with
+         * our server ({@code carrierTrusted}: it gates {@link #probeOwn} and is shown in the status line) and, if
+         * so, to record the carrier as a routing peer ({@link #recordCarrier}). The blob is <b>never</b> stored or
+         * served: it was minted for the carrier, and the dropbox gets its own through the control channel (09 Own
+         * Recency Blob Design). A carrier that never synced answers with the default instance (status UNDEFINED);
+         * that, and a failing RPC, are logged, not visit errors.
          */
-        private void fetchRecencyBlob(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blocking) {
+        private void fetchRecencyBlob(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blocking,
+                                      CarrierChannelFactory.CarrierChannel carrierChannel) {
             GetRecencyBlobResponse response;
             try {
                 response = blocking.withDeadlineAfter(options.shortDeadlineMs(), MILLISECONDS)
@@ -512,6 +516,28 @@ public final class TransportVisitClient {
             logger.log(INFO, "carrier " + carrierId + " recency blob ts=" +
                     response.getRecencyBlob().getBlobTimestamp() + " trusted=" + carrierTrusted +
                     " (checked only, never stored)");
+            if (carrierTrusted) recordCarrier(response, carrierChannel.peerCertificate());
+        }
+
+        /**
+         * Records the carrier in the dropbox's own routing list, as a stock client records the carriers it meets,
+         * only if the blob's {@code senderId} names the TLS key this channel talks to: anyone can replay another
+         * carrier's blob, but not its key. Runs before the own bundle is prepared, so that bundle already lists the
+         * carrier.
+         */
+        private void recordCarrier(GetRecencyBlobResponse response, X509Certificate peerCert) {
+            String peerId = ClientBundleTransmission.boundPeerId(response, peerCert);
+            if (peerId == null) {
+                logger.log(WARNING, "carrier " + carrierId + " recency blob names " +
+                        response.getRecencyBlob().getSenderId() + ", not its TLS key; not recorded");
+                return;
+            }
+            try {
+                control.recordCarrier(peerId);
+            } catch (RuntimeException e) {
+                // The control channel must never break the relay.
+                logger.log(WARNING, "control channel failed to record carrier " + peerId, e);
+            }
         }
 
         // ---------------------------------------------------------------- upload

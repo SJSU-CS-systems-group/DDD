@@ -167,15 +167,12 @@ public class ServerBundleTransmission {
                 }
                 var counters = this.applicationDataManager.getBundleCountersForClient(clientId);
                 if (receivedBundleCounter <= counters.lastReceivedBundleCounter) {
-                    // another carrier with the same bundle is a route too; checked before the receipt row is written
+                    // another carrier with the same bundle is a route too
                     if (senderType != CLIENT) {
-                        bundleRouting.recordUploadedDuplicate(senderId,
-                                                              clientId,
-                                                              uncompressedBundle.getBundleId(),
-                                                              System.currentTimeMillis());
+                        bundleRouting.recordUploaded(senderId, clientId, System.currentTimeMillis());
                     }
                     // The counter advances only after every ADU was stored. A duplicate without a row cannot be
-                    // dated, so its row is undated (0) and the replay guard never refreshes a route from it.
+                    // dated, so its row is undated (0).
                     recordReceivedBundle(uncompressedBundle, clientId, receivedBundleCounter, senderId, 0);
                     deleteStagedPayloadAfterCommit(stagedPayload);
                     logger.log(WARNING,
@@ -360,8 +357,7 @@ public class ServerBundleTransmission {
      * then keeps its copy a while longer.
      *
      * @param receivedAtMs when the server first received the bundle, or 0 for a duplicate that had no row (superseded
-     *                     before it arrived, or processed before this table existed): such a row is undated, so the
-     *                     routing replay guard never refreshes a carrier from it
+     *                     before it arrived, or processed before this table existed)
      */
     private void recordReceivedBundle(UncompressedBundle uncompressedBundle,
                                       String clientId,
@@ -519,7 +515,7 @@ public class ServerBundleTransmission {
     public BundlesToExchange inventoryBundlesForTransmission(BundleSenderType senderType,
                                                              String senderId,
                                                              Set<String> bundleIdsPresent) {
-        List<String> clientIds = this.bundleRouting.clientsForCarrier(senderId, System.currentTimeMillis());
+        List<String> clientIds = this.bundleRouting.clientsForCarrier(senderId);
 
         logger.log(INFO,
                    "[BundleTransmission] Found " + clientIds.size() + " reachable from the sender: " +

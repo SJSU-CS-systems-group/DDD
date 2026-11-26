@@ -307,6 +307,16 @@ public final class DropboxControlManager implements ControlChannel {
     }
 
     @Override
+    public synchronized void recordCarrier(String peerId) {
+        if (endpoint == null) return;
+        try {
+            if (endpoint.recordCarrier(peerId)) logger.log(Level.INFO, "Recorded carrier " + peerId);
+        } catch (RuntimeException e) {
+            logger.log(Level.WARNING, "Could not record carrier " + peerId, e);
+        }
+    }
+
+    @Override
     public synchronized boolean accept(Path stagedJar) {
         if (endpoint == null) return false;
         DropboxControlEndpoint.AcceptResult r = endpoint.accept(stagedJar);

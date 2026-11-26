@@ -29,7 +29,7 @@ import static java.util.logging.Level.WARNING;
  * A legacy row's {@code transportID} is either a TLS name ({@code DDDTLSUtil.publicKeyToName}: unpadded Base64url of
  * the X.509 DER) or a key from old client metadata (a 28-character SHA-1 ID, or junk). Only TLS names are converted:
  * {@code SecurityUtils.generateID(name)} is exactly {@code SecurityUtils.peerIdForTlsKey} of that key. Every
- * converted edge is dated now, so it lives one TTL. The legacy table is left untouched, so the previous server
+ * converted edge is dated now. The legacy table is left untouched, so the previous server
  * version can still run on it; a {@link RoutingMeta#LEGACY_IMPORT_DONE_MS} row stops a second import. A failed import
  * writes no marker and is retried at the next startup.
  * <p>

@@ -11,6 +11,9 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import java.net.InetAddress;
 import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
+import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
  * Creates the gRPC channel the dropbox uses to talk to a carrier (an unmodified BundleTransport) during a
@@ -21,6 +24,28 @@ import java.security.SecureRandom;
  * Each call must return a NEW channel; the visit client owns it and shuts it down when the visit ends.
  */
 public interface CarrierChannelFactory {
+
+    /** A new channel to one carrier, and the TLS certificate that carrier presents on it. */
+    final class CarrierChannel {
+        private final ManagedChannel channel;
+        private final Supplier<X509Certificate> peerCertificate;
+
+        /**
+         * @param channel         the channel, owned by the caller
+         * @param peerCertificate the carrier's certificate once the handshake ran; returns null before that, or
+         *                        always for a channel without TLS
+         */
+        public CarrierChannel(ManagedChannel channel, Supplier<X509Certificate> peerCertificate) {
+            this.channel = Objects.requireNonNull(channel, "channel");
+            this.peerCertificate = Objects.requireNonNull(peerCertificate, "peerCertificate");
+        }
+
+        /** @return the channel */
+        public ManagedChannel channel() { return channel; }
+
+        /** @return the certificate the carrier presented, or null if no TLS handshake has run on the channel */
+        public X509Certificate peerCertificate() { return peerCertificate.get(); }
+    }
 
     /**
      * Maximum inbound gRPC message size for carrier channels: 8 MiB.
@@ -42,7 +67,7 @@ public interface CarrierChannelFactory {
      * @return a new, unstarted-or-idle channel owned by the caller
      * @throws Exception if TLS material cannot be set up
      */
-    ManagedChannel create(InetAddress host, int port) throws Exception;
+    CarrierChannel create(InetAddress host, int port) throws Exception;
 
     /**
      * The production factory: TLS exactly as the stock client builds it in
@@ -58,6 +83,7 @@ public interface CarrierChannelFactory {
      *       without {@code clientAuth}, Research/R2 §5), so this is parity, not authentication;</li>
      *   <li>{@link #MAX_INBOUND_MESSAGE_BYTES} for 4 MiB download chunks.</li>
      * </ul>
+     * The pinned certificate is the channel's {@link CarrierChannel#peerCertificate()}.
      *
      * <p>FUTURE: pin the carrier's TLS key to the DNS-SD {@code transportId} it advertised, so a visit cannot be
      * hijacked by a look-alike group owner.
@@ -73,16 +99,16 @@ public interface CarrierChannelFactory {
                                        DDDTLSUtil.getKeyManagerFactory(identityOrNull.grpcKeyPair,
                                                                        identityOrNull.grpcCert).getKeyManagers();
             SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(keyManagers,
-                            new TrustManager[] { new DDDX509ExtendedTrustManager(true) },
-                            new SecureRandom());
+            DDDX509ExtendedTrustManager trustManager = new DDDX509ExtendedTrustManager(true);
+            sslContext.init(keyManagers, new TrustManager[] { trustManager }, new SecureRandom());
             // Use the literal IP: the stock client passes an address string, and DNS is meaningless offline.
-            return OkHttpChannelBuilder.forAddress(host.getHostAddress(), port)
+            ManagedChannel channel = OkHttpChannelBuilder.forAddress(host.getHostAddress(), port)
                     .hostnameVerifier((hostname, session) -> true)
                     .useTransportSecurity()
                     .sslSocketFactory(sslContext.getSocketFactory())
                     .maxInboundMessageSize(MAX_INBOUND_MESSAGE_BYTES)
                     .build();
+            return new CarrierChannel(channel, trustManager::getCheckedCert);
         };
     }
 }

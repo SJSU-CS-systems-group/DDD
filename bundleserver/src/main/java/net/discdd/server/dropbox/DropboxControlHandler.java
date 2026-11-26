@@ -189,7 +189,7 @@ public class DropboxControlHandler implements InternalAppHandler {
                                          InventoryCompleteness.isComplete(newestJson.getBytes(StandardCharsets.UTF_8)));
         var facts = facts(newest, sightings);
         var decision = planner.plan(newest, facts, now);
-        recordDeposits(clientId, newest, facts, now);
+        recordDeposits(clientId, newest, facts);
         // every accepted report gets a plan, even an empty one, so the dropbox learns its report was processed
         enqueuePlan(node, newest, decision, now);
     }
@@ -236,8 +236,7 @@ public class DropboxControlHandler implements InternalAppHandler {
      * Records a DEPOSITED edge from the dropbox to each client {@code facts} maps an upstream entry's key fingerprint
      * to, with the newest first sighting among that client's listed bundles. Unmapped entries are skipped.
      */
-    private void recordDeposits(String dropboxId, InventoryReport report, DropboxRetentionPlanner.Facts facts,
-                                long now) {
+    private void recordDeposits(String dropboxId, InventoryReport report, DropboxRetentionPlanner.Facts facts) {
         var newestByClient = new HashMap<String, Long>();
         for (var entry : report.getUpstream()) {
             String key = entry.getClientKeyB64();
@@ -245,7 +244,7 @@ public class DropboxControlHandler implements InternalAppHandler {
             Long firstSeen = facts.firstSeenMs(Direction.UPSTREAM, entry.getBundleId());
             if (client != null && firstSeen != null) newestByClient.merge(client, firstSeen, Math::max);
         }
-        newestByClient.forEach((client, firstSeen) -> bundleRouting.recordDeposited(dropboxId, client, firstSeen, now));
+        newestByClient.forEach((client, firstSeen) -> bundleRouting.recordDeposited(dropboxId, client, firstSeen));
     }
 
     /**
