@@ -16,6 +16,7 @@ import net.discdd.bundleclient.service.BundleClientService
 import net.discdd.bundlesecurity.DDDPEMEncoder
 import net.discdd.bundlesecurity.SecurityUtils
 import net.discdd.client.bundlesecurity.ClientSecurity
+import net.discdd.client.bundletransmission.ClientBundleTransmission.ServerKeyMismatchException
 import net.discdd.utils.QRCodeParser
 import java.nio.file.Files
 
@@ -88,6 +89,9 @@ class ServerViewModel(
                                     bec.downloadStatus()
                                 )
                             )
+                            if (bec.e() is ServerKeyMismatchException) {
+                                appendMessage(context.getString(R.string.server_key_mismatch))
+                            }
                             _isTransmitting.value = false
                         }
                 } ?: run {

@@ -38,6 +38,7 @@ import net.discdd.bundleclient.utils.RecentTransport;
 import net.discdd.bundleclient.utils.RecentTransportRepository;
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.BundleExchangeCounts;
+import net.discdd.client.bundletransmission.ClientBundleTransmission.ServerKeyMismatchException;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.Statuses;
 import net.discdd.client.bundletransmission.TransportDevice;
 import net.discdd.datastore.providers.MessageProvider;
@@ -351,7 +352,9 @@ public class BundleClientService extends Service {
                                                  device.getDescription(),
                                                  statusesToString(currentBundle.uploadStatus()),
                                                  statusesToString(currentBundle.downloadStatus()));
-            if (currentBundle.e() instanceof ClientBundleTransmission.RecencyException) {
+            if (currentBundle.e() instanceof ServerKeyMismatchException) {
+                broadcastBundleClientLogEvent(R.string.server_key_mismatch);
+            } else if (currentBundle.e() instanceof ClientBundleTransmission.RecencyException) {
                 broadcastBundleClientLogEvent(R.string.not_exchanged_recently_s, currentBundle.e().getMessage());
             }
             String text1;
