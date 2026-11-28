@@ -22,9 +22,11 @@ public class ClientPaths {
     // client bundle generator
     public final Path counterFilePath;
     public final java.io.File metadataFile;
+    public final java.io.File transportLastSeenFile;
 
     // client routing
     private static final String METADATAFILE = "routing.metadata";
+    private static final String LAST_SEEN_FILE = "routing.lastseen";
 
     // BundleSecurity directory
     private static final String BUNDLE_ID_NEXT_COUNTER = "Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
@@ -128,6 +130,7 @@ public class ClientPaths {
         var metaDataPath = rootDir.resolve("BundleRouting");
         metaDataPath.toFile().mkdirs();
         metadataFile = metaDataPath.resolve(METADATAFILE).toFile();
+        transportLastSeenFile = metaDataPath.resolve(LAST_SEEN_FILE).toFile();
 
         // client bundle generator
         counterFilePath = rootDir.resolve(Paths.get("BundleRouting", "sentBundle.id"));

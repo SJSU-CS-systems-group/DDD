@@ -2,13 +2,12 @@ package net.discdd.client.bundlerouting;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.gson.JsonParseException;
 import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import net.discdd.pathutils.ClientPaths;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.HashMap;
@@ -21,8 +20,11 @@ public class ClientRouting {
 
     private static final Logger logger = Logger.getLogger(ClientRouting.class.getName());
 
+    public static final long TRANSPORT_EXPIRATION_MS = 30L * 24 * 60 * 60 * 1000;
+
     private static ClientRouting singleClientRoutingInstance = null;
-    HashMap<String, Long> metadata = null;
+    // transportId -> time of the last visit; routing.metadata is built from its keys
+    HashMap<String, Long> lastSeen = null;
     ClientPaths clientPaths;
 
     /* Initialize client routing score table
@@ -32,22 +34,37 @@ public class ClientRouting {
      * Return:
      * None
      */
-    private ClientRouting(ClientPaths clientPaths) throws IOException, ClientMetaDataFileException {
+    ClientRouting(ClientPaths clientPaths) throws IOException, ClientMetaDataFileException {
         this.clientPaths = clientPaths;
-        ObjectMapper objectMapper = new ObjectMapper();
+        lastSeen = readMap(clientPaths.transportLastSeenFile);
 
-        metadata = new HashMap<>();
-
-        if (clientPaths.metadataFile.exists()) {
-            try {
-                metadata =
-                        objectMapper.readValue(clientPaths.metadataFile, new TypeReference<HashMap<String, Long>>() {});
-            } catch (JsonParseException | JsonMappingException e) {
-                throw new ClientMetaDataFileException("Corrupted JSON File:" + e);
-            }
-        } else {
-            objectMapper.writeValue(clientPaths.metadataFile, metadata);
+        // transports saved by older versions in routing.metadata have no visit time yet
+        long now = System.currentTimeMillis();
+        for (String transportId : readMap(clientPaths.metadataFile).keySet()) {
+            lastSeen.putIfAbsent(transportId, now);
         }
+        Files.deleteIfExists(clientPaths.metadataFile.toPath());
+        save();
+    }
+
+    private static HashMap<String, Long> readMap(File file) throws IOException, ClientMetaDataFileException {
+        if (!file.exists()) {
+            return new HashMap<>();
+        }
+        try {
+            return new ObjectMapper().readValue(file, new TypeReference<HashMap<String, Long>>() {});
+        } catch (JsonParseException | JsonMappingException e) {
+            throw new ClientMetaDataFileException("Corrupted JSON File:" + e);
+        }
+    }
+
+    private void save() throws IOException {
+        new ObjectMapper().writeValue(clientPaths.transportLastSeenFile, lastSeen);
+    }
+
+    private boolean expireOldTransports() {
+        long cutoff = System.currentTimeMillis() - TRANSPORT_EXPIRATION_MS;
+        return lastSeen.entrySet().removeIf(entry -> entry.getValue() < cutoff);
     }
 
     public static ClientRouting initializeInstance(ClientPaths clientPaths) throws ClientMetaDataFileException,
@@ -67,43 +84,39 @@ public class ClientRouting {
         return singleClientRoutingInstance;
     }
 
-    /* Updates the score for the transport
+    /* Marks the transport as seen
      * Parameters:
      * transportID      : encoded transport ID
      * Returns:
      * None
      */
-    public void updateMetaData(String senderId) throws ClientMetaDataFileException {
+    public synchronized void updateMetaData(String senderId) throws ClientMetaDataFileException {
         if (senderId == null) {
             logger.log(WARNING, ("senderId cannot be null"));
             return;
         }
-        long count = 1;
+        lastSeen.put(senderId, System.currentTimeMillis());
+        expireOldTransports();
 
-        if (metadata.containsKey(senderId)) {
-            count += metadata.get(senderId);
-            metadata.put(senderId, count);
-        } else {
-            metadata.put(senderId, count);
-        }
-
-        ObjectMapper mapper = new ObjectMapper();
         try {
-            JsonNode rootNode = mapper.readTree(clientPaths.metadataFile);
-            ((ObjectNode) rootNode).put(senderId, count);
-            mapper.writeValue(clientPaths.metadataFile, rootNode);
+            save();
         } catch (Exception e) {
             throw new ClientMetaDataFileException("Error updating Routing Meta Data:" + e);
         }
     }
 
-    /* Creates the metadata file in the bundle directory
+    /* Builds routing.metadata for an outgoing bundle: every transport seen recently, each marked 1
      * Parameters:
-     * bundlePath   : Path to the bundle to be sent
-     * Returns:
      * None
+     * Returns:
+     * routing.metadata contents
      */
-    public byte[] bundleMetaData() throws IOException {
-        return Files.readAllBytes(clientPaths.metadataFile.toPath());
+    public synchronized byte[] bundleMetaData() throws IOException {
+        if (expireOldTransports()) {
+            save();
+        }
+        var transports = new HashMap<String, Long>();
+        lastSeen.keySet().forEach(transportId -> transports.put(transportId, 1L));
+        return new ObjectMapper().writeValueAsBytes(transports);
     }
 }
