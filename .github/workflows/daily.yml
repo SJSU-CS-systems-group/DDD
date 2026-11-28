@@ -72,6 +72,10 @@ jobs:
         if: contains(matrix.runner, 'ubuntu-latest') == false
         uses: actions/checkout@v4
 
+      - name: Validate Gradle Wrapper
+        if: contains(matrix.runner, 'ubuntu-latest') == false
+        uses: gradle/actions/wrapper-validation@v6
+
       - name: Maven install
         if: contains(matrix.runner, 'ubuntu-latest') == false
         run: |
