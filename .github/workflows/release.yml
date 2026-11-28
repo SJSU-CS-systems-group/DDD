@@ -31,9 +31,6 @@ jobs:
       - name: Maven install
         run: mvn -ntp install
 
-      - name: Decode signing key
-        run: |
-
       - name: Build release APK and AAB
         run: |
           cd AndroidApps
